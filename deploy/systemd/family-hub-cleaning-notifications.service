@@ -1,0 +1,16 @@
+[Unit]
+Description=Enqueue due Family Hub cleaning notifications
+Requires=family-hub-database.service
+After=family-hub-database.service
+
+[Service]
+Type=oneshot
+User=family-hub
+Group=family-hub
+WorkingDirectory=/opt/family-hub/current/backend
+EnvironmentFile=/etc/family-hub/backend.env
+ExecStartPre=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job cleaning-notifications --event start
+ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.enqueue_due_cleaning_notifications
+ExecStopPost=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job cleaning-notifications --result=${SERVICE_RESULT}
+NoNewPrivileges=true
+PrivateTmp=true

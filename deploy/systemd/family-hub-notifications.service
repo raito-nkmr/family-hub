@@ -1,0 +1,17 @@
+[Unit]
+Description=Deliver pending Family Hub Web Push notifications
+Requires=family-hub-database.service
+After=network-online.target family-hub-database.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=family-hub
+Group=family-hub
+WorkingDirectory=/opt/family-hub/current/backend
+EnvironmentFile=/etc/family-hub/backend.env
+ExecStartPre=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job notifications --event start
+ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.send_notifications
+ExecStopPost=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job notifications --result=${SERVICE_RESULT}
+NoNewPrivileges=true
+PrivateTmp=true

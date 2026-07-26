@@ -1,0 +1,18 @@
+[Unit]
+Description=Family Hub production PostgreSQL container
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/family-hub/current
+ExecStartPre=/usr/bin/docker volume inspect family-hub-production-postgres-data
+ExecStart=/usr/bin/docker compose --file /opt/family-hub/current/deploy/compose.production.yaml up --detach --wait db
+ExecStop=/usr/bin/docker compose --file /opt/family-hub/current/deploy/compose.production.yaml stop --timeout 60 db
+TimeoutStartSec=180
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

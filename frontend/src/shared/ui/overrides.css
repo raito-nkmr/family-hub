@@ -1,0 +1,131 @@
+.danger-button:not(.danger-button--filled) svg.material-symbol-icon,
+.album-photo-card__remove svg.material-symbol-icon,
+.group-member-card__remove svg.material-symbol-icon {
+  color: var(--color-action-danger);
+}
+
+@media (max-width: 980px) {
+  .photo-grid,
+  .loading-grid,
+  .album-photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .photo-picker-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .photo-grid,
+  .loading-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.125rem;
+  }
+
+  .photo-grid--columns-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .photo-grid--columns-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .album-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .album-hero,
+  .group-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 3.5rem 0 4.5rem;
+  }
+
+  .album-hero h1,
+  .album-detail-header h1,
+  .group-hero h1,
+  .group-detail-header h1 {
+    font-size: clamp(2.4rem, 12vw, 3.4rem);
+  }
+
+  .album-hero > .primary-button,
+  .group-hero > .primary-button {
+    align-self: flex-start;
+  }
+
+  .album-grid,
+  .group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .album-photos .section-heading,
+  .group-members .section-heading {
+    gap: 1rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dialog {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .dialog__panel {
+    width: 100%;
+    min-height: 100svh;
+    max-height: none;
+    padding: 1.5rem 1rem;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .dialog__panel--surface-media {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 1rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    background: var(--color-bg-surface);
+  }
+
+  .photo-picker-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+
+  .section-heading {
+    align-items: center;
+  }
+
+  .section-heading h2 {
+    font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  .refresh-button span {
+    display: none;
+  }
+
+  .refresh-button {
+    width: var(--control-height-default);
+  }
+
+  .modal {
+    padding: 0;
+    place-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+  }
+}

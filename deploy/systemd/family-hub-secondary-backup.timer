@@ -1,0 +1,10 @@
+[Unit]
+Description=Create a weekly Family Hub snapshot on the second HDD
+
+[Timer]
+OnCalendar=Sun *-*-* 05:00:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=20m
+
+[Install]
+WantedBy=timers.target

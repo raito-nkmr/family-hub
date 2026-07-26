@@ -1,0 +1,333 @@
+# Production Build and Release Runbook
+
+## Purpose
+
+This runbook explains how to reproduce Family Hub production from reviewed repository configuration. The target design is in
+[`deployment.md`](./deployment.md). Host-specific production state is intentionally kept outside the public repository.
+
+The production layout uses Caddy and FastAPI on the host, a dedicated PostgreSQL container managed by Docker Compose, and an
+external HDD. Do not include the development `compose.yaml` or its database volume in production.
+
+## Secret boundary
+
+The following remain on the host and must never be copied, displayed, diffed, or committed to the repository:
+
+- `/etc/family-hub/backend.env`, including the production `DATABASE_URL`
+- `/etc/family-hub/database.env`, used to initialize the PostgreSQL container
+- Cloudflare Tunnel token
+- Web Push private key
+
+See `deploy/database.env.example` for database variable names. Do not share the database password with development; configure
+the production `DATABASE_URL` and `database.env` deliberately. Production PostgreSQL listens on `127.0.0.1:5433`.
+Agents do not operate `.env` or these secret files; operators create and change them directly.
+
+## Database boundary
+
+| Area | Development | Production |
+| --- | --- | --- |
+| Compose file | Repository `compose.yaml` | `/opt/family-hub/current/deploy/compose.production.yaml` |
+| Compose project | `fastapi-react-playground` | `family-hub-production` |
+| Host port | `127.0.0.1:5432` | `127.0.0.1:5433` |
+| Volume | `fastapi-react-playground_postgres-data` | `family-hub-production-postgres-data` |
+| Environment | `backend/.env` | `/etc/family-hub/database.env` |
+| Lifecycle | Developer-controlled Compose | `family-hub-database.service` |
+
+Create the production volume as an external volume so `docker compose down --volumes` cannot remove it. An intentional
+production reset must stop services and explicitly remove this named volume after verifying the target.
+
+## Release contents
+
+`/opt/family-hub/releases/<timestamp>/` contains at least:
+
+```text
+<release>/
+├── backend/
+│   ├── .venv/
+│   ├── alembic/
+│   ├── alembic.ini
+│   ├── app/
+│   ├── pyproject.toml
+│   ├── requirements.txt
+│   └── requirements.lock
+├── frontend/
+│   └── dist/
+└── deploy/
+    └── compose.production.yaml
+```
+
+Do not include `.env`, test data, Python cache, `frontend/node_modules`, or development Compose volumes. Before creating a
+release, run `npm ci`, frontend checks, and `npm run build`; deploy only `dist/`. Create the backend environment from the
+committed `requirements.lock`. Keep compatible input ranges in `requirements.txt` and `requirements-dev.txt`, and update the
+lock file with `make backend-lock` when those inputs change.
+
+## Pre-construction validation
+
+Create the Caddy access-log directory before validation:
+
+```bash
+sudo install -d -o caddy -g caddy -m 0750 /var/log/family-hub
+sudo touch /var/log/family-hub/access.log
+sudo chown caddy:caddy /var/log/family-hub/access.log
+sudo chmod 0640 /var/log/family-hub/access.log
+```
+
+Validate the repository configuration:
+
+```bash
+FAMILY_HUB_DATABASE_ENV_FILE="$PWD/deploy/database.env.example" \
+  docker compose --file deploy/compose.production.yaml config --quiet
+
+sudo caddy validate --config deploy/Caddyfile --adapter caddyfile
+systemd-analyze verify deploy/systemd/*.service deploy/systemd/*.timer
+```
+
+Complete the normal backend and frontend checks as well. Repeat Caddy and systemd validation with the versions installed on
+the target host.
+
+## First construction
+
+An operator performs these steps on the Ubuntu host after creating and checking the secret files:
+
+1. Create `/etc/family-hub/database.env` as `root:family-hub`, mode `0640`.
+2. Point `/etc/family-hub/backend.env` at production PostgreSQL on `127.0.0.1:5433`.
+3. Create the external production volume.
+4. Deploy a release and switch `/opt/family-hub/current`.
+5. Install Caddy configuration and systemd units.
+6. Reload systemd and start the production database.
+7. Apply Alembic migrations.
+8. Create the initial system administrator.
+9. Start or reload Backend, Caddy, and cloudflared.
+
+```bash
+sudo docker volume create family-hub-production-postgres-data
+sudo install -o root -g root -m 0644 \
+  deploy/systemd/family-hub-database.service \
+  /etc/systemd/system/family-hub-database.service
+sudo install -o root -g root -m 0644 \
+  deploy/systemd/family-hub-backend.service \
+  /etc/systemd/system/family-hub-backend.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now family-hub-database.service
+```
+
+Apply migrations with a temporary unit that reads the production environment:
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
+```
+
+Create the initial administrator with a PTY so password input is hidden:
+
+```bash
+sudo systemd-run --wait --pty --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.create_user --username owner --system-role admin
+```
+
+Replace the username with the operator's value. Never put the password in an argument, environment variable, or log.
+
+## Cutover from the public test environment
+
+The current `fastapi-react-playground-db-1` is resettable public-test data. The first production-like rehearsal creates an
+empty schema in the new production volume instead of migrating this database.
+
+Use this order:
+
+1. Stop `family-hub-backend.service`.
+2. Prepare the new production volume and secret files.
+3. Deploy the new release and systemd units.
+4. Start the database service and confirm its Compose health check.
+5. Apply Alembic and create the initial administrator.
+6. Start Backend and check loopback health and readiness.
+7. Validate and reload Caddy.
+8. From the custom domain, check health, login, invitations, core features, and public readiness `404`.
+9. Stop the old development DB only after the new configuration is accepted.
+
+Do not remove the old development database until all required checks pass against the new one.
+
+## Cloudflare and browser cache
+
+Set Cloudflare Browser Cache TTL to `Respect Existing Headers`; the default four-hour policy can override Caddy's shorter
+TTL and revalidation instructions. Add at least these public-host rules:
+
+| Condition | Cache eligibility | Purpose |
+| --- | --- | --- |
+| URI path starts with `/api/` | Bypass cache | Never store authenticated APIs at the Edge |
+| URI path equals `/sw.js` | Bypass cache | Do not delay Service Worker update checks |
+
+Do not apply Cache Everything to HTML. Verify externally:
+
+```bash
+curl -sSI https://<public-host>/
+curl -sSI https://<public-host>/invitations
+curl -sSI https://<public-host>/sw.js
+curl -sSI https://<public-host>/assets/<current-hash>.js
+curl -sSI https://<public-host>/api/v1/health
+```
+
+Expected results are `no-cache, must-revalidate` for `/` and SPA routes, `no-store` and `DYNAMIC` or `BYPASS` for `sw.js`,
+long immutable cache and second-request `HIT` for hashed assets, and `private, no-store` with `DYNAMIC` or `BYPASS` for APIs.
+Cache purge does not clear four-hour browser caches already stored; use Safari website-data deletion or another browser during
+immediate post-change checks.
+
+## Operational timers
+
+Before production begins, introduce database backup, photo integrity, and trash purge one at a time. Installing units is not
+enough: run each service manually, verify success, and enable its timer only afterward. Configure optional Healthchecks-style
+URLs in `/etc/family-hub/backend.env` before starting units:
+
+| Job | Variable |
+| --- | --- |
+| DB backup | `MONITORING_PING_URL_DB_BACKUP` |
+| Photo integrity | `MONITORING_PING_URL_INTEGRITY` |
+| Trash purge | `MONITORING_PING_URL_TRASH_PURGE` |
+| Web Push delivery | `MONITORING_PING_URL_NOTIFICATIONS` |
+| Cleaning due | `MONITORING_PING_URL_CLEANING_NOTIFICATIONS` |
+| Secondary storage backup | `MONITORING_PING_URL_SECONDARY_BACKUP` |
+
+Units POST `/start`, the base URL on success, and `/fail` on failure. Unconfigured values are no-ops. Never record actual
+monitoring URLs or identifiers in the repository or this runbook.
+
+### Required tools
+
+The database backup command uses host `pg_dump`. Install a version compatible with PostgreSQL 18 and verify:
+
+```bash
+command -v pg_dump && pg_dump --version
+command -v pg_restore && pg_restore --version
+command -v rsync
+```
+
+`rsync` is needed only for a second-HDD snapshot. Do not enable `family-hub-secondary-backup.timer` without a second HDD.
+
+### Install units
+
+```bash
+sudo install -o root -g root -m 0644 \
+  deploy/systemd/family-hub-db-backup.service \
+  deploy/systemd/family-hub-db-backup.timer \
+  deploy/systemd/family-hub-integrity.service \
+  deploy/systemd/family-hub-integrity.timer \
+  deploy/systemd/family-hub-trash-purge.service \
+  deploy/systemd/family-hub-trash-purge.timer \
+  /etc/systemd/system/
+sudo systemctl daemon-reload
+```
+
+### Database backup
+
+```bash
+sudo systemctl start family-hub-db-backup.service
+sudo systemctl status family-hub-db-backup.service --no-pager
+sudo journalctl -u family-hub-db-backup.service -n 50 --no-pager
+```
+
+Before enabling the timer, verify successful exit, a `.dump` and `.json` under `database-backups/YYYY/MM/`, restricted file
+permissions, a `succeeded` maintenance record, and restoration into a temporary database.
+
+```bash
+sudo systemctl enable --now family-hub-db-backup.timer
+```
+
+For restore drills, use a real dump and a disposable loopback-only PostgreSQL 18 container. Wait for `pg_isready` to report
+`accepting connections`, then run `pg_restore --no-owner --no-privileges --exit-on-error`. Check `alembic_version`, user count,
+and administrator count before stopping the container. `POSTGRES_HOST_AUTH_METHOD=trust` is permitted only in this temporary
+loopback container, never in production. The drill does not change the production database.
+
+Custom-format dumps may include `maintenance_runs` that were `running` when the snapshot was taken. Restore does not carry
+running processes; mark such records interrupted before starting Backend.
+
+### Photo integrity
+
+Start the normal read-only check first, without recalculating every original hash:
+
+```bash
+sudo systemctl start family-hub-integrity.service
+sudo systemctl status family-hub-integrity.service --no-pager
+sudo journalctl -u family-hub-integrity.service -n 100 --no-pager
+```
+
+Findings return status 1. Investigate and classify any findings before enabling the timer:
+
+```bash
+sudo systemctl enable --now family-hub-integrity.timer
+```
+
+### Trash purge
+
+Trash purge permanently deletes photos past retention. Run it only after database backup and integrity succeed and the trash
+contents and retention policy are verified:
+
+```bash
+sudo systemctl start family-hub-trash-purge.service
+sudo systemctl status family-hub-trash-purge.service --no-pager
+sudo journalctl -u family-hub-trash-purge.service -n 100 --no-pager
+sudo systemctl enable --now family-hub-trash-purge.timer
+sudo systemctl list-timers 'family-hub-*' --all --no-pager
+```
+
+Do not enable notification timers before VAPID configuration and real-device validation. Verify that
+`PUSH_ALLOWED_ENDPOINT_HOSTS` contains only verified providers and that the per-user subscription limit is intended.
+Enable notifications from standalone iPhone Family Hub, trigger an event from another user, manually run the delivery
+service, and verify device display, click navigation, and non-secret journal output. After cleaning-due notification is also
+verified manually, enable both timers:
+
+```bash
+sudo systemctl start family-hub-notifications.service
+sudo systemctl start family-hub-cleaning-notifications.service
+sudo systemctl enable --now family-hub-notifications.timer family-hub-cleaning-notifications.timer
+sudo systemctl list-timers 'family-hub-*notifications*' --all --no-pager
+```
+
+## Intentional production-like database reset
+
+Only during pre-production rehearsal may resettable test data be removed. Verify the exact volume name before acting:
+
+```bash
+sudo systemctl stop family-hub-backend.service
+sudo systemctl stop family-hub-database.service
+sudo docker volume inspect family-hub-production-postgres-data
+sudo docker volume rm family-hub-production-postgres-data
+sudo docker volume create family-hub-production-postgres-data
+sudo systemctl start family-hub-database.service
+```
+
+Reapply Alembic and recreate the initial administrator. After production starts, use backup restoration instead of this reset procedure.
+
+## Release update
+
+For a release without a database schema change:
+
+1. Run all backend and frontend checks.
+2. Create a timestamped release.
+3. Review Alembic upgrades and irreversible changes.
+4. Stop Backend.
+5. Switch `current` to the new release.
+6. Apply Alembic.
+7. Start Backend.
+8. Validate and reload Caddy only when its configuration changed.
+9. Check loopback and custom-domain health, login, and core screens.
+10. If needed, roll back the application release; do not automatically downgrade the database.
+
+## Production start conditions
+
+- Production database is separated from development.
+- Database health, Backend, Caddy, and cloudflared recover automatically after reboot.
+- Database backups are written to separate storage.
+- A backup can be restored into a temporary database.
+- Photo integrity checks succeed.
+- Authenticated core features pass external smoke tests.
+- Cloudflare, Caddy, and Service Worker caching follow the intended policy.
+- iPhone Safari has verified PWA, upload, and original display.
+- The acceptance checklist in [`deployment.md`](./deployment.md#production-acceptance-checklist) passes.
+
+日本語版: [production-runbook.ja.md](./production-runbook.ja.md)

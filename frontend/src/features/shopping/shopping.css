@@ -1,0 +1,282 @@
+.shopping-page {
+  min-height: 650px;
+}
+
+.shopping-hero {
+  max-width: 760px;
+  padding: clamp(3rem, 8vw, 6.5rem) 0;
+}
+
+.shopping-hero h1 {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: clamp(2.5rem, 4.4vw, 4rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 1.03;
+}
+
+.shopping-hero > p:last-child {
+  max-width: 580px;
+  margin: 1.5rem 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+.shopping-board {
+  padding: clamp(3rem, 7vw, 6rem) 0;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.shopping-board__toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+}
+
+.shopping-board__toolbar > div {
+  display: grid;
+  gap: 0.4rem;
+  width: min(360px, 100%);
+}
+
+.shopping-board__toolbar label,
+.shopping-add > label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.shopping-board__toolbar select,
+.shopping-add input {
+  min-height: 48px;
+  padding: 0.65rem 0.8rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.shopping-add {
+  display: grid;
+  gap: 0.45rem;
+  margin: 2rem 0 4rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background: var(--color-bg-emphasis);
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+}
+
+.shopping-add > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.shopping-add input {
+  width: 100%;
+  min-width: 0;
+}
+
+.shopping-add button,
+.shopping-item > button {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height-large);
+  padding: 0 1.2rem;
+  cursor: pointer;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.shopping-add button {
+  color: var(--color-button-primary-text);
+  background: var(--color-button-primary-bg);
+  border: 1px solid var(--color-button-primary-bg);
+}
+
+.shopping-add button:hover:not(:disabled) {
+  background: var(--color-button-primary-bg-hover);
+  border-color: var(--color-button-primary-bg-hover);
+}
+
+.shopping-item > button {
+  color: var(--color-button-success-text);
+  background: var(--color-button-success-bg);
+  border: 1px solid var(--color-button-success-bg);
+}
+
+.shopping-item > button:hover:not(:disabled) {
+  background: var(--color-button-success-bg-hover);
+  border-color: var(--color-button-success-bg-hover);
+}
+
+.shopping-add button:disabled,
+.shopping-item > button:disabled,
+.shopping-history button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.shopping-add svg,
+.shopping-item svg,
+.shopping-history svg,
+.shopping-empty-state svg {
+  width: 20px;
+}
+
+.shopping-add__error {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-error);
+  font-size: 0.76rem;
+}
+
+.shopping-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.shopping-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, auto);
+  gap: 1rem;
+  align-items: center;
+  min-height: 88px;
+  padding: 1rem 1rem 1rem 1.25rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 13px;
+  box-shadow: 0 8px 22px rgb(16 42 67 / 6%);
+}
+
+.shopping-item h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-display);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.shopping-item p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.shopping-item--skeleton {
+  min-height: 88px;
+  background: linear-gradient(
+    100deg,
+    var(--color-bg-surface) 20%,
+    var(--color-bg-subtle) 50%,
+    var(--color-bg-surface) 80%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.shopping-history {
+  margin-top: 2.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+}
+
+.shopping-history summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 44px;
+}
+
+.shopping-history__list {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.8rem;
+}
+
+.shopping-history__list > div {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem;
+  background: var(--color-bg-subtle);
+  border-radius: 8px;
+}
+
+.shopping-history__list strong,
+.shopping-history__list span {
+  display: block;
+}
+
+.shopping-history__list strong {
+  overflow-wrap: anywhere;
+}
+
+.shopping-history__list span {
+  margin-top: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+}
+
+.shopping-history button {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.8rem;
+  color: var(--color-action-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .shopping-hero {
+    padding: 2.5rem 0 3.5rem;
+  }
+
+  .shopping-hero h1 {
+    font-size: clamp(2.15rem, 10vw, 2.9rem);
+  }
+
+  .shopping-add > div,
+  .shopping-item {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-add button,
+  .shopping-item > button {
+    width: 100%;
+  }
+
+  .shopping-item {
+    min-height: 138px;
+  }
+
+  .shopping-history__list > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shopping-history button {
+    justify-content: center;
+    width: 100%;
+  }
+}

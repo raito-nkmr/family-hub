@@ -1,0 +1,30 @@
+name: family-hub-production
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    env_file:
+      - path: ${FAMILY_HUB_DATABASE_ENV_FILE:-/etc/family-hub/database.env}
+        required: true
+    ports:
+      - "127.0.0.1:${FAMILY_HUB_DATABASE_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 1m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  postgres-data:
+    external: true
+    name: family-hub-production-postgres-data

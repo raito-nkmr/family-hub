@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Family Hub trash purge daily
+
+[Timer]
+OnCalendar=*-*-* 03:20:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

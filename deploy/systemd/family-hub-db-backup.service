@@ -1,0 +1,25 @@
+[Unit]
+Description=Back up the Family Hub PostgreSQL database
+Requires=family-hub-database.service
+After=family-hub-database.service
+RequiresMountsFor=/mnt/family-hub-storage
+
+[Service]
+Type=oneshot
+User=family-hub
+Group=family-hub
+WorkingDirectory=/opt/family-hub/current/backend
+EnvironmentFile=/etc/family-hub/backend.env
+ExecStartPre=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job db-backup --event start
+ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.backup_database
+ExecStopPost=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job db-backup --result=${SERVICE_RESULT}
+TimeoutStartSec=2h
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/family-hub-storage

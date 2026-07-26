@@ -1,0 +1,22 @@
+[Unit]
+Description=Permanently delete expired Family Hub trash
+Requires=family-hub-database.service
+After=family-hub-database.service
+RequiresMountsFor=/mnt/family-hub-storage
+
+[Service]
+Type=oneshot
+User=family-hub
+Group=family-hub
+WorkingDirectory=/opt/family-hub/current/backend
+EnvironmentFile=/etc/family-hub/backend.env
+ExecStartPre=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job trash-purge --event start
+ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.purge_trashed_photos
+ExecStopPost=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job trash-purge --result=${SERVICE_RESULT}
+TimeoutStartSec=30m
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/family-hub /mnt/family-hub-storage

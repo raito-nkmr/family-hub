@@ -1,0 +1,26 @@
+[Unit]
+Description=Family Hub FastAPI backend
+Requires=family-hub-database.service
+After=network-online.target family-hub-database.service
+Wants=network-online.target
+RequiresMountsFor=/mnt/family-hub-storage
+
+[Service]
+Type=simple
+User=family-hub
+Group=family-hub
+WorkingDirectory=/opt/family-hub/current/backend
+EnvironmentFile=/etc/family-hub/backend.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=5
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/family-hub /mnt/family-hub-storage
+
+[Install]
+WantedBy=multi-user.target

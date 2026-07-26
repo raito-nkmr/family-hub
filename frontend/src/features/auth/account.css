@@ -1,0 +1,140 @@
+.account-page {
+  padding: clamp(2rem, 5vw, 4rem) 0;
+}
+
+.account-hero {
+  margin-bottom: 2rem;
+}
+
+.account-hero h1,
+.account-hero p {
+  margin: 0;
+}
+
+.account-hero h1 {
+  font-family: var(--font-family-display);
+  font-size: clamp(2rem, 5vw, 3.6rem);
+}
+
+.account-hero p:last-child,
+.account-panel > p,
+.account-panel__heading p {
+  margin-top: 0.35rem;
+  color: var(--color-text-secondary);
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.account-panel {
+  min-width: 0;
+  padding: 1.25rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgb(16 42 67 / 8%);
+}
+
+.account-panel--pwa {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 1rem;
+  align-items: center;
+}
+
+.account-panel--pwa .secondary-button {
+  flex: 0 0 auto;
+}
+
+.account-panel h2,
+.account-panel__heading p {
+  margin: 0;
+}
+
+.account-panel__heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.account-form {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+}
+
+.account-form input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.65rem;
+  font: inherit;
+}
+
+.account-form .primary-button {
+  justify-self: start;
+  margin-top: 0.5rem;
+}
+
+.session-list {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0;
+  margin: 1rem 0;
+  list-style: none;
+}
+
+.session-list li {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--color-bg-subtle);
+  border-radius: 9px;
+}
+
+.session-list small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--color-text-secondary);
+}
+
+.account-panel__logout-all {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 760px) {
+  .account-hero h1 {
+    font-size: clamp(1.85rem, 8vw, 2.5rem);
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-panel--pwa {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .account-panel--pwa .secondary-button {
+    margin-left: 68px;
+  }
+
+  .session-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .session-list .danger-button {
+    align-self: flex-start;
+  }
+}

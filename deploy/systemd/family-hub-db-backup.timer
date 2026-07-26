@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up the Family Hub database daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

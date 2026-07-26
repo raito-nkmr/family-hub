@@ -1,0 +1,134 @@
+.pwa-install-card {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.1rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgb(16 42 67 / 8%);
+}
+
+.pwa-install-card__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  flex: 0 0 auto;
+}
+
+.pwa-install-card__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.pwa-install-card__content h2,
+.pwa-install-card__content p {
+  margin: 0;
+}
+
+.pwa-install-card__content p {
+  margin-top: 0.2rem;
+  color: var(--color-text-secondary);
+}
+
+.pwa-install-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pwa-install-card__dismiss {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  place-items: center;
+}
+
+.pwa-install-card__dismiss:hover {
+  background: var(--color-bg-subtle);
+}
+
+.pwa-install-card__dismiss svg {
+  width: 20px;
+}
+
+.pwa-guide__heading {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  padding-right: 2rem;
+}
+
+.pwa-guide__heading img {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+}
+
+.pwa-guide__eyebrow,
+.pwa-guide__heading h2,
+.pwa-guide__intro,
+.pwa-guide__note {
+  margin: 0;
+}
+
+.pwa-guide__eyebrow {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.pwa-guide__heading h2 {
+  margin-top: 0.15rem;
+  font-family: var(--font-family-display);
+}
+
+.pwa-guide__intro {
+  margin-top: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.pwa-guide__steps {
+  display: grid;
+  gap: 0.75rem;
+  padding-left: 1.6rem;
+  margin: 1rem 0;
+}
+
+.pwa-guide__steps li {
+  padding-left: 0.25rem;
+}
+
+.pwa-guide__steps strong,
+.pwa-guide__steps span {
+  display: block;
+}
+
+.pwa-guide__steps span,
+.pwa-guide__note {
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+}
+
+.pwa-guide__done {
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .pwa-install-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .pwa-install-card__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

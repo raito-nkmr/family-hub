@@ -1,0 +1,95 @@
+.account-panel--notifications {
+  grid-column: 1 / -1;
+}
+
+.notification-settings__heading {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.notification-settings__heading h2,
+.notification-settings__heading p,
+.notification-settings__status,
+.notification-preferences p {
+  margin: 0;
+}
+
+.notification-settings__heading p,
+.notification-preferences p {
+  margin-top: 0.2rem;
+  color: var(--color-text-secondary);
+}
+
+.notification-settings__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  color: var(--color-action-filled-text);
+  background: var(--color-action-filled-bg);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.notification-settings__icon svg {
+  width: 21px;
+}
+
+.notification-settings__status {
+  padding: 0.7rem 0.8rem;
+  margin-top: 1rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  border-radius: 9px;
+}
+
+.notification-settings__actions,
+.notification-settings__install {
+  margin-top: 1rem;
+}
+
+.notification-preferences {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 0 0;
+  margin: 1.25rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.notification-preferences legend {
+  padding: 0.8rem 0 0;
+  font-weight: 700;
+}
+
+.notification-preferences__item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--color-bg-subtle);
+  border-radius: 9px;
+}
+
+.notification-preferences__item strong,
+.notification-preferences__item small {
+  display: block;
+}
+
+.notification-preferences__item small {
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+}
+
+.notification-preferences__item input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--color-action-primary);
+  flex: 0 0 auto;
+}
+
+.notification-preferences .secondary-button {
+  justify-self: start;
+}
