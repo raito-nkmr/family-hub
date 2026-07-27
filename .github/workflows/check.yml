@@ -62,7 +62,7 @@ jobs:
 
       - name: Apply migrations to PostgreSQL
         working-directory: backend
-        run: alembic upgrade head
+        run: uv run --locked alembic upgrade head
 
       - name: Run all checks
         run: make check
