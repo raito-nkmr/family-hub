@@ -20,7 +20,7 @@ from app.main import create_app
 from tests.features.auth.factories import make_user, make_user_session
 
 
-def make_request(*, origin: str = "http://localhost:5173", cookie: str | None = None) -> Request:
+def make_request(*, origin: str = "http://localhost:15173", cookie: str | None = None) -> Request:
     headers = [(b"origin", origin.encode("ascii"))]
     if cookie is not None:
         headers.append((b"cookie", f"photo_session={cookie}".encode("ascii")))

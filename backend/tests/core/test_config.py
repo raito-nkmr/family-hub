@@ -6,9 +6,9 @@ from app.core.config import Settings, get_management_settings, get_settings
 
 
 def test_cors_origin_list_parses_comma_separated_origins() -> None:
-    settings = Settings(cors_origins="http://localhost:5173, https://photos.example.test")
+    settings = Settings(cors_origins="http://localhost:15173, https://photos.example.test")
 
-    assert settings.cors_origin_list == ["http://localhost:5173", "https://photos.example.test"]
+    assert settings.cors_origin_list == ["http://localhost:15173", "https://photos.example.test"]
 
 
 def test_app_port_must_be_valid() -> None:
@@ -17,7 +17,7 @@ def test_app_port_must_be_valid() -> None:
 
 
 def test_default_app_port_is_separate_from_production() -> None:
-    assert Settings().app_port == 8001
+    assert Settings().app_port == 18000
 
 
 def test_photo_default_timezone_must_be_valid() -> None:

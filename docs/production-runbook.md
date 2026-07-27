@@ -27,7 +27,7 @@ Agents do not operate `.env` or these secret files; operators create and change 
 | --- | --- | --- |
 | Compose file | Repository `compose.yaml` | `/opt/family-hub/current/deploy/compose.production.yaml` |
 | Compose project | `fastapi-react-playground` | `family-hub-production` |
-| Host port | `127.0.0.1:5432` | `127.0.0.1:5433` |
+| Host port | `127.0.0.1:15432` | `127.0.0.1:5433` |
 | Volume | `fastapi-react-playground_postgres-data` | `family-hub-production-postgres-data` |
 | Environment | `backend/.env` | `/etc/family-hub/database.env` |
 | Lifecycle | Developer-controlled Compose | `family-hub-database.service` |

@@ -91,7 +91,7 @@ are documented in [Backend Design](docs/backend-design.md).
 Start the backend from `backend/`:
 
 ```bash
-.venv/bin/uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 8001
+.venv/bin/uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 18000
 ```
 
 Start the frontend from `frontend/` in another terminal:
@@ -100,7 +100,7 @@ Start the frontend from `frontend/` in another terminal:
 npm run dev
 ```
 
-The development API listens on `127.0.0.1:8001`. Vite proxies `/api` requests to it.
+The development API listens on `127.0.0.1:18000`. Vite runs on `127.0.0.1:15173` and proxies `/api` requests to it.
 
 VS Code users can also use the `Dev: Start All` task to start the database and both development servers.
 

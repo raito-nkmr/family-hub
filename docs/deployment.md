@@ -54,9 +54,10 @@ intended for testing and are therefore not part of the production path.
 
 The production database is managed by `deploy/compose.production.yaml` and separated from the development `compose.yaml`.
 The production Compose project is `family-hub-production`, and its volume is `family-hub-production-postgres-data`. Create
-the volume as an external volume in advance so `compose down --volumes` cannot remove it. Development PostgreSQL continues
-to use `127.0.0.1:5432`. Development FastAPI listens on `127.0.0.1:8001`, and Vite's `/api` proxy uses that port. Keep
-the backend ports separated so the development frontend cannot accidentally connect to production FastAPI at `127.0.0.1:8000`.
+the volume as an external volume in advance so `compose down --volumes` cannot remove it. Development PostgreSQL uses
+`127.0.0.1:15432`. Development FastAPI listens on `127.0.0.1:18000`, and Vite listens on `127.0.0.1:15173` while its
+`/api` proxy uses the development backend port. Keep the backend ports separated so the development frontend cannot
+accidentally connect to production FastAPI at `127.0.0.1:8000`.
 
 `family-hub-database.service` waits for Docker startup and a successful Compose health check. Backend and database-related
 maintenance units must declare this service in `Requires` and `After`; they must not depend on an OS-provided
@@ -124,7 +125,7 @@ spoofed forwarding headers are sent from a real device.
 - Do not add Cloudflare Access in the initial configuration.
 - Production cookies use `__Host-photo_session`, `Secure`, `HttpOnly`, `SameSite=Lax`, and `Path=/`.
 - Set `AUTH_TRUSTED_ORIGINS` and `CORS_ORIGINS` to the public production origin only.
-- Do not mix development `http://localhost:5173` values into production settings.
+- Do not mix development `http://localhost:15173` values into production settings.
 
 For a public URL such as `https://family.example.com`, configure the origin without a trailing slash:
 
