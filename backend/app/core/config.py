@@ -15,12 +15,12 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     app_host: str = "127.0.0.1"
-    app_port: int = Field(default=8001, ge=1, le=65535)
+    app_port: int = Field(default=18000, ge=1, le=65535)
     app_reload: bool = False
     app_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:15173"
     database_url: str | None = None
-    auth_trusted_origins: str = "http://localhost:5173"
+    auth_trusted_origins: str = "http://localhost:15173"
     auth_session_idle_seconds: int = Field(default=604_800, gt=0)
     auth_session_absolute_seconds: int = Field(default=2_592_000, gt=0)
     auth_session_touch_seconds: int = Field(default=3_600, gt=0)

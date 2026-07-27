@@ -27,7 +27,7 @@ Agents do not operate `.env` or these secret files; operators create and change 
 | --- | --- | --- |
 | Compose file | Repository `compose.yaml` | `/opt/family-hub/current/deploy/compose.production.yaml` |
 | Compose project | `fastapi-react-playground` | `family-hub-production` |
-| Host port | `127.0.0.1:5432` | `127.0.0.1:5433` |
+| Host port | `127.0.0.1:15432` | `127.0.0.1:5433` |
 | Volume | `fastapi-react-playground_postgres-data` | `family-hub-production-postgres-data` |
 | Environment | `backend/.env` | `/etc/family-hub/database.env` |
 | Lifecycle | Developer-controlled Compose | `family-hub-database.service` |
@@ -47,8 +47,7 @@ production reset must stop services and explicitly remove this named volume afte
 │   ├── alembic.ini
 │   ├── app/
 │   ├── pyproject.toml
-│   ├── requirements.txt
-│   └── requirements.lock
+│   └── uv.lock
 ├── frontend/
 │   └── dist/
 └── deploy/
@@ -57,8 +56,15 @@ production reset must stop services and explicitly remove this named volume afte
 
 Do not include `.env`, test data, Python cache, `frontend/node_modules`, or development Compose volumes. Before creating a
 release, run `npm ci`, frontend checks, and `npm run build`; deploy only `dist/`. Create the backend environment from the
-committed `requirements.lock`. Keep compatible input ranges in `requirements.txt` and `requirements-dev.txt`, and update the
-lock file with `make backend-lock` when those inputs change.
+committed `pyproject.toml` and `uv.lock` with `uv sync --locked --no-dev`. Update the lock file with `make backend-lock`
+when backend dependencies change.
+
+On the production host, install the pinned runtime environment after switching the release symlink:
+
+```bash
+cd /opt/family-hub/current/backend
+uv sync --locked --no-dev
+```
 
 ## Pre-construction validation
 

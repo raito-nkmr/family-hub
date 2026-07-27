@@ -56,7 +56,6 @@ layout.
 Create the Python environment and install the locked backend dependencies:
 
 ```bash
-python3.13 -m venv backend/.venv
 make backend-sync
 ```
 
@@ -79,8 +78,8 @@ Apply database migrations and create an initial system administrator:
 
 ```bash
 cd backend
-.venv/bin/alembic upgrade head
-.venv/bin/python -m app.commands.create_user --username owner --system-role admin
+uv run --locked alembic upgrade head
+uv run --locked python -m app.commands.create_user --username owner --system-role admin
 ```
 
 Configure database credentials and photo storage paths in `backend/.env`. Storage configuration and safety requirements
@@ -91,7 +90,7 @@ are documented in [Backend Design](docs/backend-design.md).
 Start the backend from `backend/`:
 
 ```bash
-.venv/bin/uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 8001
+uv run --locked uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 18000
 ```
 
 Start the frontend from `frontend/` in another terminal:
@@ -100,7 +99,7 @@ Start the frontend from `frontend/` in another terminal:
 npm run dev
 ```
 
-The development API listens on `127.0.0.1:8001`. Vite proxies `/api` requests to it.
+The development API listens on `127.0.0.1:18000`. Vite runs on `127.0.0.1:15173` and proxies `/api` requests to it.
 
 VS Code users can also use the `Dev: Start All` task to start the database and both development servers.
 
