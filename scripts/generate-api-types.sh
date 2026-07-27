@@ -7,15 +7,9 @@ output_directory="${1:-$project_root/frontend/src/shared/api/generated}"
 schema_file="$(mktemp)"
 trap 'rm -f "$schema_file"' EXIT
 
-if [[ -x "$project_root/backend/.venv/bin/python" ]]; then
-  python="$project_root/backend/.venv/bin/python"
-else
-  python="python"
-fi
-
 (
   cd "$project_root/backend"
-  "$python" -m app.commands.export_openapi --output "$schema_file"
+  uv run --locked python -m app.commands.export_openapi --output "$schema_file"
 )
 
 "$project_root/frontend/node_modules/.bin/openapi-ts" \

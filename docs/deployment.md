@@ -73,7 +73,7 @@ unit collects them in the journal; use `journalctl -u family-hub-backend.service
 strings so search text and other user-entered values are not copied into application logs.
 
 ```bash
-.venv/bin/python -m uvicorn app.main:app \
+uv run --locked python -m uvicorn app.main:app \
   --host 127.0.0.1 \
   --port 8000 \
   --proxy-headers \
