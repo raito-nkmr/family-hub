@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "alembic~=1.18.5",
-    "fastapi~=0.139.2",
+    "fastapi~=0.141.1",
     "pillow~=12.3.0",
     "pillow-heif~=1.4.0",
     "psycopg[binary]~=3.3.4",
