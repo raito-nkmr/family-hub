@@ -50,6 +50,7 @@ async def test_get_health_returns_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert response.headers["cache-control"] == "private, no-store"
     assert len(response.headers["x-request-id"]) == 36
 
 

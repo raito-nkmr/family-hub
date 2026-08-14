@@ -34,5 +34,6 @@ def test_photo_catalog_returns_photos_shared_with_group() -> None:
 
     assert catalog.get_addable_to_group_ids({photo.id}, group_id) == {photo.id}
     statement = session.scalars.call_args.args[0]
-    sql = str(statement.compile(dialect=postgresql.dialect()))
+    sql = str(statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
     assert "photo_shares" in sql
+    assert "photos.lifecycle_state = 'active'" in sql

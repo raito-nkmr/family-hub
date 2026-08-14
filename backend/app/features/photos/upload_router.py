@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from starlette.concurrency import run_in_threadpool
 
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.photos.dependencies import get_upload_batch_service
@@ -159,7 +160,7 @@ async def append_upload_chunk(
         if len(payload) > MAX_UPLOAD_CHUNK_BYTES:
             _raise_upload_error(UploadChunkTooLargeError())
     try:
-        next_offset = service.append_chunk(item_id, user.id, upload_offset, bytes(payload))
+        next_offset = await run_in_threadpool(service.append_chunk, item_id, user.id, upload_offset, bytes(payload))
     except (
         UploadItemNotFoundError,
         UploadBatchInvalidError,

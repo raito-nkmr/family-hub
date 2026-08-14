@@ -2,7 +2,7 @@ import logging
 import time
 from uuid import uuid4
 
-from starlette.datastructures import Headers
+from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -60,6 +60,25 @@ class RequestLoggingMiddleware:
                     duration_ms,
                 )
             request_id_context.reset(token)
+
+
+class PrivateApiCacheControlMiddleware:
+    """Prevent browser and intermediary caching of API responses."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/api/"):
+            await self._app(scope, receive, send)
+            return
+
+        async def send_with_cache_control(message):
+            if message["type"] == "http.response.start":
+                MutableHeaders(scope=message)["Cache-Control"] = "private, no-store"
+            await send(message)
+
+        await self._app(scope, receive, send_with_cache_control)
 
 
 class SinglePhotoUploadSizeLimitMiddleware:
