@@ -108,6 +108,7 @@ export function useNotificationSettings({ locale, onUnauthorized }: UseNotificat
     setBusyAction('subscribe')
     setError(null)
     let createdSubscription: PushSubscription | null = null
+    let serverSubscriptionCreated = false
     try {
       const nextPermission =
         Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
@@ -131,14 +132,17 @@ export function useNotificationSettings({ locale, onUnauthorized }: UseNotificat
         })
         createdSubscription = subscription
       }
-      for (const subscriptionId of config.subscription_ids) await deleteMutation.mutateAsync(subscriptionId)
       const response = await createMutation.mutateAsync(serializePushSubscription(subscription, locale))
+      serverSubscriptionCreated = true
+      for (const subscriptionId of config.subscription_ids) {
+        if (subscriptionId !== response.id) await deleteMutation.mutateAsync(subscriptionId)
+      }
       queryClient.setQueryData<NotificationConfigResponse>(queryKeys.notificationConfig, (current) =>
         current ? { ...current, subscription_ids: [response.id] } : current,
       )
       setBrowserSubscribed(true)
     } catch (subscribeError) {
-      if (createdSubscription) await createdSubscription.unsubscribe().catch(() => false)
+      if (createdSubscription && !serverSubscriptionCreated) await createdSubscription.unsubscribe().catch(() => false)
       if (!isUnauthorizedError(subscribeError)) {
         setError(
           subscribeError instanceof ApiError && subscribeError.status === 409 ? 'subscriptionLimit' : 'subscribe',

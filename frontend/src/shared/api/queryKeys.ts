@@ -13,6 +13,7 @@ export const queryKeys = {
   albums: ['albums'] as const,
   album: (albumId: string) => ['albums', albumId] as const,
   photoStorage: ['photos', 'storage'] as const,
+  photosPrefix: ['photos', 'list'] as const,
   photos: (filters: unknown) => ['photos', 'list', filters] as const,
   photo: (photoId: string) => ['photos', 'detail', photoId] as const,
   photoTimeline: (year: number) => ['photos', 'timeline', year] as const,
