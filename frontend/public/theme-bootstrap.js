@@ -1,6 +1,6 @@
 ;(() => {
   try {
-    const savedTheme = localStorage.getItem('family-hub-theme') ?? localStorage.getItem('photo-storage-theme')
+    const savedTheme = localStorage.getItem('family-hub-theme')
     const theme =
       savedTheme === 'light' || savedTheme === 'dark'
         ? savedTheme
@@ -10,7 +10,6 @@
     document.documentElement.dataset.theme = theme
     document.documentElement.style.colorScheme = theme
     localStorage.setItem('family-hub-theme', theme)
-    localStorage.removeItem('photo-storage-theme')
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', theme === 'dark' ? '#0b1726' : '#d8e2ed')

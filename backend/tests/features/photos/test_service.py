@@ -247,7 +247,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
     photo = make_photo(visibility=PhotoVisibility.SHARED, group_id=group_id)
     session.scalar.return_value = photo
     remove_from_albums = MagicMock()
-    monkeypatch.setattr("app.features.photos.service.remove_photo_from_group_albums", remove_from_albums)
+    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_group_albums", remove_from_albums)
     service, _ = make_service(session)
 
     service.update_photo(

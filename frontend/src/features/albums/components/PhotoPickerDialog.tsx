@@ -32,12 +32,9 @@ export function PhotoPickerDialog({
 }: PhotoPickerDialogProps) {
   const { t } = useTranslation()
   const headingId = useId()
-  const [filters, setFilters] = useState<PhotoFilters>({
-    excludeAlbumId: albumId,
-    sharingGroupId: groupId,
-  })
+  const [searchFilters, setSearchFilters] = useState<PhotoFilters>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const photoList = usePhotoList({ filters })
+  const photoList = usePhotoList({ filters: { ...searchFilters, excludeAlbumId: albumId, sharingGroupId: groupId } })
   useUnauthorizedError(photoList.error, onUnauthorized)
   const listError =
     photoList.error && !isUnauthorizedError(photoList.error)
@@ -47,11 +44,7 @@ export function PhotoPickerDialog({
   const selectedArray = useMemo(() => [...selectedIds], [selectedIds])
 
   const search = (nextFilters: PhotoFilters) => {
-    setFilters({
-      ...nextFilters,
-      excludeAlbumId: albumId,
-      sharingGroupId: groupId,
-    })
+    setSearchFilters(nextFilters)
   }
 
   const togglePhoto = (photoId: string) => {
@@ -73,7 +66,7 @@ export function PhotoPickerDialog({
         <span>{t('albums.selectedCount', { count: selectedCount })}</span>
       </div>
 
-      <PhotoSearchPanel filters={filters} timeline={null} disabled={photoList.loading} onSearch={search} />
+      <PhotoSearchPanel filters={searchFilters} timeline={null} disabled={photoList.loading} onSearch={search} />
 
       {photoList.loading ? (
         <div className="feature-loading" aria-label={t('photos.loadingList')}>

@@ -11,6 +11,7 @@ from app.features.auth.dependencies import (
     require_csrf_token,
 )
 from app.features.auth.public import AuthService, InvalidCurrentPasswordError
+from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.activity import (
     InvalidPhotoActivityCursorError,
     PhotoActivityNotFoundError,
@@ -18,12 +19,15 @@ from app.features.photos.activity import (
     PhotoActivityService,
 )
 from app.features.photos.dependencies import (
+    get_photo_access_service,
     get_photo_activity_service,
+    get_photo_metadata_service,
     get_photo_query_service,
-    get_photo_service,
     get_photo_storage,
+    get_photo_upload_service,
 )
 from app.features.photos.export_router import router as export_router
+from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.models import Photo
 from app.features.photos.queries import InvalidPhotoCursorError, PhotoListFilters, PhotoQueryService
 from app.features.photos.registration import (
@@ -53,7 +57,6 @@ from app.features.photos.service import (
     PhotoBulkSelectionError,
     PhotoContentUnavailableError,
     PhotoNotFoundError,
-    PhotoService,
     PhotoTooLargeError,
     PhotoUpdateConflictError,
     PhotoUpdateForbiddenError,
@@ -62,13 +65,14 @@ from app.features.photos.service import (
 )
 from app.features.photos.storage import PhotoStorage, StorageStatusCode
 from app.features.photos.trash_router import router as trash_router
+from app.features.photos.upload_service import PhotoUploadService
 
 router = APIRouter(tags=["photos"], dependencies=[Depends(require_authenticated_user)])
 router.include_router(export_router)
 router.include_router(trash_router)
 
 
-def _photo_response(photo: Photo, service: PhotoService, user_id: UUID) -> PhotoResponse:
+def _photo_response(photo: Photo, service: PhotoAccessService, user_id: UUID) -> PhotoResponse:
     return PhotoResponse.model_validate(photo).model_copy(
         update={
             "is_favorite": service.is_favorite(photo.id, user_id),
@@ -101,7 +105,8 @@ async def get_storage_status(storage: Annotated[PhotoStorage, Depends(get_photo_
 def upload_photo(
     file: Annotated[UploadFile, File()],
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoUploadService, Depends(get_photo_upload_service)],
+    access_service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
     group_ids: Annotated[list[UUID] | None, Form()] = None,
 ) -> PhotoResponse:
     try:
@@ -131,7 +136,7 @@ def upload_photo(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Photo storage unavailable",
         ) from error
-    return _photo_response(photo, service, authenticated_user.id)
+    return _photo_response(photo, access_service, authenticated_user.id)
 
 
 @router.get("", response_model=PhotoListResponse)
@@ -228,7 +233,7 @@ def mark_photo_activity_seen(
 def bulk_add_photo_sharing(
     body: BulkPhotoSharingAdd,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoMetadataService, Depends(get_photo_metadata_service)],
 ) -> BulkPhotoSharingResponse:
     try:
         result = service.bulk_add_sharing(
@@ -261,7 +266,7 @@ def bulk_add_photo_sharing(
 def get_photo_metadata(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> PhotoResponse:
     try:
         photo = service.get_photo(photo_id, authenticated_user.id)
@@ -274,7 +279,7 @@ def get_photo_metadata(
 def get_photo_content(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> FileResponse:
     try:
         content = service.get_photo_content(photo_id, authenticated_user.id)
@@ -296,7 +301,7 @@ def get_photo_content(
 def download_photo_original(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> FileResponse:
     try:
         photo = service.get_photo(photo_id, authenticated_user.id)
@@ -321,7 +326,7 @@ def download_photo_original(
 def get_photo_thumbnail(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> FileResponse:
     try:
         content = service.get_photo_thumbnail(photo_id, authenticated_user.id)
@@ -348,7 +353,8 @@ def update_photo_metadata(
     photo_id: UUID,
     body: PhotoUpdate,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoMetadataService, Depends(get_photo_metadata_service)],
+    access_service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> PhotoResponse:
     try:
         update_kwargs = {
@@ -392,7 +398,7 @@ def update_photo_metadata(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Photo storage unavailable",
         ) from error
-    return _photo_response(photo, service, authenticated_user.id)
+    return _photo_response(photo, access_service, authenticated_user.id)
 
 
 @router.delete(
@@ -406,7 +412,8 @@ def remove_photo_group_share_as_admin(
     body: GroupPhotoModerationRequest,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-    photo_service: Annotated[PhotoService, Depends(get_photo_service)],
+    photo_service: Annotated[PhotoMetadataService, Depends(get_photo_metadata_service)],
+    access_service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> PhotoResponse:
     try:
         auth_service.verify_current_password(authenticated_user.id, body.current_password)
@@ -432,7 +439,7 @@ def remove_photo_group_share_as_admin(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not update photo",
         ) from error
-    return _photo_response(photo, photo_service, authenticated_user.id)
+    return _photo_response(photo, access_service, authenticated_user.id)
 
 
 @router.put(
@@ -443,7 +450,7 @@ def remove_photo_group_share_as_admin(
 def add_photo_favorite(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> PhotoResponse:
     try:
         photo = service.set_favorite(photo_id, authenticated_user.id, True)
@@ -465,7 +472,7 @@ def add_photo_favorite(
 def remove_photo_favorite(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
 ) -> PhotoResponse:
     try:
         photo = service.set_favorite(photo_id, authenticated_user.id, False)

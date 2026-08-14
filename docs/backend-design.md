@@ -123,7 +123,10 @@ owner and group-share visibility; `activity.py` handles New and read positions; 
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
 `storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
-catalog needed by other features.
+catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
+content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `upload_service.py`
+handles single-photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
+`export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
 

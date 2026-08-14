@@ -74,7 +74,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   const invalidateLibrary = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix }),
-      queryClient.invalidateQueries({ queryKey: ['photos', 'timeline'] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoStorage }),
     ])
   }
@@ -183,7 +183,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       await trashPhoto(selectedPhoto.id)
       removePhotoFromPages(queryClient, photoFilters, selectedPhoto.id)
       setSelectedPhotoId(null)
-      await queryClient.invalidateQueries({ queryKey: ['photos', 'timeline'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix })
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setMetadataError(i18n.t('photoTrash.trashFailed'))

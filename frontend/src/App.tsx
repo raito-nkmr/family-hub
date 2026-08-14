@@ -12,7 +12,6 @@ import type { Theme } from './shared/types/theme'
 import { AppFooter } from './shared/ui/AppFooter'
 
 const THEME_STORAGE_KEY = 'family-hub-theme'
-const LEGACY_THEME_STORAGE_KEY = 'photo-storage-theme'
 
 function readInvitationToken(hash: string): string | null {
   const token = new URLSearchParams(hash.slice(1)).get('invite')
@@ -59,7 +58,6 @@ function App() {
     document.documentElement.style.colorScheme = theme
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme)
-      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
     } catch {
       // The selected theme still applies when browser storage is unavailable.
     }

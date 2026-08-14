@@ -11,7 +11,7 @@ from app.core.config import Settings
 from app.core.middleware import SINGLE_PHOTO_MULTIPART_OVERHEAD_BYTES
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.photos.activity import PhotoActivityItem, PhotoActivityPage
-from app.features.photos.dependencies import get_photo_service, get_photo_storage
+from app.features.photos.dependencies import get_photo_storage, get_photo_trash_service
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoVisibility
 from app.features.photos.queries import PhotoListFilters, PhotoListItem, PhotoListPage, PhotoTimelineMonth
 from app.features.photos.registration import (
@@ -129,7 +129,7 @@ async def test_list_trash_returns_paginated_response_without_favorite_n_plus_one
     service = PhotoServiceStub([photo, make_photo(uploaded_by_user_id=TEST_USER.id)])
     app = create_app(Settings(app_env="test"))
     app.dependency_overrides[require_authenticated_user] = get_authenticated_user
-    app.dependency_overrides[get_photo_service] = lambda: service
+    app.dependency_overrides[get_photo_trash_service] = lambda: service
     transport = ASGITransport(app=app)
 
     async with app.router.lifespan_context(app), AsyncClient(transport=transport, base_url="http://test") as client:
@@ -484,7 +484,8 @@ def make_upload_file() -> UploadFile:
 def test_upload_photo_returns_created_metadata() -> None:
     photo = make_photo()
 
-    response = upload_photo(make_upload_file(), authenticated_user=TEST_USER, service=PhotoServiceStub([photo]))
+    service = PhotoServiceStub([photo])
+    response = upload_photo(make_upload_file(), authenticated_user=TEST_USER, service=service, access_service=service)
 
     assert response.id == photo.id
 
@@ -505,7 +506,8 @@ def test_upload_photo_maps_domain_errors(upload_error: Exception, expected_statu
         upload_photo(
             make_upload_file(),
             authenticated_user=TEST_USER,
-            service=PhotoServiceStub([], upload_error=upload_error),
+            service=(service := PhotoServiceStub([], upload_error=upload_error)),
+            access_service=service,
         )
 
     assert error.value.status_code == expected_status
@@ -541,6 +543,7 @@ def test_update_photo_metadata_returns_updated_photo() -> None:
         ),
         TEST_USER,
         PhotoServiceStub([photo]),
+        PhotoServiceStub([photo]),
     )
 
     assert response.visibility is PhotoVisibility.SHARED
@@ -557,6 +560,7 @@ def test_update_photo_metadata_rejects_non_owner_sharing_change() -> None:
             photo.id,
             PhotoUpdate(sharing=PhotoSharing(type=PhotoVisibility.SHARED, group_ids=[group_id]), version=1),
             TEST_USER,
+            PhotoServiceStub([photo], upload_error=PhotoUpdateForbiddenError()),
             PhotoServiceStub([photo], upload_error=PhotoUpdateForbiddenError()),
         )
 
