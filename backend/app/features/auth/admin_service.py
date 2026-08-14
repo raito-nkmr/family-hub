@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, aliased
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.models import SystemRole, User, UserSession
 from app.features.auth.passwords import verify_password
-from app.features.groups.public import FamilyGroup, FamilyGroupMember, GroupRole
+from app.features.groups.public import FamilyGroup, FamilyGroupMember, GroupRole, lock_administrator_mutations
 
 
 class AdministrativeUserNotFoundError(Exception):
@@ -136,6 +136,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         target = self._lock_user(target_user_id)
         if target.is_active == is_active:
@@ -173,6 +174,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         target = self._lock_user(target_user_id)
         previous = SystemRole(target.system_role)
@@ -206,6 +208,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         group = self._session.scalar(select(FamilyGroup).where(FamilyGroup.id == group_id).with_for_update())
         membership = self._session.get(FamilyGroupMember, (group_id, target_user_id))

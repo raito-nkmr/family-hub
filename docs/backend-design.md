@@ -98,6 +98,10 @@ Membership removal and photo, upload, album, cleaning, and shopping operations t
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
 albums, cleaning tasks, and shopping items in that order.
 
+Mutations that can change the last active system or group administrator use one PostgreSQL transaction advisory lock. The
+lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
+group-admin membership changes cannot leave an administrator invariant broken by a concurrent request.
+
 ### `features.cleaning`
 
 Owns group-scoped cleaning tasks, day intervals, and append-only completion history. Members may list and complete active
