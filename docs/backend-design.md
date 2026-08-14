@@ -67,8 +67,8 @@ function or registry for Alembic.
 ### `features.health`
 
 Public liveness reports only that the application process is running. Loopback-only readiness checks PostgreSQL and photo
-storage readability and returns `503` when either is unavailable. Caddy blocks the exact readiness path with `404` on the
-public route. Detailed authenticated storage status belongs to the photo feature.
+storage readability and returns `503` when either is unavailable, without preventing the process from starting. Caddy blocks
+the exact readiness path with `404` on the public route. Detailed authenticated storage status belongs to the photo feature.
 
 ### `features.auth`
 

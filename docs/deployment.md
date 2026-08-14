@@ -64,8 +64,10 @@ maintenance units must declare this service in `Requires` and `After`; they must
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
 construction and cutover procedures.
 
-Uvicorn is managed by a service definition under `deploy/systemd/`. The HDD mount and production database service are
-startup requirements.
+Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
+startup requirement. The backend remains available for authentication, cleaning, shopping, groups, and other database-backed
+features when the photo HDD is unavailable; photo operations that need the HDD return `503` or an equivalent unavailable
+status.
 
 Application logs are written to stderr with an ISO-like timestamp, level, logger name, and request ID. The systemd backend
 unit collects them in the journal; use `journalctl -u family-hub-backend.service` for application and request logs. Set
@@ -219,7 +221,8 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 - The Named Tunnel reconnects automatically after reboot and does not depend on a Quick Tunnel.
 - The router has no inbound port forwards, and Caddy and Uvicorn listen only on loopback.
 - Protected APIs and photo originals cannot be fetched while unauthenticated.
-- Loopback `/api/v1/readiness` checks the database and photo storage, while the Caddy route returns `404`.
+- Loopback `/api/v1/readiness` reports both database and photo-storage status, while the Caddy route returns `404`. Photo
+  storage being unavailable must not prevent the backend process or non-photo APIs from running.
 - `AUTH_TRUSTED_ORIGINS`, CORS, and cookie attributes match the production origin.
 - Spoofed forwarding headers sent directly are not accepted as the client IP.
 - `/api/*` bypasses Cloudflare cache and authenticated binaries return `private, no-store`.
