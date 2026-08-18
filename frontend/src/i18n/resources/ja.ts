@@ -50,7 +50,7 @@ export const ja: TranslationShape = {
   },
   home: {
     title: '家族の今をひと目で',
-    description: '最近の写真、掃除の予定、買い物リストをまとめて確認できます。',
+    description: '最近の写真、掃除の予定、買い物リストをまとめて確認する。',
     loading: 'ホームを読み込んでいます',
     loadFailed: 'ホームの情報を読み込めませんでした。',
     photos: '最近の写真',
@@ -89,7 +89,7 @@ export const ja: TranslationShape = {
   },
   notifications: {
     title: '通知',
-    description: 'アプリを閉じているときも、Family Hubの更新を受け取れます。',
+    description: 'アプリを閉じているときも、Family Hubの更新を受け取る。',
     statusLoading: '通知を利用できるか確認しています…',
     statusLoadFailed: '通知を利用できる状態か確認できませんでした。',
     statusUnavailable: 'サーバーでWeb Pushが設定されていません。',
@@ -136,7 +136,7 @@ export const ja: TranslationShape = {
     logoutFailed: 'ログアウトできませんでした。接続を確認してください。',
     eyebrow: 'FAMILY HUB',
     title: 'おかえりなさい',
-    description: 'プライベートなFamily Hubへログインします。',
+    description: 'プライベートなFamily Hubへログインする。',
     username: 'ユーザー名',
     password: 'パスワード',
     signingIn: '確認しています…',
@@ -193,7 +193,7 @@ export const ja: TranslationShape = {
   photos: {
     title: '写真ライブラリ',
     description:
-      'iPhoneの写真を自宅のストレージへ安全に保存・整理し、家族との思い出の共有や、必要なときの原本書き出しができます。',
+      'iPhoneの写真を自宅のストレージへ安全に保存・整理し、家族と思い出を共有し、必要なときに原本を書き出す。',
     library: 'LIBRARY',
     listTitle: '写真一覧',
     count: '{{total}}枚中{{shown}}枚を表示',
@@ -228,7 +228,7 @@ export const ja: TranslationShape = {
   },
   photoActivity: {
     title: '新着写真',
-    description: '家族が最近追加した写真や、新しく共有された写真を確認できます。',
+    description: '家族が最近追加した写真や、新しく共有された写真を確認する。',
     uploaded: '{{username}}さんが写真を{{count}}枚追加しました',
     shared: '{{username}}さんが写真を{{count}}枚共有しました',
     loading: '新着写真を読み込み中',
@@ -268,7 +268,7 @@ export const ja: TranslationShape = {
   },
   account: {
     title: 'アカウントの安全設定',
-    description: '{{username}}のパスワードとログイン中のセッションを管理します。',
+    description: '{{username}}のパスワードとログイン中のセッションを管理する。',
     passwordTitle: 'パスワードを変更',
     passwordHelp: 'パスワードを変更すると、すべての端末からログアウトします。',
     currentPassword: '現在のパスワード',
@@ -361,7 +361,7 @@ export const ja: TranslationShape = {
   },
   bulkPhotoSharing: {
     title: '{{count}}枚の写真をまとめて共有',
-    description: '追加する共有先を選んでください。既存の共有設定はそのまま残ります。',
+    description: '追加する共有先を選択する。既存の共有設定は維持する。',
     groups: '追加する共有先',
     noGroups: '共有先にできるグループがありません。',
     select: '写真を選択',
@@ -392,7 +392,7 @@ export const ja: TranslationShape = {
   photoTrash: {
     detailEyebrow: 'ゴミ箱の写真',
     title: 'ゴミ箱',
-    description: '保持期間が終わる前に写真を復元するか、完全に削除できます。',
+    description: '保持期間が終わる前に写真を復元するか、完全に削除する。',
     count: '{{total}}枚中{{shown}}枚を表示',
     loading: 'ゴミ箱を読み込み中',
     empty: 'ゴミ箱は空です',
@@ -414,7 +414,7 @@ export const ja: TranslationShape = {
   },
   systemStatus: {
     title: 'ストレージとバックアップ',
-    description: '写真ストレージの容量と、最新の保守処理結果を確認できます。',
+    description: '写真ストレージの容量と、最新の保守処理結果を確認する。',
     loading: 'システム状態を読み込み中',
     loadFailed: 'システム状態を読み込めませんでした。',
     primaryStorage: '写真の保存先',
@@ -481,7 +481,7 @@ export const ja: TranslationShape = {
   albums: {
     detailEyebrow: 'アルバム',
     title: 'アルバム',
-    description: '旅行や季節ごとに写真をまとめて、振り返りやすく整理できます。',
+    description: '旅行や季節ごとに写真をまとめ、振り返りやすく整理する。',
     create: 'アルバムを作成',
     edit: 'アルバムを編集',
     editAction: '編集',
@@ -531,8 +531,7 @@ export const ja: TranslationShape = {
   },
   cleaning: {
     title: '掃除',
-    description:
-      '掃除の頻度を設定しておくと、次に掃除するタイミングを確認できます。掃除が終わったら、「掃除完了」ボタンを押してください。',
+    description: '掃除の頻度を設定し、次回の掃除のタイミングを管理する。完了した掃除は「掃除完了」ボタンで記録する。',
     add: '掃除箇所を追加',
     group: '家族グループ',
     board: '掃除する場所',
@@ -572,7 +571,7 @@ export const ja: TranslationShape = {
   },
   shopping: {
     title: '買い物リスト',
-    description: '必要なものに気づいたら追加して、買い物中はかごに入れたものをさっと購入済みにできます。',
+    description: '必要なものを追加し、買い物中に購入済みとして記録する。',
     group: '家族グループ',
     itemName: '買うもの',
     itemPlaceholder: '例：牛乳 2本',
@@ -597,7 +596,7 @@ export const ja: TranslationShape = {
   groups: {
     detailEyebrow: '家族グループ',
     title: '家族グループ',
-    description: '家族グループを作成し、メンバーとFamily Hubの機能を共有できます。',
+    description: '家族グループを作成し、メンバーとFamily Hubの機能を共有する。',
     create: 'グループを作成',
     list: '所属グループ',
     count_one: '{{count}}件のグループ',
@@ -643,7 +642,7 @@ export const ja: TranslationShape = {
   },
   invitations: {
     title: '招待管理',
-    description: '家族がFamily Hubへ参加するための、一度だけ使えるリンクを作成します。参加前ならいつでも取り消せます。',
+    description: '家族がFamily Hubへ参加するための一度だけ使えるリンクを作成する。参加前のリンクはいつでも取り消せる。',
     create: '家族を招待する',
     username: '家族が使うユーザー名',
     usernamePlaceholder: '例：たろう',
@@ -701,7 +700,7 @@ export const ja: TranslationShape = {
   },
   appError: {
     title: '画面を表示できませんでした',
-    description: '一時的な問題が発生しました。ページを再読み込みしてください。',
+    description: '一時的な問題が発生した。ページを再読み込みする。',
     reload: 'ページを再読み込み',
   },
   errors: {

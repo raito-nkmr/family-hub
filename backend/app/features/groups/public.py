@@ -1,12 +1,13 @@
 from collections.abc import Collection
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, GroupRole
 
 __all__ = [
+    "lock_administrator_mutations",
     "FamilyGroup",
     "FamilyGroupMember",
     "GroupRole",
@@ -14,6 +15,13 @@ __all__ = [
     "lock_group_admin",
     "lock_user_group_ids",
 ]
+
+ADMINISTRATOR_MUTATION_LOCK_ID = 0x66616D696C795F68
+
+
+def lock_administrator_mutations(session: Session) -> None:
+    """Serialize changes that can remove or create the last active group administrator."""
+    session.execute(select(func.pg_advisory_xact_lock(ADMINISTRATOR_MUTATION_LOCK_ID)))
 
 
 def get_user_group_ids(session: Session, user_id: UUID, requested_ids: Collection[UUID]) -> set[UUID]:

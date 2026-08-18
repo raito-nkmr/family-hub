@@ -88,4 +88,51 @@ describe('PhotoModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /お気に入りに追加/ }))
     expect(onToggleFavorite).toHaveBeenCalledOnce()
   })
+
+  it('syncs the capture date input after resetting an override', () => {
+    const onCaptureDateSave = vi.fn()
+    const overriddenPhoto = {
+      ...photo,
+      captured_at: '2026-07-14T00:00:00Z',
+      captured_at_override: '2026-07-15T03:04:00Z',
+    }
+    const { rerender } = render(
+      <PhotoModal
+        photo={overriddenPhoto}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onCaptureDateSave={onCaptureDateSave}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByDisplayValue('2026-07-15T12:04')
+    fireEvent.click(screen.getByRole('button', { name: '元のEXIF値に戻す' }))
+
+    expect(onCaptureDateSave).toHaveBeenCalledWith(null)
+
+    rerender(
+      <PhotoModal
+        photo={{ ...overriddenPhoto, captured_at_override: null }}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onCaptureDateSave={onCaptureDateSave}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByDisplayValue('2026-07-14T09:00')).toBe(input)
+  })
 })

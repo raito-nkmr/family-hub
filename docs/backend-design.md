@@ -67,8 +67,8 @@ function or registry for Alembic.
 ### `features.health`
 
 Public liveness reports only that the application process is running. Loopback-only readiness checks PostgreSQL and photo
-storage readability and returns `503` when either is unavailable. Caddy blocks the exact readiness path with `404` on the
-public route. Detailed authenticated storage status belongs to the photo feature.
+storage readability and returns `503` when either is unavailable, without preventing the process from starting. Caddy blocks
+the exact readiness path with `404` on the public route. Detailed authenticated storage status belongs to the photo feature.
 
 ### `features.auth`
 
@@ -97,6 +97,10 @@ photo shares, activity-group relations, and upload-batch shares. Photos remain; 
 Membership removal and photo, upload, album, cleaning, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
 albums, cleaning tasks, and shopping items in that order.
+
+Mutations that can change the last active system or group administrator use one PostgreSQL transaction advisory lock. The
+lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
+group-admin membership changes cannot leave an administrator invariant broken by a concurrent request.
 
 ### `features.cleaning`
 

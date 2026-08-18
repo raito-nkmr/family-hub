@@ -153,7 +153,8 @@ Use this order:
 3. Deploy the new release and systemd units.
 4. Start the database service and confirm its Compose health check.
 5. Apply Alembic and create the initial administrator.
-6. Start Backend and check loopback health and readiness.
+6. Start Backend and check loopback health and readiness. The backend must start even when the photo HDD is unavailable;
+   readiness reports the photo-storage problem separately, and photo operations remain unavailable until the HDD is restored.
 7. Validate and reload Caddy.
 8. From the custom domain, check health, login, invitations, core features, and public readiness `404`.
 9. Stop the old development DB only after the new configuration is accepted.

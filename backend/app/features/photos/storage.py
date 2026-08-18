@@ -290,6 +290,12 @@ class PhotoStorage:
         ):
             return self._status(StorageStatusCode.NOT_CONFIGURED)
 
+        return self._get_writable_storage_status(additional_bytes)
+
+    def _get_writable_storage_status(self, additional_bytes: int) -> StorageStatus:
+        if self._root is None or not self._expected_marker:
+            return self._status(StorageStatusCode.NOT_CONFIGURED)
+
         status = self._get_read_status()
         if not status.available:
             return status
@@ -311,7 +317,7 @@ class PhotoStorage:
         except OSError:
             return self._status(StorageStatusCode.IO_ERROR)
 
-        required_free_bytes = self._minimum_free_bytes + additional_bytes
+        required_free_bytes = (self._minimum_free_bytes or 0) + additional_bytes
         if free_bytes < required_free_bytes:
             return self._status(
                 StorageStatusCode.INSUFFICIENT_SPACE,
@@ -516,7 +522,7 @@ class PhotoStorage:
 
     def update_sidecar(self, metadata: SidecarMetadata) -> None:
         payload = json.dumps(metadata.as_json(), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
-        self._require_upload_ready(len(payload))
+        self._require_writable_storage(len(payload))
         original_path = self.get_original_path(metadata.storage_key)
         sidecar_path = original_path.with_suffix(".json")
         sidecar_part = sidecar_path.with_name(f"{metadata.photo_id}.json.part")
@@ -549,7 +555,7 @@ class PhotoStorage:
 
     def delete_photo_files(self, original_storage_key: str, derivative_storage_keys: tuple[str, ...]) -> None:
         """Permanently delete one photo's known files. Missing files are treated as already deleted."""
-        status = self._get_upload_status(0)
+        status = self._get_writable_storage_status(0)
         if not status.available:
             raise StorageUnavailableError(status.status)
         original_key = self._validate_original_key(original_storage_key)
@@ -585,6 +591,11 @@ class PhotoStorage:
             raise StorageUnavailableError(status.status)
         if self._maximum_upload_bytes is None or self._upload_chunk_bytes is None:
             raise StorageUnavailableError(StorageStatusCode.NOT_CONFIGURED)
+
+    def _require_writable_storage(self, additional_bytes: int) -> None:
+        status = self._get_writable_storage_status(additional_bytes)
+        if not status.available:
+            raise StorageUnavailableError(status.status)
 
     def _get_or_create_directory(self, relative_path: PurePosixPath) -> Path:
         if self._root is None:

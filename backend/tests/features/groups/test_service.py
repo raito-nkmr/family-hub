@@ -165,6 +165,7 @@ def test_add_member_registers_active_user_and_returns_updated_group() -> None:
     session.get.side_effect = [actor_membership, None]
     service, directory = make_service(session)
     directory.list_by_ids.return_value = {
+        actor_id: PublicUser(id=actor_id, username="owner", is_active=True),
         target_id: PublicUser(id=target_id, username="たろう", is_active=True),
     }
     expected = object()
@@ -191,6 +192,7 @@ def test_add_member_rejects_existing_membership() -> None:
     session.get.side_effect = [actor_membership, existing]
     service, directory = make_service(session)
     directory.list_by_ids.return_value = {
+        actor_id: PublicUser(id=actor_id, username="owner", is_active=True),
         target_id: PublicUser(id=target_id, username="たろう", is_active=True),
     }
 

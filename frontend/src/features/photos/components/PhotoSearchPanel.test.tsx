@@ -44,4 +44,17 @@ describe('PhotoSearchPanel', () => {
     expect(screen.getByDisplayValue('旅行')).toBeInTheDocument()
     expect(screen.getByDisplayValue('2026-07-01')).toBeInTheDocument()
   })
+
+  it('does not count fixed album picker filters as user-applied conditions', () => {
+    render(
+      <PhotoSearchPanel
+        filters={{ excludeAlbumId: 'album-1', sharingGroupId: 'group-1' }}
+        timeline={null}
+        disabled={false}
+        onSearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText(/件適用中/)).not.toBeInTheDocument()
+  })
 })

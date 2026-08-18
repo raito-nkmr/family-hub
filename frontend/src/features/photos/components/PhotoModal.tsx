@@ -41,7 +41,16 @@ export function PhotoModal({
   const confirm = useConfirmation()
   const isOwner = photo.uploaded_by_user_id === currentUserId
   const [memo, setMemo] = useState(photo.memo ?? '')
-  const [captureDate, setCaptureDate] = useState(() => toDateTimeLocal(photo.captured_at_override ?? photo.captured_at))
+  const captureDateSource = photo.captured_at_override ?? photo.captured_at
+  const [captureDateState, setCaptureDateState] = useState(() => ({
+    photoId: photo.id,
+    source: captureDateSource,
+    value: toDateTimeLocal(captureDateSource),
+  }))
+  const captureDate =
+    captureDateState.photoId === photo.id && captureDateState.source === captureDateSource
+      ? captureDateState.value
+      : toDateTimeLocal(captureDateSource)
   const [moderationPassword, setModerationPassword] = useState('')
   const moderatedGroups = groups.filter(
     (group) => (photo.sharing.group_ids ?? []).includes(group.id) && group.current_user_role === 'admin',
@@ -208,7 +217,9 @@ export function PhotoModal({
                 type="datetime-local"
                 value={captureDate}
                 disabled={updatingMetadata}
-                onChange={(event) => setCaptureDate(event.target.value)}
+                onChange={(event) =>
+                  setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
+                }
               />
               <div>
                 <button

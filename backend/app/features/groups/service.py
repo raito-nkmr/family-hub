@@ -16,6 +16,7 @@ from app.features.groups.models import (
     FamilyGroupMembershipInvitation,
     GroupRole,
 )
+from app.features.groups.public import lock_administrator_mutations
 from app.features.photos.public import PhotoShare
 from app.features.shopping.public import ShoppingItem
 
@@ -144,6 +145,10 @@ class GroupService:
         creator_user_id: UUID,
         creator_username: str = "unknown",
     ) -> GroupDetail:
+        lock_administrator_mutations(self._session)
+        creator = self._user_directory.list_by_ids({creator_user_id}).get(creator_user_id)
+        if creator is None or not creator.is_active:
+            raise GroupUserNotFoundError
         if self._session.scalar(select(FamilyGroup.id).where(FamilyGroup.name == name)) is not None:
             raise GroupNameAlreadyExistsError
 
@@ -354,6 +359,8 @@ class GroupService:
         username: str,
         accept: bool,
     ) -> None:
+        if accept:
+            lock_administrator_mutations(self._session)
         invitation = self._session.scalar(
             select(FamilyGroupMembershipInvitation)
             .where(
@@ -414,6 +421,8 @@ class GroupService:
         role: GroupRole,
         actor_username: str = "unknown",
     ) -> GroupDetail:
+        if role is GroupRole.ADMIN:
+            lock_administrator_mutations(self._session)
         group = self._get_group_for_admin(group_id, actor_user_id)
         users = self._user_directory.list_by_ids({user_id})
         user = users.get(user_id)
@@ -465,6 +474,7 @@ class GroupService:
         role: GroupRole,
         actor_username: str = "unknown",
     ) -> GroupDetail:
+        lock_administrator_mutations(self._session)
         group = self._get_group_for_admin(group_id, actor_user_id)
         membership = self._session.get(FamilyGroupMember, (group_id, target_user_id))
         if membership is None:
@@ -496,6 +506,7 @@ class GroupService:
         actor_user_id: UUID,
         actor_username: str = "unknown",
     ) -> None:
+        lock_administrator_mutations(self._session)
         group = self._get_group_for_admin(group_id, actor_user_id)
         membership = self._session.get(FamilyGroupMember, (group_id, target_user_id))
         if membership is None:
@@ -524,6 +535,9 @@ class GroupService:
             statement = statement.with_for_update()
         group = self._session.scalar(statement)
         if group is None:
+            raise GroupNotFoundError(group_id)
+        actor = self._user_directory.list_by_ids({actor_user_id}).get(actor_user_id)
+        if actor is None or not actor.is_active:
             raise GroupNotFoundError(group_id)
         membership = self._session.get(FamilyGroupMember, (group_id, actor_user_id))
         if membership is None:

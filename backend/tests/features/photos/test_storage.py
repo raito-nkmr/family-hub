@@ -595,6 +595,40 @@ def test_update_sidecar_replaces_metadata_atomically(tmp_path: Path, monkeypatch
     assert not finalized.sidecar_path.with_name(f"{photo_id}.json.part").exists()
 
 
+def test_existing_photo_operations_do_not_require_upload_configuration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: True)
+    monkeypatch.setattr(storage_module, "_is_read_only", lambda path: False)
+    monkeypatch.setattr(storage_module, "_is_writable", lambda path: True)
+    monkeypatch.setattr(storage_module, "_get_free_bytes", lambda path: 4_096)
+    settings = Settings(
+        photo_storage_root=tmp_path,
+        photo_derivative_root=tmp_path / "derivatives",
+        photo_storage_marker=EXPECTED_MARKER,
+    )
+    storage = PhotoStorage(settings)
+    photo_id = uuid4()
+    storage_key = f"originals/2026/07/{photo_id}.jpg"
+    original = tmp_path / storage_key
+    original.parent.mkdir(parents=True)
+    original.write_bytes(b"photo")
+    derivative = make_staged_derivative(tmp_path, photo_id)
+    stored_derivative = settings.photo_derivative_root / derivative.storage_key
+    stored_derivative.parent.mkdir(parents=True, exist_ok=True)
+    stored_derivative.write_bytes(b"thumbnail")
+    metadata = make_sidecar(photo_id, storage_key, 5, hashlib.sha256(b"photo").hexdigest(), derivative)
+
+    storage.update_sidecar(metadata)
+    storage.delete_photo_files(storage_key, (derivative.storage_key,))
+
+    assert not original.exists()
+    assert not original.with_suffix(".json").exists()
+    assert not stored_derivative.exists()
+
+
 def test_finalize_upload_removes_original_when_sidecar_rename_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

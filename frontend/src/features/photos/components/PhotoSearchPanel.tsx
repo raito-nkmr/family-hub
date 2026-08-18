@@ -36,9 +36,15 @@ export function PhotoSearchPanel({
   const [capturedStatus, setCapturedStatus] = useState<'all' | 'known' | 'unknown'>(
     filters.capturedAtKnown === true ? 'known' : filters.capturedAtKnown === false ? 'unknown' : 'all',
   )
-  const activeFilterCount = Object.values(filters).filter(
-    (value) => value !== undefined && value !== '' && value !== false,
-  ).length
+  const activeFilterCount = [
+    filters.q,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.mineOnly,
+    filters.favorite,
+    filters.visibility,
+    filters.capturedAtKnown !== undefined,
+  ].filter(Boolean).length
 
   const submit = (event: FormEvent) => {
     event.preventDefault()

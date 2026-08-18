@@ -35,7 +35,11 @@ class PhotoCatalog:
                 PhotoShare.group_id == group_id,
             )
         )
-        statement = select(Photo.id).where(Photo.id.in_(photo_ids), group_share)
+        statement = select(Photo.id).where(
+            Photo.id.in_(photo_ids),
+            Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            group_share,
+        )
         return set(self._session.scalars(statement).all())
 
     def list_by_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> list[Photo]:

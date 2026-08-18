@@ -139,4 +139,24 @@ describe('useNotificationSettings', () => {
     expect(createPushSubscription).not.toHaveBeenCalled()
     expect(result.current.error).toBe('permissionDenied')
   })
+
+  it('keeps existing server subscriptions when registration fails', async () => {
+    vi.mocked(getNotificationConfig).mockResolvedValue({
+      enabled: true,
+      vapid_public_key: 'AQID',
+      subscription_ids: ['old-server-subscription'],
+      preferences,
+    })
+    vi.mocked(createPushSubscription).mockRejectedValue(new Error('registration failed'))
+
+    const { result } = renderHook(() => useNotificationSettings({ locale: 'ja', onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.enable())
+
+    expect(deletePushSubscription).not.toHaveBeenCalled()
+    expect(result.current.error).toBe('subscribe')
+  })
 })
