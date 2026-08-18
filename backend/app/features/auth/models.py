@@ -44,6 +44,7 @@ class User(Base):
         DateTime(timezone=True),
         server_default=func.current_timestamp(),
     )
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class UserSession(Base):

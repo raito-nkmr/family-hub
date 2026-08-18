@@ -21,10 +21,18 @@ from app.features.albums.service import (
     PhotoNotFoundError,
     PhotoNotInAlbumError,
 )
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
 from app.features.photos.public import PhotoResponse
 
-router = APIRouter(tags=["albums"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["albums"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 
 
 def _detail_response(detail: AlbumDetail) -> AlbumDetailResponse:

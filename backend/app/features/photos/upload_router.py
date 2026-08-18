@@ -4,7 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from starlette.concurrency import run_in_threadpool
 
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
 from app.features.photos.dependencies import get_upload_batch_service
 from app.features.photos.models import UploadBatch, UploadItem
 from app.features.photos.schemas import UploadBatchCreate, UploadBatchResponse, UploadItemResponse
@@ -23,7 +28,7 @@ from app.features.photos.uploads import (
 
 router = APIRouter(
     tags=["photo uploads"],
-    dependencies=[Depends(require_authenticated_user)],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
 )
 
 

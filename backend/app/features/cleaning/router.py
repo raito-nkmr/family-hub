@@ -3,7 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
 from app.features.cleaning.dependencies import get_cleaning_service
 from app.features.cleaning.schemas import (
     CleaningTaskCreate,
@@ -20,7 +25,10 @@ from app.features.cleaning.service import (
     CleaningTaskSummary,
 )
 
-router = APIRouter(tags=["cleaning"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["cleaning"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 
 
 def _response(task: CleaningTaskSummary) -> CleaningTaskResponse:

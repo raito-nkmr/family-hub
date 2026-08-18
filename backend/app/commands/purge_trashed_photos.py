@@ -28,7 +28,6 @@ def main() -> None:
             service = PhotoTrashService(
                 session,
                 storage,
-                settings.photo_default_timezone,
                 settings.photo_trash_retention_days,
             )
             try:

@@ -18,6 +18,7 @@ class AuthenticatedUser:
     id: UUID
     username: str
     system_role: SystemRole = SystemRole.USER
+    must_change_password: bool = False
 
 
 def get_auth_service(
@@ -52,7 +53,13 @@ def require_authenticated_user(context: Annotated[AuthContext, Depends(get_auth_
         id=context.user.id,
         username=context.user.username,
         system_role=SystemRole(context.user.system_role),
+        must_change_password=context.user.must_change_password,
     )
+
+
+def require_password_change_complete(user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)]) -> None:
+    if user.must_change_password:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password change required")
 
 
 def require_system_admin(user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)]) -> AuthenticatedUser:

@@ -44,7 +44,11 @@ def reset_user_password(
     connection.execute(
         User.__table__.update()
         .where(User.id == user_id)
-        .values(password_hash=hash_password(password), password_changed_at=reset_at)
+        .values(
+            password_hash=hash_password(password),
+            password_changed_at=reset_at,
+            must_change_password=True,
+        )
     )
     revoked = connection.execute(
         UserSession.__table__.update()

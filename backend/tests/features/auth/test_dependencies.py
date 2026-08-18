@@ -7,6 +7,7 @@ from app.features.auth.dependencies import (
     get_cookie_name,
     require_authenticated_user,
     require_csrf_token,
+    require_password_change_complete,
     require_system_admin,
 )
 from app.features.auth.models import SystemRole
@@ -60,5 +61,20 @@ def test_csrf_dependency_rejects_invalid_token() -> None:
 
     with pytest.raises(HTTPException) as error:
         require_csrf_token(context, "wrong-token")
+
+    assert error.value.status_code == 403
+
+
+def test_password_change_dependency_accepts_regular_user() -> None:
+    user = AuthenticatedUser(id=make_user_session().user.id, username="owner")
+
+    require_password_change_complete(user)
+
+
+def test_password_change_dependency_rejects_temporary_password() -> None:
+    user = AuthenticatedUser(id=make_user_session().user.id, username="owner", must_change_password=True)
+
+    with pytest.raises(HTTPException) as error:
+        require_password_change_complete(user)
 
     assert error.value.status_code == 403

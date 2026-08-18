@@ -2,12 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from app.features.auth.dependencies import require_system_admin
+from app.features.auth.dependencies import require_password_change_complete, require_system_admin
 from app.features.maintenance.dependencies import get_maintenance_service
 from app.features.maintenance.schemas import MaintenanceRunListResponse, MaintenanceRunResponse, SystemStatusResponse
 from app.features.maintenance.service import MaintenanceService
 
-router = APIRouter(tags=["admin maintenance"], dependencies=[Depends(require_system_admin)])
+router = APIRouter(
+    tags=["admin maintenance"],
+    dependencies=[Depends(require_system_admin), Depends(require_password_change_complete)],
+)
 
 
 @router.get("/status", response_model=SystemStatusResponse)

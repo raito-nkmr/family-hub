@@ -14,6 +14,7 @@ def make_user() -> User:
         system_role=SystemRole.USER,
         created_at=now - timedelta(days=2),
         password_changed_at=now - timedelta(days=2),
+        must_change_password=False,
     )
 
 

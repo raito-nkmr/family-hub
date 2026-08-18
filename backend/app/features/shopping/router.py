@@ -3,7 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
 from app.features.shopping.dependencies import get_shopping_service
 from app.features.shopping.schemas import ShoppingItemCreate, ShoppingItemListResponse, ShoppingItemResponse
 from app.features.shopping.service import (
@@ -14,7 +19,10 @@ from app.features.shopping.service import (
     ShoppingStateConflictError,
 )
 
-router = APIRouter(tags=["shopping"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["shopping"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 
 
 def _response(item: ShoppingItemSummary) -> ShoppingItemResponse:

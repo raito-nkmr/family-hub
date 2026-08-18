@@ -39,6 +39,7 @@ def main() -> None:
                     password_hash=hash_password(password),
                     is_active=True,
                     system_role=arguments.system_role,
+                    must_change_password=False,
                 )
             )
     finally:

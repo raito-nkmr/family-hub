@@ -13,7 +13,12 @@ from app.features.auth.admin_service import (
     LastSystemAdministratorError,
     UserOwnsGroupsWithoutAnotherAdminError,
 )
-from app.features.auth.dependencies import AuthenticatedUser, require_csrf_token, require_system_admin
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_csrf_token,
+    require_password_change_complete,
+    require_system_admin,
+)
 from app.features.auth.schemas import (
     AdministrativeAuditEventListResponse,
     AdministrativeAuditEventResponse,
@@ -26,7 +31,10 @@ from app.features.auth.schemas import (
     AdministrativeUserStatusUpdate,
 )
 
-router = APIRouter(tags=["admin users"], dependencies=[Depends(require_system_admin)])
+router = APIRouter(
+    tags=["admin users"],
+    dependencies=[Depends(require_system_admin), Depends(require_password_change_complete)],
+)
 
 
 def _raise_admin_error(error: Exception) -> None:

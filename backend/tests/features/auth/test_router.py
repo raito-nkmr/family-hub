@@ -73,6 +73,7 @@ def test_login_sets_http_only_session_cookie() -> None:
     assert result.user.username == "owner"
     assert result.user.system_role.value == "user"
     assert result.csrf_token == service.user_session.csrf_token
+    assert result.must_change_password is False
     cookie = response.headers["set-cookie"]
     assert "photo_session=session-token" in cookie
     assert "HttpOnly" in cookie
@@ -101,6 +102,7 @@ def test_current_session_returns_user_and_csrf_token() -> None:
 
     assert result.user.username == "owner"
     assert result.csrf_token == service.user_session.csrf_token
+    assert result.must_change_password is False
 
 
 def test_logout_revokes_session_and_deletes_cookie() -> None:

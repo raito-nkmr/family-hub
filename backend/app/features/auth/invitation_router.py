@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.features.auth.dependencies import (
     AuthenticatedUser,
     require_csrf_token,
+    require_password_change_complete,
     require_system_admin,
     require_trusted_origin,
 )
@@ -29,7 +30,10 @@ from app.features.auth.schemas import (
 )
 
 public_router = APIRouter(tags=["auth invitations"])
-admin_router = APIRouter(tags=["admin invitations"], dependencies=[Depends(require_system_admin)])
+admin_router = APIRouter(
+    tags=["admin invitations"],
+    dependencies=[Depends(require_system_admin), Depends(require_password_change_complete)],
+)
 
 
 def _response(invitation: InvitationSummary) -> InvitationResponse:

@@ -30,7 +30,7 @@ def make_invitation(*, expired: bool = False) -> UserInvitation:
 
 
 def make_service(session: MagicMock) -> InvitationService:
-    return InvitationService(session, Settings(app_env="test", auth_invitation_ttl_seconds=3600))
+    return InvitationService(session, Settings(app_env="test"))
 
 
 def test_create_invitation_hashes_token_and_revokes_previous_invite() -> None:
@@ -81,6 +81,7 @@ def test_accept_invitation_creates_regular_user(monkeypatch: pytest.MonkeyPatch)
     assert user.username == "family-member"
     assert user.password_hash == "hashed:a-secure-family-password"
     assert user.system_role is SystemRole.USER
+    assert user.must_change_password is False
     assert invitation.used_at is not None
     session.commit.assert_called_once_with()
 

@@ -9,6 +9,7 @@ from app.features.auth.dependencies import (
     get_auth_service,
     require_authenticated_user,
     require_csrf_token,
+    require_password_change_complete,
 )
 from app.features.auth.public import AuthService, InvalidCurrentPasswordError
 from app.features.photos.access_service import PhotoAccessService
@@ -67,7 +68,10 @@ from app.features.photos.storage import PhotoStorage, StorageStatusCode
 from app.features.photos.trash_router import router as trash_router
 from app.features.photos.upload_service import PhotoUploadService
 
-router = APIRouter(tags=["photos"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["photos"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 router.include_router(export_router)
 router.include_router(trash_router)
 
