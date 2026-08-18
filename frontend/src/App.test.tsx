@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { getCurrentSession } from './features/auth/api'
@@ -22,6 +23,16 @@ function renderApp(initialEntry: string) {
     <MemoryRouter initialEntries={[initialEntry]}>
       <App />
     </MemoryRouter>,
+  )
+}
+
+function renderAppInStrictMode(initialEntry: string) {
+  return render(
+    <StrictMode>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <App />
+      </MemoryRouter>
+    </StrictMode>,
   )
 }
 
@@ -49,6 +60,34 @@ describe('App routes', () => {
 
     expect(screen.getByLabelText('認証状態を確認中')).toBeInTheDocument()
     expect(await screen.findByText('Authenticated as family-member')).toBeInTheDocument()
+  })
+
+  it('continues restoring a session after StrictMode aborts the first check', async () => {
+    const session = {
+      id: 'user-id',
+      username: 'family-member',
+      system_role: 'user' as const,
+      must_change_password: false,
+    }
+    vi.mocked(getCurrentSession).mockImplementation(
+      (signal) =>
+        new Promise((resolve, reject) => {
+          const timeoutId = window.setTimeout(() => resolve(session), 25)
+          signal?.addEventListener(
+            'abort',
+            () => {
+              window.clearTimeout(timeoutId)
+              reject(new DOMException('Aborted', 'AbortError'))
+            },
+            { once: true },
+          )
+        }),
+    )
+
+    renderAppInStrictMode('/photos/library')
+
+    expect(await screen.findByText('Authenticated as family-member')).toBeInTheDocument()
+    expect(getCurrentSession).toHaveBeenCalledTimes(2)
   })
 
   it('restores a session when leaving a directly opened privacy page', async () => {

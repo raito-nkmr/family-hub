@@ -46,7 +46,7 @@ function App() {
         if (isAbortError(error)) return
         if (!isUnauthorizedError(error)) setAuthError(i18n.t('auth.checkFailed'))
       } finally {
-        setSessionCheckCompleted(true)
+        if (!controller.signal.aborted) setSessionCheckCompleted(true)
       }
     }
     void checkSession()
