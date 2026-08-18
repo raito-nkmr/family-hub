@@ -1,4 +1,5 @@
 import { ApiError, csrfHeaders } from '../../shared/api/client'
+import { isAbortError } from '../../shared/api/errors'
 import type {
   BulkPhotoSharingResponse,
   BulkPhotoSharingAdd,
@@ -192,41 +193,128 @@ export function cancelUploadBatch(batchId: string): Promise<void> {
   return sdkData(cancelUploadBatchApiV1UploadBatchesBatchIdDelete({ path: { batch_id: batchId } }))
 }
 
-const NETWORK_CHUNK_BYTES = 4 * 1024 * 1024
+const NETWORK_CHUNK_BYTES = 8 * 1024 * 1024
+const UPLOAD_REQUEST_TIMEOUT_MS = 5_000
+const MAX_UPLOAD_RETRIES = 3
+const UPLOAD_RETRY_DELAY_MS = 250
 
-function readUploadOffset(response: Response): number {
-  const value = response.headers.get('Upload-Offset')
+class UploadRequestTimeoutError extends Error {
+  constructor() {
+    super('Upload request timed out')
+    this.name = 'UploadRequestTimeoutError'
+  }
+}
+
+class UploadOffsetConflictError extends ApiError {
+  readonly actualOffset: number
+
+  constructor(actualOffset: number) {
+    super(409, 'Upload offset mismatch')
+    this.name = 'UploadOffsetConflictError'
+    this.actualOffset = actualOffset
+  }
+}
+
+function readUploadOffsetValue(value: string | null, status: number): number {
   if (value === null || !/^\d+$/.test(value)) {
-    throw new ApiError(response.status, 'Upload response did not include a valid offset')
+    throw new ApiError(status, 'Upload response did not include a valid offset')
   }
   return Number(value)
 }
 
+function getUploadContentUrl(itemId: string): string {
+  const apiOrigin = import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:18000`
+    : window.location.origin
+  return `${apiOrigin}/api/v1/upload-batches/items/${encodeURIComponent(itemId)}/content`
+}
+
+interface UploadResponse {
+  status: number
+  uploadOffset: string | null
+}
+
+async function sendUploadRequest(
+  itemId: string,
+  method: 'HEAD' | 'PATCH',
+  signal: AbortSignal,
+  body: Blob | null = null,
+  headers: Record<string, string> = {},
+): Promise<UploadResponse> {
+  if (signal.aborted) throw new DOMException('The upload was canceled', 'AbortError')
+  const timeoutController = new AbortController()
+  let timedOut = false
+  const abortRequest = () => timeoutController.abort()
+  const timeoutId = setTimeout(() => {
+    timedOut = true
+    timeoutController.abort()
+  }, UPLOAD_REQUEST_TIMEOUT_MS)
+  signal.addEventListener('abort', abortRequest, { once: true })
+  try {
+    const response = await fetch(getUploadContentUrl(itemId), {
+      method,
+      body,
+      cache: 'no-store',
+      credentials: 'include',
+      headers,
+      signal: timeoutController.signal,
+    })
+    return {
+      status: response.status,
+      uploadOffset: response.headers.get('Upload-Offset'),
+    }
+  } catch (error) {
+    if (signal.aborted) throw new DOMException('The upload was canceled', 'AbortError')
+    if (timedOut) throw new UploadRequestTimeoutError()
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+    signal.removeEventListener('abort', abortRequest)
+  }
+}
+
 async function getUploadOffset(itemId: string, signal: AbortSignal): Promise<number> {
-  const response = await fetch(`/api/v1/upload-batches/items/${encodeURIComponent(itemId)}/content`, {
-    method: 'HEAD',
-    credentials: 'include',
-    cache: 'no-store',
-    signal,
-  })
-  if (!response.ok) throw new ApiError(response.status, 'Could not read upload offset')
-  return readUploadOffset(response)
+  const response = await sendUploadRequest(itemId, 'HEAD', signal)
+  if (response.status < 200 || response.status >= 300) {
+    throw new ApiError(response.status, 'Could not read upload offset')
+  }
+  return readUploadOffsetValue(response.uploadOffset, response.status)
 }
 
 async function sendUploadChunk(itemId: string, offset: number, chunk: Blob, signal: AbortSignal): Promise<number> {
-  const response = await fetch(`/api/v1/upload-batches/items/${encodeURIComponent(itemId)}/content`, {
-    method: 'PATCH',
-    credentials: 'same-origin',
-    headers: {
-      ...csrfHeaders(),
-      'Content-Type': 'application/offset+octet-stream',
-      'Upload-Offset': String(offset),
-    },
-    body: chunk,
-    signal,
+  const response = await sendUploadRequest(itemId, 'PATCH', signal, chunk, {
+    ...csrfHeaders(),
+    'Content-Type': 'application/offset+octet-stream',
+    'Upload-Offset': String(offset),
   })
+  const nextOffset = readUploadOffsetValue(response.uploadOffset, response.status)
+  if (response.status === 409) throw new UploadOffsetConflictError(nextOffset)
   if (response.status !== 204) throw new ApiError(response.status, `Upload failed with status ${response.status}`)
-  return readUploadOffset(response)
+  return nextOffset
+}
+
+function isRetryableUploadError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true
+  return error.status === 408 || error.status === 409 || error.status === 429 || error.status >= 500
+}
+
+async function waitBeforeUploadRetry(signal: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('The upload was canceled', 'AbortError'))
+      return
+    }
+    function abort() {
+      clearTimeout(timeoutId)
+      signal.removeEventListener('abort', abort)
+      reject(new DOMException('The upload was canceled', 'AbortError'))
+    }
+    const timeoutId = setTimeout(() => {
+      signal.removeEventListener('abort', abort)
+      resolve()
+    }, UPLOAD_RETRY_DELAY_MS)
+    signal.addEventListener('abort', abort, { once: true })
+  })
 }
 
 export async function uploadItemContent(
@@ -239,14 +327,33 @@ export async function uploadItemContent(
   if (offset > file.size) throw new ApiError(409, 'Stored upload exceeds the selected file')
   onProgress(offset)
   while (offset < file.size) {
-    const chunk = file.slice(offset, Math.min(offset + NETWORK_CHUNK_BYTES, file.size))
-    if (chunk.size === 0) throw new ApiError(409, 'Selected file could not be read')
-    const nextOffset = await sendUploadChunk(item.id, offset, chunk, signal)
-    if (nextOffset <= offset || nextOffset > file.size) {
-      throw new ApiError(409, 'Upload did not advance to a valid offset')
+    let retryCount = 0
+    while (offset < file.size) {
+      const chunk = file.slice(offset, Math.min(offset + NETWORK_CHUNK_BYTES, file.size))
+      if (chunk.size === 0) throw new ApiError(409, 'Selected file could not be read')
+      try {
+        const nextOffset = await sendUploadChunk(item.id, offset, chunk, signal)
+        if (nextOffset <= offset || nextOffset > file.size) {
+          throw new ApiError(409, 'Upload did not advance to a valid offset')
+        }
+        offset = nextOffset
+        onProgress(offset)
+        break
+      } catch (error) {
+        if (isAbortError(error) || !isRetryableUploadError(error) || retryCount >= MAX_UPLOAD_RETRIES) {
+          throw error
+        }
+        retryCount += 1
+        if (error instanceof UploadOffsetConflictError) {
+          if (error.actualOffset > file.size) throw new ApiError(409, 'Stored upload exceeds the selected file')
+          if (error.actualOffset !== offset) {
+            offset = error.actualOffset
+            onProgress(offset)
+          }
+        }
+        await waitBeforeUploadRetry(signal)
+      }
     }
-    offset = nextOffset
-    onProgress(offset)
   }
 }
 

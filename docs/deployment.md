@@ -59,6 +59,10 @@ the volume as an external volume in advance so `compose down --volumes` cannot r
 `/api` proxy uses the development backend port. Keep the backend ports separated so the development frontend cannot
 accidentally connect to production FastAPI at `127.0.0.1:8000`.
 
+For real-device LAN testing, bind development FastAPI to `0.0.0.0`, allow the Vite LAN origin in both
+`CORS_ORIGINS` and `AUTH_TRUSTED_ORIGINS`, and use the development frontend URL on the device. The development React
+client sends resumable upload chunks directly to port `18000`; other API requests continue to use the Vite proxy.
+
 `family-hub-database.service` waits for Docker startup and a successful Compose health check. Backend and database-related
 maintenance units must declare this service in `Requires` and `After`; they must not depend on an OS-provided
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
@@ -167,6 +171,10 @@ Cloudflare-proxied requests have plan-specific body-size limits; Free and Pro pl
 Treat `PHOTO_MAX_UPLOAD_BYTES` as the whole-file application limit and `PHOTO_UPLOAD_CHUNK_BYTES` as the per-request
 chunk limit.
 
+The backend host must provide `ffprobe` and `ffmpeg` on `PATH` for MP4, QuickTime MOV, and M4V validation and thumbnail
+generation. Video originals are stored without conversion; playback uses the browser's native support for the returned MIME
+type.
+
 ## Web Push outbound communication
 
 Accept only HTTPS subscription endpoints whose provider hosts are listed in `PUSH_ALLOWED_ENDPOINT_HOSTS`. The default
@@ -226,7 +234,7 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 - `AUTH_TRUSTED_ORIGINS`, CORS, and cookie attributes match the production origin.
 - Spoofed forwarding headers sent directly are not accepted as the client IP.
 - `/api/*` bypasses Cloudflare cache and authenticated binaries return `private, no-store`.
-- Near-limit photos can be saved through React chunked upload.
+- Near-limit photos and supported videos can be saved through React chunked upload.
 - ZIP export measurements are complete or operational limits have been decided.
 - PostgreSQL and the external HDD cannot be reached directly from Cloudflare, the LAN, or clients.
 - Backup and restore procedures have been verified using separate media.

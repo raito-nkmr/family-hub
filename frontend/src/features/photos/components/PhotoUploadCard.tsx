@@ -90,7 +90,7 @@ export function PhotoUploadCard({
             type="file"
             multiple
             disabled={uploading}
-            accept="image/jpeg,image/jpg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
+            accept="image/jpeg,image/jpg,image/png,image/heic,image/heif,video/mp4,video/quicktime,video/x-m4v,.jpg,.jpeg,.png,.heic,.heif,.mp4,.mov,.m4v"
             onChange={(event) => {
               const files = Array.from(event.target.files ?? [])
               event.currentTarget.value = ''

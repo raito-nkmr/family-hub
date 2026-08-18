@@ -88,6 +88,19 @@
   background: rgb(23 113 93 / 88%);
 }
 
+.photo-card__media-type {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.28rem 0.55rem;
+  color: #fff;
+  background: rgb(11 23 38 / 78%);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .photo-card__favorite {
   position: absolute;
   top: 0.65rem;

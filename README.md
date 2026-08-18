@@ -10,6 +10,7 @@ layout.
 
 - **Photo library**
   - Cursor-based infinite scrolling, timeline navigation, and server-side search
+  - Image and video uploads with first-frame thumbnails and in-browser playback
   - Favorites, shared photos, photo activity, shared memos, and group-based visibility
   - Group albums with selectable cover photos
   - Bulk sharing to multiple family groups
@@ -50,6 +51,7 @@ layout.
 - [uv](https://docs.astral.sh/uv/)
 - Node.js and npm
 - Docker with Docker Compose
+- `ffmpeg` with `ffprobe` on `PATH` for video validation and thumbnails
 
 ## Quick start
 
@@ -100,6 +102,10 @@ npm run dev
 ```
 
 The development API listens on `127.0.0.1:18000`. Vite runs on `127.0.0.1:15173` and proxies `/api` requests to it.
+
+For real-device LAN testing, start FastAPI with `--host 0.0.0.0` and add the Vite origin (for example,
+`http://192.168.3.7:15173`) to both `CORS_ORIGINS` and `AUTH_TRUSTED_ORIGINS`. In development, upload chunks are sent
+directly to the FastAPI port to avoid unreliable repeated large requests through the Vite proxy.
 
 VS Code users can also use the `Dev: Start All` task to start the database and both development servers.
 

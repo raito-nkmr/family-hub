@@ -21,6 +21,41 @@ const item: UploadItem = {
   photo_id: null,
 }
 
+type MockUploadResponse = { status: number; offset: string } | { kind: 'error' } | { kind: 'timeout' }
+
+function stubUploadFetch(responses: MockUploadResponse[]) {
+  const fallback = responses[responses.length - 1]
+  const requests: Array<{
+    method: string
+    body: BodyInit | null | undefined
+    requestHeaders: Record<string, string>
+  }> = []
+
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const response = responses.shift() ?? fallback
+    if (!response) throw new Error('Missing mocked fetch response')
+    requests.push({
+      method: init?.method ?? 'GET',
+      body: init?.body,
+      requestHeaders: Object.fromEntries(new Headers(init?.headers).entries()),
+    })
+    if ('kind' in response && response.kind === 'timeout') {
+      await new Promise<never>((_, reject) => {
+        const abort = () => reject(new DOMException('The operation was aborted', 'AbortError'))
+        init?.signal?.addEventListener('abort', abort, { once: true })
+      })
+    }
+    if ('kind' in response) throw new Error('Upload request failed')
+    return new Response(null, {
+      status: response.status,
+      headers: { 'Upload-Offset': response.offset },
+    })
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+  return requests
+}
+
 describe('getPhotos', () => {
   afterEach(() => vi.unstubAllGlobals())
 
@@ -122,11 +157,10 @@ describe('uploadItemContent', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('uploads a selected file with fetch and reports the completed offset', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 200, headers: { 'Upload-Offset': '0' } }))
-      .mockResolvedValueOnce(new Response(null, { status: 204, headers: { 'Upload-Offset': '5' } }))
-    vi.stubGlobal('fetch', fetchMock)
+    const requests = stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 204, offset: '5' },
+    ])
     const onProgress = vi.fn()
 
     await uploadItemContent(
@@ -136,23 +170,39 @@ describe('uploadItemContent', () => {
       onProgress,
     )
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock.mock.calls[1][1]).toEqual(
+    expect(requests).toHaveLength(2)
+    expect(requests[1]).toEqual(
       expect.objectContaining({
         method: 'PATCH',
         body: expect.any(Blob),
-        headers: expect.objectContaining({ 'Upload-Offset': '0' }),
+        requestHeaders: expect.objectContaining({ 'upload-offset': '0' }),
       }),
     )
     expect(onProgress).toHaveBeenLastCalledWith(5)
   })
 
+  it('uses the returned offset when starting the next chunk', async () => {
+    const chunkSize = 8 * 1024 * 1024
+    const file = new File([new Uint8Array(chunkSize + 1)], 'video.mov', { type: 'video/quicktime' })
+    const requests = stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 204, offset: String(chunkSize) },
+      { status: 204, offset: String(chunkSize + 1) },
+    ])
+    const onProgress = vi.fn()
+
+    await uploadItemContent(item, file, new AbortController().signal, onProgress)
+
+    expect(requests).toHaveLength(3)
+    expect(requests[2].requestHeaders['upload-offset']).toBe(String(chunkSize))
+    expect(onProgress).toHaveBeenLastCalledWith(chunkSize + 1)
+  })
+
   it('rejects a chunk response that does not advance the offset', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 200, headers: { 'Upload-Offset': '0' } }))
-      .mockResolvedValueOnce(new Response(null, { status: 204, headers: { 'Upload-Offset': '0' } }))
-    vi.stubGlobal('fetch', fetchMock)
+    stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 204, offset: '0' },
+    ])
 
     await expect(
       uploadItemContent(
@@ -162,5 +212,37 @@ describe('uploadItemContent', () => {
         vi.fn(),
       ),
     ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('retries a transient chunk failure at the same offset', async () => {
+    stubUploadFetch([{ status: 200, offset: '0' }, { kind: 'error' }, { status: 204, offset: '5' }])
+    const onProgress = vi.fn()
+
+    await uploadItemContent(
+      item,
+      new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+      new AbortController().signal,
+      onProgress,
+    )
+
+    expect(onProgress).toHaveBeenLastCalledWith(5)
+  })
+
+  it('retries when a chunk request remains pending until its timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      stubUploadFetch([{ status: 200, offset: '0' }, { kind: 'timeout' }, { status: 204, offset: '5' }])
+
+      const upload = uploadItemContent(
+        item,
+        new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+        new AbortController().signal,
+        vi.fn(),
+      )
+      await vi.advanceTimersByTimeAsync(5_250)
+      await upload
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

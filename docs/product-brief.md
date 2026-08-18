@@ -19,9 +19,10 @@ per-user favorites; group albums with cover selection; a new-photo activity view
 owned photos; group membership management; group-scoped cleaning; and group-scoped shopping lists.
 
 Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, and next-due display.
-Batch photo upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable state kept
-for 24 hours, and partial success. A WebP thumbnail with a longest edge of at most 480 px is generated synchronously when
-an upload is finalized. Lists and albums serve thumbnails; the enlarged modal serves originals. Resume from React is
+Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
+state kept for 24 hours, and partial success. JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V are supported. A WebP
+thumbnail with a longest edge of at most 480 px is generated synchronously from the image or the first video frame when an
+upload is finalized. Lists and albums serve thumbnails; the enlarged modal serves images or playable video originals. Resume from React is
 limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
@@ -82,7 +83,7 @@ Production operation has not started. Production database separation, database-b
 timers, the first manual runs, and a temporary-database restore test are complete. Device-specific Web Push subscriptions,
 unsubscriptions, and preference UI are implemented. The next automatic timer runs, real-device acceptance after the fiber
 connection is available, real-device Web Push delivery validation, person detection, automatic repair and full recovery from
-analysis results, video, and tags remain incomplete. See [`web-push.md`](./web-push.md) and
+analysis results, and tags remain incomplete. Video upload and playback are implemented for the supported formats above. See [`web-push.md`](./web-push.md) and
 [`deployment.md`](./deployment.md) for the current documented operational prerequisites. Update this section when
 implementation status changes.
 
@@ -102,11 +103,11 @@ This is not a committed implementation plan. Revisit it after each feature based
 
 - Next candidate: verify maintenance-timer automation, reboot recovery, and authenticated core features.
 - After infrastructure cleanup: accept the PWA, notifications, and core features on a real iPhone.
-- Only when clearly needed: tags, person detection, and video support.
+- Only when clearly needed: tags and person detection.
 - Important non-software task: scheduled backup to a second HDD.
 
 Original downloads and exports, password and session management, and safe trash state transitions are implemented. PWA
-operation and Web Push depend on the HTTPS production path. Decide on tags, person detection, and video only when photo
+operation and Web Push depend on the HTTPS production path. Decide on tags and person detection only when photo
 volume and usage requirements justify them.
 
 ## Current hardware and operations
@@ -134,7 +135,7 @@ is used for organization, list ordering, search, and date timelines, but not for
 be absent or not yet parsed.
 
 Each original has a JSON sidecar with the same UUID. It records the schema version, ID, upload user ID and username,
-filename, storage path, MIME type, file size, SHA-256 hash, image dimensions, capture and upload times, derivatives, shared
+filename, storage path, MIME type, file size, SHA-256 hash, media dimensions, capture and upload times, derivatives, shared
 memo and its last editor and timestamp, and share targets. If PostgreSQL is lost, originals and sidecars can be scanned to
 re-register photo metadata and regenerate missing thumbnails.
 
@@ -180,13 +181,13 @@ From an iPhone connected to the home Wi-Fi, log in, upload one photo, save it sa
 ## MVP
 
 1. Access from iPhone Safari 17 or later on the home Wi-Fi and log in.
-2. Select JPEG (including the primary image from iPhone-generated MPO), PNG, or HEIF/HEIC images.
-3. Upload the image to FastAPI.
+2. Select JPEG (including the primary image from iPhone-generated MPO), PNG, HEIF/HEIC, MP4, QuickTime MOV, or M4V media.
+3. Upload the media to FastAPI.
 4. Store the original on the external HDD.
 5. Read capture time when it exists in EXIF.
 6. Store file metadata in PostgreSQL.
-7. List uploaded images in React, newest capture time first.
-8. Select an image for enlarged display.
+7. List uploaded media in React, newest capture time first.
+8. Select media for enlarged display or playback.
 9. Detect duplicate uploads by the same user using the SHA-256 hash.
 
 ## Authentication policy
@@ -311,7 +312,7 @@ metadata from originals and sidecars after database loss is possible, but restor
 ## Metadata
 
 PostgreSQL stores metadata rather than image content. At minimum it stores ID, uploader ID and username, upload filename,
-HDD path, MIME type, file size, SHA-256 hash, capture time, upload time, and image dimensions. See
+HDD path, MIME type, file size, SHA-256 hash, capture time, upload time, and media dimensions. See
 [`database-design.md`](./database-design.md) for tables, constraints, and indexes.
 
 Photo metadata can be re-registered by scanning originals and JSON sidecars after database loss. Thumbnail locations are
@@ -367,7 +368,6 @@ configured on the browser or server operating system.
 
 - Repair and recovery commands for integrity findings
 - Background regeneration of derivatives for existing photos
-- Video upload
 - Devices other than iPhone and browsers other than Safari
 - Additional EXIF fields
 - Tags

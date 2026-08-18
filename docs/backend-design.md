@@ -126,7 +126,9 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP;
+`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
+thumbnails from images or the first video frame, and `video_validation.py` validates supported video containers with
+`ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
 catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
 content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `upload_service.py`
@@ -239,8 +241,9 @@ be symlinks. Linux mount information is checked when available, with a standard 
 for internal-SSD development tests, but production must point at the external HDD mount.
 
 Never use client filenames or extensions to construct paths. The server chooses extensions after content validation. Accept
-JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Use the first MPO image for validation and thumbnails while
-preserving the original multi-image file.
+JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Also accept MP4, QuickTime MOV, and M4V video files;
+`ffprobe` must find a supported container and a usable video stream. Use the first MPO image or first video frame for
+validation and thumbnails while preserving the original file.
 
 At finalization, create a WebP thumbnail with a longest edge of at most 480 px, quality 80, and method 4 on the internal SSD.
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
@@ -255,9 +258,10 @@ After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to r
 
 Register a batch, its share groups, and its items. Batches are valid for 24 hours. Serialize batch creation with a
 transaction-level advisory lock, then include unreceived bytes from existing active batches in the free-space check.
-Browsers send 4 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Reconcile the database position
-with `.part` size after interruption and resume only within the same open page. Expired batches are canceled and temporary
-files removed on access or new-batch creation.
+Browsers send 2 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
+timeout; after a transient failure, the client reconciles the server offset and retries the chunk up to three times.
+Reconcile the database position with `.part` size after interruption and resume only within the same open page. Expired
+batches are canceled and temporary files removed on access or new-batch creation.
 
 The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
@@ -270,9 +274,9 @@ Validate HDD identity, mount, write access, and free space
   ↓
 Write chunks to incoming/<UUID>.part and calculate size and SHA-256
   ↓
-Validate size and actual JPEG/MPO, PNG, or HEIF/HEIC content
+Validate size and actual image or MP4/MOV/M4V video content
   ↓
-Read dimensions and EXIF capture time
+Read dimensions and EXIF or video creation time
   ↓
 Check same-owner SHA-256 duplicate
   ↓
@@ -285,9 +289,10 @@ Insert metadata, shares, and activity in PostgreSQL and commit
 Return 201 Created
 ```
 
-Do not trust `Content-Length`, filename, extension, or declared MIME type alone. Validate actual content with Pillow and
-`pillow-heif`; reject AVIF for the MVP. If any finalization step fails, remove completed files when possible and report
-unremovable files for integrity recovery.
+Do not trust `Content-Length`, filename, extension, or declared MIME type alone. Validate actual image content with Pillow and
+`pillow-heif`, and actual video content with `ffprobe`; reject AVIF and unsupported video containers. The runtime must have
+the `ffprobe` and `ffmpeg` commands available for video validation and thumbnail generation. If any finalization step fails,
+remove completed files when possible and report unremovable files for integrity recovery.
 
 ## Filesystem and database consistency
 
@@ -347,7 +352,7 @@ and unit tests remain separately runnable.
 ## Future design candidates and open decisions
 
 Candidates include a home aggregation API if existing calls become a problem, repair commands for integrity findings,
-background derivative regeneration, video, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
+background derivative regeneration, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
 marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, production hostname
 and Cloudflare plan, and independent LAN HTTPS when Cloudflare is unavailable.
 

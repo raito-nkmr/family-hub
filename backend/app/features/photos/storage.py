@@ -14,7 +14,12 @@ from typing import BinaryIO
 from uuid import UUID
 
 from app.core.config import Settings
-from app.features.photos.thumbnails import THUMBNAIL_CONTENT_TYPE, ThumbnailGenerationError, generate_thumbnail
+from app.features.photos.thumbnails import (
+    THUMBNAIL_CONTENT_TYPE,
+    ThumbnailGenerationError,
+    generate_thumbnail,
+    generate_video_thumbnail,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -462,13 +467,19 @@ class PhotoStorage:
 
         return StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest())
 
-    def stage_thumbnail(self, source_path: Path, storage_key: str) -> StagedDerivative:
+    def stage_thumbnail(
+        self,
+        source_path: Path,
+        storage_key: str,
+        content_type: str = "image/jpeg",
+    ) -> StagedDerivative:
         key = self._validate_derivative_key(storage_key)
         incoming = self._get_or_create_derivative_directory(PurePosixPath("incoming"))
         part_path = incoming / f"{key.stem}.thumbnail.part"
         _unlink_if_possible(part_path)
         try:
-            generated = generate_thumbnail(source_path, part_path)
+            generator = generate_video_thumbnail if content_type.startswith("video/") else generate_thumbnail
+            generated = generator(source_path, part_path)
         except ThumbnailGenerationError as error:
             raise PhotoStorageError("Could not generate photo thumbnail") from error
         return StagedDerivative(

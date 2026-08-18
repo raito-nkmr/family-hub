@@ -32,6 +32,7 @@ from app.features.photos.storage import (
     StagedDerivative,
     StagedUpload,
 )
+from app.features.photos.video_validation import VideoMetadata
 from tests.features.photos.factories import make_photo
 
 
@@ -543,6 +544,28 @@ def test_upload_photo_registers_finalized_file(tmp_path: Path, monkeypatch: pyte
     assert sidecar.sharing_audiences == ()
     assert sidecar.derivatives[0]["kind"] == PhotoDerivativeKind.THUMBNAIL
     storage.cleanup_staged.assert_called_once_with(staged)
+
+
+def test_upload_video_registers_video_metadata_and_thumbnail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    session = MagicMock(spec=Session)
+    session.scalar.return_value = None
+    service, storage = make_service(session)
+    staged = configure_staged_upload(storage, tmp_path)
+    monkeypatch.setattr(
+        "app.features.photos.registration.inspect_video",
+        lambda path, content_type, timezone: VideoMetadata("video/quicktime", ".mov", 1920, 1080, None),
+    )
+
+    result = service.upload_photo(BytesIO(b"video"), "original.mov", "video/quicktime", uuid4(), "owner")
+
+    assert result.content_type == "video/quicktime"
+    assert result.storage_key.endswith(".mov")
+    assert (result.width, result.height) == (1920, 1080)
+    storage.stage_thumbnail.assert_called_once_with(
+        staged.path,
+        f"thumbnails/{result.uploaded_at:%Y/%m}/{result.id}.webp",
+        content_type="video/quicktime",
+    )
 
 
 def test_upload_photo_creates_activity_for_shared_groups(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

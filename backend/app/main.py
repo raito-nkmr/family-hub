@@ -56,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Upload-Offset"],
     )
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(PrivateApiCacheControlMiddleware)

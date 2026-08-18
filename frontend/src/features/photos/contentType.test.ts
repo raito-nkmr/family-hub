@@ -21,6 +21,9 @@ describe('formatPhotoContentType', () => {
     ['image/png', 'PNG'],
     ['image/heif', 'HEIF'],
     ['image/heic', 'HEIC'],
+    ['video/mp4', 'MP4 video'],
+    ['video/quicktime', 'QuickTime video'],
+    ['video/x-m4v', 'M4V video'],
   ])('formats %s for people', (contentType, expected) => {
     expect(formatPhotoContentType(contentType)).toBe(expected)
   })
@@ -28,5 +31,9 @@ describe('formatPhotoContentType', () => {
   it('returns a safe fallback for an unknown MIME type', () => {
     expect(formatPhotoContentType('application/octet-stream')).toBe('application/octet-stream')
     expect(formatPhotoContentType('')).toBe('Unknown')
+  })
+
+  it('recognizes video media types', () => {
+    expect(getPhotoContentType(new File(['video'], 'clip.MOV'))).toBe('video/quicktime')
   })
 })

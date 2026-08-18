@@ -21,6 +21,15 @@ describe('PhotoPreview', () => {
     expect(screen.getByRole('img')).toHaveAttribute('src', '/api/v1/photos/photo%2Fid/content')
   })
 
+  it('uses a video player for an original video', () => {
+    const { container } = render(
+      <PhotoPreview photo={{ ...photo, content_type: 'video/quicktime' }} source="original" />,
+    )
+
+    expect(screen.getByLabelText('photo.jpg')).toHaveAttribute('poster', '/api/v1/photos/photo%2Fid/thumbnail')
+    expect(container.querySelector('source')).toHaveAttribute('src', '/api/v1/photos/photo%2Fid/content')
+  })
+
   it('shows a placeholder without downloading the original if the derivative is unavailable', () => {
     render(<PhotoPreview photo={photo} />)
 

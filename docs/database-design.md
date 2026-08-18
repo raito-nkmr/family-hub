@@ -145,12 +145,13 @@ purchase time must both be null or both be set. Index `(group_id, purchased_at, 
 
 Stores one metadata row per original. Important fields are uploader and username snapshot, display filename, relative
 `storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, capture and upload timestamps, lifecycle
-state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner.
+state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner. The same row represents either an
+image or a supported video; `content_type` distinguishes them and dimensions describe the video stream when applicable.
 
 Constraints include unique `storage_key`, required existing owner, unique `(uploaded_by_user_id, sha256)`, positive size,
 lowercase 64-character SHA-256, paired dimensions or both null, and valid lifecycle/timestamp combinations. Do not include
-allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. The MVP accepts
-JPEG, primary-image MPO selected as JPEG, PNG, and HEIF/HEIC.
+allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. Supported media
+includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V.
 
 ### `photo_metadata`
 
@@ -265,8 +266,10 @@ originals/2026/07/550e8400-e29b-41d4-a716-446655440000.jpg
 ```
 
 `YYYY/MM` is based on upload time, not capture time. Changing capture metadata does not move an original. Do not use
-`original_filename` to construct paths. Store accepted JPEG, primary-image MPO, PNG, and HEIF/HEIC bytes without recompression
-or format conversion. Validate actual content during upload and recovery rather than trusting `content_type` alone.
+`original_filename` to construct paths. Store accepted JPEG, primary-image MPO, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V
+bytes without recompression or format conversion. Validate actual content during upload and recovery rather than trusting
+`content_type` alone. Video thumbnails are regenerable first-frame WebP derivatives; video conversion and streaming
+optimization are not part of this implementation.
 
 ## JSON sidecars
 
