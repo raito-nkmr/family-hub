@@ -78,6 +78,29 @@ unit collects them in the journal; use `journalctl -u family-hub-backend.service
 `APP_LOG_LEVEL` in the host environment file when a different application log level is needed. Request paths exclude query
 strings so search text and other user-entered values are not copied into application logs.
 
+Resumable chunk diagnostics use a client-generated upload attempt ID to correlate browser console entries with backend
+request-body reception, durable `.part` synchronization, offset changes, and response status. The browser logs entries with
+the `[photo-upload]` prefix and can read the backend `X-Request-ID` header for direct cross-origin development uploads.
+Compare `attemptId` in the browser with `attempt_id` in the backend log. An advanced server offset followed by a client
+timeout and a `409` retry at the old offset confirms that the server stored the chunk but the response did not reach the
+client. These diagnostics intentionally exclude filenames, media contents, cookies, CSRF tokens, and credentials.
+
+Successful resumable chunk responses use `200 OK` with a short, explicitly sized body. After reading the status and
+`Upload-Offset` header, the browser aborts that request's response stream without waiting for the body. This avoids iPhone
+Safari queueing the seventh request after retaining six cross-origin responses. Preserve `Upload-Offset` through development
+and production proxies because it remains the authoritative next position.
+
+This failure was confirmed during LAN development with a 50.5 MiB MOV: six 8 MiB `PATCH` requests reached FastAPI and were
+persisted, while the seventh request never reached the backend. Waiting for the empty or short response body could instead
+stall the first request. Capturing the response headers and then aborting only that request's response stream allowed the
+seventh chunk, item completion, and thumbnail retrieval to succeed without a retry.
+
+The five-second frontend upload timeout is a temporary diagnostic value chosen to make these stalls and retries appear
+quickly. It is not a production target. A longer timeout would only have delayed this particular retained-response failure.
+Before production acceptance, configure the timeout separately for production using real iPhone Wi-Fi and mobile-network
+measurements. The response-stream abort was added for the development cross-origin direct route and must either be limited
+to that route or verified not to produce client-closed responses through Cloudflare.
+
 ```bash
 uv run --locked python -m uvicorn app.main:app \
   --host 127.0.0.1 \

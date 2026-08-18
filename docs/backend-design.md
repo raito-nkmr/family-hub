@@ -258,10 +258,31 @@ After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to r
 
 Register a batch, its share groups, and its items. Batches are valid for 24 hours. Serialize batch creation with a
 transaction-level advisory lock, then include unreceived bytes from existing active batches in the free-space check.
-Browsers send 2 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
+Browsers send 8 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
 timeout; after a transient failure, the client reconciles the server offset and retries the chunk up to three times.
 Reconcile the database position with `.part` size after interruption and resume only within the same open page. Expired
 batches are canceled and temporary files removed on access or new-batch creation.
+
+The current five-second request timeout is intentionally short for development diagnostics on the LAN. It makes a stalled
+request and its retries observable quickly; it is not the production timeout target and increasing it does not fix a
+retained Safari response. Before production acceptance, use an environment-specific timeout based on real iPhone Wi-Fi and
+mobile-network measurements, and ensure the development value is not included in the production build.
+
+Each chunk attempt carries a client-generated attempt ID, retry count, and direct or same-origin route label. Browser
+diagnostic messages and backend logs record the attempt ID, item ID, offsets, byte counts, response request ID, and timing.
+The backend separately records request-body reception, durable `.part` synchronization, and offset-conflict recovery so an
+interrupted request can be distinguished from a lost response. Do not log filenames, file contents, cookies, CSRF tokens, or
+other credentials as upload diagnostics.
+
+Successful `PATCH` responses use `200 OK` with a short, explicitly sized body instead of an empty `204`. After receiving the
+status and `Upload-Offset` header, the browser aborts that request's response stream without waiting for its body. This
+forces iPhone Safari to release a development-LAN cross-origin request instead of retaining six responses and indefinitely
+queueing the seventh. The client also accepts the former `204` response during a rolling deployment.
+
+The response-stream abort is a workaround for development uploads sent directly from the Vite origin on port `15173` to
+FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI.
+Before production acceptance, scope the abort behavior to the development direct-upload route or explicitly validate that
+it does not create client-closed responses through Cloudflare.
 
 The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
