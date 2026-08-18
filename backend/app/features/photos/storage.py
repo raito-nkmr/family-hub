@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -14,6 +15,8 @@ from uuid import UUID
 
 from app.core.config import Settings
 from app.features.photos.thumbnails import THUMBNAIL_CONTENT_TYPE, ThumbnailGenerationError, generate_thumbnail
+
+logger = logging.getLogger(__name__)
 
 STORAGE_MARKER_FILENAME = ".photo-storage-marker"
 LINUX_MOUNTINFO_PATH = Path("/proc/self/mountinfo")
@@ -222,6 +225,7 @@ class PhotoStorage:
         self._require_upload_ready(additional_bytes)
 
     def get_resumable_offset(self, item_id: UUID) -> int:
+        self._require_readable_storage()
         path = self._resumable_path(item_id, create_directory=False)
         try:
             if path.is_symlink():
@@ -254,6 +258,7 @@ class PhotoStorage:
         return actual_offset + len(data)
 
     def resumable_as_staged(self, item_id: UUID, expected_size: int) -> StagedUpload:
+        self._require_readable_storage()
         path = self._resumable_path(item_id, create_directory=False)
         digest = hashlib.sha256()
         size_bytes = 0
@@ -269,7 +274,8 @@ class PhotoStorage:
         return StagedUpload(item_id, path, size_bytes, digest.hexdigest())
 
     def cleanup_resumable(self, item_id: UUID) -> None:
-        _unlink_if_possible(self._resumable_path(item_id, create_directory=False))
+        if self._photo_storage_is_available():
+            _unlink_if_possible(self._resumable_path(item_id, create_directory=False))
 
     def _resumable_path(self, item_id: UUID, *, create_directory: bool) -> Path:
         incoming = self._get_or_create_directory(PurePosixPath("incoming")) if create_directory else None
@@ -443,15 +449,15 @@ class PhotoStorage:
                 destination.flush()
                 os.fsync(destination.fileno())
         except UploadTooLargeError:
-            _unlink_if_possible(part_path)
+            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
             raise
         except OSError as error:
-            _unlink_if_possible(part_path)
+            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
             if error.errno in {ENOSPC, EDQUOT}:
                 raise StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE) from error
             raise PhotoStorageError("Could not stage uploaded photo") from error
         except Exception:
-            _unlink_if_possible(part_path)
+            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
             raise
 
         return StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest())
@@ -504,17 +510,19 @@ class PhotoStorage:
             try:
                 sidecar_part.replace(sidecar_path)
             except OSError:
-                _unlink_if_possible(original_path)
+                self._unlink_photo_path_if_available(original_path, self._photo_storage_is_available())
                 raise
             try:
                 derivative.path.replace(derivative_path)
             except OSError:
-                _unlink_if_possible(original_path)
-                _unlink_if_possible(sidecar_path)
+                photo_storage_available = self._photo_storage_is_available()
+                self._unlink_photo_path_if_available(original_path, photo_storage_available)
+                self._unlink_photo_path_if_available(sidecar_path, photo_storage_available)
                 raise
         except OSError as error:
-            _unlink_if_possible(staged.path)
-            _unlink_if_possible(sidecar_part)
+            photo_storage_available = self._photo_storage_is_available()
+            self._unlink_photo_path_if_available(staged.path, photo_storage_available)
+            self._unlink_photo_path_if_available(sidecar_part, photo_storage_available)
             _unlink_if_possible(derivative.path)
             raise PhotoStorageError("Could not finalize uploaded photo") from error
 
@@ -536,20 +544,24 @@ class PhotoStorage:
                 os.fsync(destination.fileno())
             sidecar_part.replace(sidecar_path)
         except OSError as error:
-            _unlink_if_possible(sidecar_part)
+            self._unlink_photo_path_if_available(sidecar_part, self._photo_storage_is_available())
             raise PhotoStorageError("Could not update photo sidecar") from error
 
     def cleanup_staged(self, staged: StagedUpload) -> None:
-        _unlink_if_possible(staged.path)
-        _unlink_if_possible(staged.path.with_name(f"{staged.photo_id}.json.part"))
+        photo_storage_available = self._photo_storage_is_available()
+        self._unlink_photo_path_if_available(staged.path, photo_storage_available)
+        self._unlink_photo_path_if_available(
+            staged.path.with_name(f"{staged.photo_id}.json.part"), photo_storage_available
+        )
         derivative_part = (
             Path(os.path.abspath(self._derivative_root)) / "incoming" / f"{staged.photo_id}.thumbnail.part"
         )
         _unlink_if_possible(derivative_part)
 
     def cleanup_finalized(self, upload: FinalizedUpload) -> None:
-        _unlink_if_possible(upload.original_path)
-        _unlink_if_possible(upload.sidecar_path)
+        photo_storage_available = self._photo_storage_is_available()
+        self._unlink_photo_path_if_available(upload.original_path, photo_storage_available)
+        self._unlink_photo_path_if_available(upload.sidecar_path, photo_storage_available)
         if upload.derivative_path is not None:
             _unlink_if_possible(upload.derivative_path)
 
@@ -591,6 +603,23 @@ class PhotoStorage:
             raise StorageUnavailableError(status.status)
         if self._maximum_upload_bytes is None or self._upload_chunk_bytes is None:
             raise StorageUnavailableError(StorageStatusCode.NOT_CONFIGURED)
+
+    def _require_readable_storage(self) -> None:
+        status = self._get_read_status()
+        if not status.available:
+            raise StorageUnavailableError(status.status)
+
+    def _photo_storage_is_available(self) -> bool:
+        status = self._get_read_status()
+        if not status.available:
+            logger.warning("Skipping photo-storage cleanup because storage is unavailable: %s", status.status)
+            return False
+        return True
+
+    @staticmethod
+    def _unlink_photo_path_if_available(path: Path, storage_available: bool) -> None:
+        if storage_available:
+            _unlink_if_possible(path)
 
     def _require_writable_storage(self, additional_bytes: int) -> None:
         status = self._get_writable_storage_status(additional_bytes)

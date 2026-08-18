@@ -13,6 +13,7 @@ from PIL import Image
 from app.core.config import Settings
 from app.features.photos import storage as storage_module
 from app.features.photos.storage import (
+    FinalizedUpload,
     InvalidStorageKeyError,
     OriginalNotFoundError,
     PhotoStorage,
@@ -393,6 +394,61 @@ def test_resumable_upload_reports_actual_offset_after_interruption(
 
     assert error.value.actual_offset == 3
     assert storage.get_resumable_offset(item_id) == 3
+
+
+def test_resumable_read_does_not_use_a_missing_hdd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    item_id = uuid4()
+    part = tmp_path / "incoming" / f"{item_id}.part"
+    part.parent.mkdir()
+    part.write_bytes(b"photo")
+
+    with pytest.raises(StorageUnavailableError) as error:
+        storage.resumable_as_staged(item_id, 5)
+
+    assert error.value.status is StorageStatusCode.NOT_MOUNT_POINT
+
+
+def test_resumable_cleanup_keeps_partial_file_when_hdd_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    item_id = uuid4()
+    part = tmp_path / "incoming" / f"{item_id}.part"
+    part.parent.mkdir()
+    part.write_bytes(b"photo")
+
+    storage.cleanup_resumable(item_id)
+
+    assert part.read_bytes() == b"photo"
+
+
+def test_finalized_cleanup_never_deletes_hdd_files_when_hdd_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    original = tmp_path / "originals" / "photo.jpg"
+    sidecar = tmp_path / "originals" / "photo.json"
+    derivative = tmp_path / "derivatives" / "thumbnails" / "photo.webp"
+    original.parent.mkdir(parents=True)
+    derivative.parent.mkdir(parents=True)
+    original.write_bytes(b"photo")
+    sidecar.write_bytes(b"metadata")
+    derivative.write_bytes(b"thumbnail")
+
+    storage.cleanup_finalized(FinalizedUpload(original, sidecar, derivative))
+
+    assert original.exists()
+    assert sidecar.exists()
+    assert not derivative.exists()
 
 
 def test_cleanup_resumable_removes_partial_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
