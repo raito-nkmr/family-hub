@@ -1,8 +1,12 @@
+import logging
+import time
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import PlainTextResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.requests import ClientDisconnect
 
 from app.features.auth.dependencies import (
     AuthenticatedUser,
@@ -25,6 +29,8 @@ from app.features.photos.uploads import (
     UploadItemNotFoundError,
     UploadOffsetError,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     tags=["photo uploads"],
@@ -144,12 +150,36 @@ def get_upload_offset(
         offset = service.get_offset(item_id, user.id)
     except (UploadItemNotFoundError, UploadBatchPersistenceError, UploadBatchStorageError) as error:
         _raise_upload_error(error)
+    logger.info("Upload offset read item_id=%s offset=%d", item_id, offset)
     return Response(headers={"Upload-Offset": str(offset)})
+
+
+def _upload_diagnostic_headers(request: Request) -> tuple[str, int | None, str]:
+    raw_attempt_id = request.headers.get("x-upload-attempt-id")
+    try:
+        attempt_id = str(UUID(raw_attempt_id)) if raw_attempt_id is not None else "-"
+    except ValueError:
+        attempt_id = "-"
+
+    raw_retry_count = request.headers.get("x-upload-retry-count", "")
+    retry_count = int(raw_retry_count) if raw_retry_count.isdigit() else None
+    if retry_count is not None and not 0 <= retry_count <= 100:
+        retry_count = None
+
+    raw_route = request.headers.get("x-upload-route")
+    upload_route = raw_route if raw_route in {"direct", "same-origin"} else "unknown"
+    return attempt_id, retry_count, upload_route
+
+
+def _content_length(request: Request) -> int | None:
+    raw_content_length = request.headers.get("content-length", "")
+    return int(raw_content_length) if raw_content_length.isdigit() else None
 
 
 @router.patch(
     "/items/{item_id}/content",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
+    response_class=PlainTextResponse,
     dependencies=[Depends(require_csrf_token)],
 )
 async def append_upload_chunk(
@@ -159,11 +189,62 @@ async def append_upload_chunk(
     user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[UploadBatchService, Depends(get_upload_batch_service)],
 ) -> Response:
+    attempt_id, retry_count, upload_route = _upload_diagnostic_headers(request)
+    received_bytes = 0
+    receive_started = time.perf_counter()
+    logger.info(
+        "Upload chunk receive started item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
+        "content_length=%s",
+        item_id,
+        attempt_id,
+        retry_count,
+        upload_route,
+        upload_offset,
+        _content_length(request),
+    )
     payload = bytearray()
-    async for chunk in request.stream():
-        payload.extend(chunk)
-        if len(payload) > MAX_UPLOAD_CHUNK_BYTES:
-            _raise_upload_error(UploadChunkTooLargeError())
+    try:
+        async for chunk in request.stream():
+            payload.extend(chunk)
+            received_bytes += len(chunk)
+            if len(payload) > MAX_UPLOAD_CHUNK_BYTES:
+                logger.warning(
+                    "Upload chunk receive rejected item_id=%s attempt_id=%s retry_count=%s route=%s "
+                    "expected_offset=%d received_bytes=%d reason=chunk_too_large duration_ms=%.1f",
+                    item_id,
+                    attempt_id,
+                    retry_count,
+                    upload_route,
+                    upload_offset,
+                    received_bytes,
+                    (time.perf_counter() - receive_started) * 1000,
+                )
+                _raise_upload_error(UploadChunkTooLargeError())
+    except ClientDisconnect:
+        logger.warning(
+            "Upload chunk client disconnected item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
+            "received_bytes=%d duration_ms=%.1f",
+            item_id,
+            attempt_id,
+            retry_count,
+            upload_route,
+            upload_offset,
+            received_bytes,
+            (time.perf_counter() - receive_started) * 1000,
+        )
+        raise
+    logger.info(
+        "Upload chunk body received item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
+        "received_bytes=%d duration_ms=%.1f",
+        item_id,
+        attempt_id,
+        retry_count,
+        upload_route,
+        upload_offset,
+        received_bytes,
+        (time.perf_counter() - receive_started) * 1000,
+    )
+    persist_started = time.perf_counter()
     try:
         next_offset = await run_in_threadpool(service.append_chunk, item_id, user.id, upload_offset, bytes(payload))
     except (
@@ -174,8 +255,33 @@ async def append_upload_chunk(
         UploadBatchStorageError,
         UploadBatchPersistenceError,
     ) as error:
+        logger.warning(
+            "Upload chunk persist rejected item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
+            "received_bytes=%d error_type=%s actual_offset=%s duration_ms=%.1f",
+            item_id,
+            attempt_id,
+            retry_count,
+            upload_route,
+            upload_offset,
+            received_bytes,
+            type(error).__name__,
+            error.actual_offset if isinstance(error, UploadOffsetError) else None,
+            (time.perf_counter() - persist_started) * 1000,
+        )
         _raise_upload_error(error)
-    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Upload-Offset": str(next_offset)})
+    logger.info(
+        "Upload chunk persisted item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
+        "received_bytes=%d next_offset=%d duration_ms=%.1f",
+        item_id,
+        attempt_id,
+        retry_count,
+        upload_route,
+        upload_offset,
+        received_bytes,
+        next_offset,
+        (time.perf_counter() - persist_started) * 1000,
+    )
+    return PlainTextResponse("ok", headers={"Upload-Offset": str(next_offset)})
 
 
 @router.post(

@@ -4531,7 +4531,7 @@ export type AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchResponses 
   /**
    * Successful Response
    */
-  204: void
+  200: string
 }
 
 export type AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchResponse =

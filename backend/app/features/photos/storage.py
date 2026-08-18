@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import shutil
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -251,6 +252,7 @@ class PhotoStorage:
             raise UploadOffsetMismatchError(actual_offset)
         if actual_offset + len(data) > total_size:
             raise UploadTooLargeError("Chunk exceeds the declared file size")
+        persist_started = time.perf_counter()
         try:
             with path.open("ab") as destination:
                 destination.write(data)
@@ -260,7 +262,16 @@ class PhotoStorage:
             if error.errno in {ENOSPC, EDQUOT}:
                 raise StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE) from error
             raise PhotoStorageError("Could not append resumable upload") from error
-        return actual_offset + len(data)
+        next_offset = actual_offset + len(data)
+        logger.info(
+            "Resumable upload chunk synced item_id=%s expected_offset=%d next_offset=%d bytes=%d duration_ms=%.1f",
+            item_id,
+            expected_offset,
+            next_offset,
+            len(data),
+            (time.perf_counter() - persist_started) * 1000,
+        )
+        return next_offset
 
     def resumable_as_staged(self, item_id: UUID, expected_size: int) -> StagedUpload:
         self._require_readable_storage()
