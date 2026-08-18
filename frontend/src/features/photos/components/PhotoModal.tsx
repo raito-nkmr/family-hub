@@ -6,6 +6,7 @@ import { useConfirmation } from '../../../shared/ui/confirmation'
 import { DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoDownloadUrl, type Photo } from '../api'
+import { formatPhotoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoModalProps {
@@ -130,6 +131,10 @@ export function PhotoModal({
           <div>
             <dt>{t('photoDetails.uploadedBy')}</dt>
             <dd>{photo.uploaded_by_username}</dd>
+          </div>
+          <div>
+            <dt>{t('photoDetails.fileType')}</dt>
+            <dd>{formatPhotoContentType(photo.content_type)}</dd>
           </div>
           <div>
             <dt>{t('photoDetails.visibility')}</dt>

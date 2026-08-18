@@ -30,4 +30,18 @@ describe('AlbumFormDialog', () => {
     expect(cancelButton.querySelector('svg')).toBeInTheDocument()
     expect(createButton.querySelector('svg')).toBeInTheDocument()
   })
+
+  it('announces save errors to assistive technology', () => {
+    render(
+      <AlbumFormDialog
+        submitting={false}
+        error="保存できませんでした"
+        groups={[]}
+        onSubmit={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveTextContent('保存できませんでした')
+  })
 })

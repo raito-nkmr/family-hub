@@ -12,8 +12,10 @@ interface PhotoActivityPageProps {
   loadingMore: boolean
   hasMore: boolean
   error: string | null
+  markSeenError?: string | null
   onRefresh: () => void
   onLoadMore: () => void
+  onRetryMarkSeen?: () => void
   onSelectPhoto: (photo: PhotoListItem) => void
 }
 
@@ -50,8 +52,10 @@ export function PhotoActivityPage({
   loadingMore,
   hasMore,
   error,
+  markSeenError = null,
   onRefresh,
   onLoadMore,
+  onRetryMarkSeen,
   onSelectPhoto,
 }: PhotoActivityPageProps) {
   const { t } = useTranslation()
@@ -73,6 +77,16 @@ export function PhotoActivityPage({
       {error && (
         <div className="page-message page-message--error" role="alert">
           {error}
+        </div>
+      )}
+      {markSeenError && (
+        <div className="page-message page-message--error" role="alert">
+          <span>{markSeenError}</span>
+          {onRetryMarkSeen && (
+            <button className="secondary-button" type="button" onClick={onRetryMarkSeen}>
+              {t('photoActivity.retryMarkSeen')}
+            </button>
+          )}
         </div>
       )}
       {loading ? (

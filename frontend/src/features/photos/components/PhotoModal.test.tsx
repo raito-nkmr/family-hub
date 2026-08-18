@@ -57,6 +57,7 @@ describe('PhotoModal', () => {
     expect(favorite).toHaveClass('secondary-button', 'icon-button')
     expect(download).toHaveClass('secondary-button', 'icon-button')
     expect(trash).toHaveClass('danger-button', 'icon-button')
+    expect(screen.getByText('JPEG')).toBeInTheDocument()
   })
 
   it('lets a viewer edit the shared memo without exposing sharing controls', () => {

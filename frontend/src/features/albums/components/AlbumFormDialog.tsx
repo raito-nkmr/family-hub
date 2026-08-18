@@ -77,7 +77,11 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
           placeholder={t('albums.descriptionPlaceholder')}
           onChange={(event) => setDescription(event.target.value)}
         />
-        {error && <p className="dialog-error">{error}</p>}
+        {error && (
+          <p className="dialog-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="dialog-actions">
           <button
             className="danger-button danger-button--filled icon-button"
