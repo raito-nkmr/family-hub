@@ -74,6 +74,7 @@ Stores family users created by a management command or administrator invitation.
 | `password_hash` | `TEXT` | No | Argon2id hash; never plaintext |
 | `is_active` | `BOOLEAN` | No | Blocks login and existing-session use when false |
 | `system_role` | `VARCHAR(16)` | No | `admin` or `user` |
+| `must_change_password` | `BOOLEAN` | No | Set by operator password resets; cleared after the user changes the password |
 | `created_at` | `TIMESTAMPTZ` | No | Creation time |
 | `password_changed_at` | `TIMESTAMPTZ` | No | Invalidates older sessions |
 
@@ -302,7 +303,7 @@ photo, album, group, invitation, resumable-upload, and cleaning schema. All late
 rewrite the baseline. The project has since added derivatives, `pg_trgm` filename and memo search, shopping, memo editor
 metadata, favorites and album groups, activity events and read states, trash lifecycle, maintenance history, Push subscriptions
 and outbox, per-device delivery state, unique group names, audit events, and group membership invitations through subsequent
-migrations up to `20260723_13` and the current revisions.
+migrations up to `20260723_13` and the current revisions, including the forced-password-change flag for operator resets.
 
 Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
 with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with

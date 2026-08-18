@@ -79,8 +79,13 @@ rate limiting, authentication dependencies, invitation handling, and a deliberat
 Login and password changes lock the target `User` row with `FOR UPDATE` before verifying the current hash. This prevents an
 old-password login from creating a new session concurrently with a password change.
 
-Other features may use only `features.auth.public`, `require_authenticated_user`, and `require_csrf_token`; they must not
-import auth internals directly.
+An operator password reset marks the user as requiring a password change. The user may authenticate only to retrieve the
+current session, change the password, or log out while this flag is set; all other authenticated feature APIs return `403`.
+Invitation acceptance is separate from operator reset: invitees choose their own password during one-time invitation
+acceptance, and those accounts do not receive the forced-change flag.
+
+Other features may use only `features.auth.public`, `require_authenticated_user`, `require_password_change_complete`, and
+`require_csrf_token`; they must not import auth internals directly.
 
 ### `features.groups`
 
@@ -300,7 +305,8 @@ production schema implicitly with `create_all()`. Start with synchronous file an
 async database access.
 
 Use typed settings and never hard-code environment paths or credentials. Key settings include `DATABASE_URL`, trusted origins,
-session idle/absolute/touch limits, secure-cookie and login limits, invitation TTL, `PHOTO_STORAGE_ROOT`,
+session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
+`PHOTO_STORAGE_ROOT`,
 `PHOTO_DERIVATIVE_ROOT`, storage marker, upload and free-space limits, default timezone, Push provider allowlist and
 subscription limit, and optional `MONITORING_PING_URL_*` values. Development defaults include 100 MiB maximum file size,
 1 MiB chunks, and 10 GiB minimum free space. Never place real `.env` values in code or documentation.
