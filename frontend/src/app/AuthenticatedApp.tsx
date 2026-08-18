@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { logout, type AuthUser } from '../features/auth/api'
+import { RequiredPasswordChangeScreen } from '../features/auth/RequiredPasswordChangeScreen'
 import { PhotoModal } from '../features/photos/components/PhotoModal'
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
 import { usePhotoActivity } from '../features/photos/usePhotoActivity'
@@ -54,6 +55,28 @@ interface AuthenticatedAppProps {
 }
 
 export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
+  if (currentUser.must_change_password) {
+    return (
+      <RequiredPasswordChangeScreen
+        username={currentUser.username}
+        theme={theme}
+        onSessionEnded={onSessionEnded}
+        onToggleTheme={onToggleTheme}
+      />
+    )
+  }
+
+  return (
+    <AuthenticatedAppShell
+      currentUser={currentUser}
+      theme={theme}
+      onSessionEnded={onSessionEnded}
+      onToggleTheme={onToggleTheme}
+    />
+  )
+}
+
+function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()

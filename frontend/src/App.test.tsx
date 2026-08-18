@@ -42,6 +42,7 @@ describe('App routes', () => {
       id: 'user-id',
       username: 'family-member',
       system_role: 'user',
+      must_change_password: false,
     })
 
     renderApp('/photos/library')
@@ -56,6 +57,7 @@ describe('App routes', () => {
       id: 'user-id',
       username: 'family-member',
       system_role: 'user',
+      must_change_password: false,
     })
     renderApp('/privacy')
 

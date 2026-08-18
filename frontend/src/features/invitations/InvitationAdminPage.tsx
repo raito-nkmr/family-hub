@@ -2,6 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../shared/lib/format'
 import { CancelIcon, CloseIcon, ContentCopyIcon, DeleteIcon, PersonAddIcon, RefreshIcon } from '../../shared/ui/icons'
+import type { InvitationExpiryHours } from './api'
 import { copyTextToClipboard } from './clipboard'
 import { useInvitations } from './useInvitations'
 
@@ -18,7 +19,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
   const usernameId = useId()
   const expiryId = useId()
   const [username, setUsername] = useState('')
-  const [expiresInHours, setExpiresInHours] = useState(24)
+  const [expiresInHours, setExpiresInHours] = useState<InvitationExpiryHours>(24)
   const invitationUrlInputRef = useRef<HTMLInputElement>(null)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const state = useInvitations({ onUnauthorized })
@@ -73,7 +74,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
               <select
                 id={expiryId}
                 value={expiresInHours}
-                onChange={(event) => setExpiresInHours(Number(event.target.value))}
+                onChange={(event) => setExpiresInHours(Number(event.target.value) as InvitationExpiryHours)}
               >
                 <option value={24}>{t('invitations.expiryOneDay')}</option>
                 <option value={72}>{t('invitations.expiryThreeDays')}</option>

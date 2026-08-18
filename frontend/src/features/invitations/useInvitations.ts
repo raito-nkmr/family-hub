@@ -12,6 +12,7 @@ import {
   revokeInvitation,
   type CreatedInvitation,
   type Invitation,
+  type InvitationExpiryHours,
 } from './api'
 
 interface UseInvitationsOptions {
@@ -28,7 +29,7 @@ export function useInvitations({ onUnauthorized }: UseInvitationsOptions) {
     queryFn: ({ signal }) => getInvitations(signal),
   })
   const createMutation = useMutation({
-    mutationFn: ({ username, expiresInHours }: { username: string; expiresInHours: number }) =>
+    mutationFn: ({ username, expiresInHours }: { username: string; expiresInHours: InvitationExpiryHours }) =>
       createInvitation(username, expiresInHours),
     onSuccess: (created) => {
       const invitation: Invitation = {
@@ -72,7 +73,7 @@ export function useInvitations({ onUnauthorized }: UseInvitationsOptions) {
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedError, onUnauthorized)
 
-  const create = async (username: string, expiresInHours = 24) => {
+  const create = async (username: string, expiresInHours: InvitationExpiryHours = 24) => {
     setError(null)
     setCreatedInvitation(null)
     try {

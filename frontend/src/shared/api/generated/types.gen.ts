@@ -389,6 +389,10 @@ export type AuthSessionResponse = {
    * Csrf Token
    */
   csrf_token: string
+  /**
+   * Must Change Password
+   */
+  must_change_password: boolean
   user: UserResponse
 }
 
@@ -931,7 +935,7 @@ export type InvitationCreate = {
   /**
    * Expires In Hours
    */
-  expires_in_hours?: number
+  expires_in_hours?: 24 | 72 | 168
   /**
    * Username
    */

@@ -44,7 +44,11 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
   useUnauthorizedError(unauthorizedError, onUnauthorized)
   const pages = trashQuery.data?.pages ?? []
   const photos = pages.flatMap((page) => page.items)
-  const pendingId = restoreMutation.variables ?? deleteMutation.variables ?? null
+  const pendingId = restoreMutation.isPending
+    ? restoreMutation.variables
+    : deleteMutation.isPending
+      ? deleteMutation.variables
+      : null
 
   const restore = async (photo: Photo) => {
     setError(null)

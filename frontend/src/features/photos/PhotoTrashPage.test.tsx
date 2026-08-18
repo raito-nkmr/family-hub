@@ -91,6 +91,18 @@ describe('PhotoTrashPage', () => {
     expect(onLibraryChanged).toHaveBeenCalledOnce()
   })
 
+  it('allows retrying restore after the first request fails', async () => {
+    const user = userEvent.setup()
+    vi.mocked(restorePhoto).mockRejectedValueOnce(new Error('restore failed'))
+    render(<PhotoTrashPage onUnauthorized={vi.fn()} onLibraryChanged={vi.fn()} />, { wrapper: createAppWrapper() })
+
+    await user.click(await screen.findByRole('button', { name: 'ゴミ箱のtrashed.jpgを開く' }))
+    await user.click(screen.getByRole('button', { name: '復元する' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('写真を復元できませんでした。')
+    expect(screen.getByRole('button', { name: '復元する' })).not.toBeDisabled()
+  })
+
   it('announces an asynchronous load error', async () => {
     vi.mocked(getTrashedPhotos).mockRejectedValue(new Error('network unavailable'))
 
