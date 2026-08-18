@@ -6,6 +6,7 @@ import {
   type BulkSharingResult,
   type PhotoFilters,
   type PhotoListItem,
+  type PhotoSearchOptions,
   type PhotoTimeline,
   type StorageStatus,
 } from './api'
@@ -25,6 +26,8 @@ interface PhotoPageProps {
   uploadQueue: QueuedUpload[]
   uploading: boolean
   groups: FamilyGroup[]
+  searchOptions: PhotoSearchOptions | null
+  searchOptionsLoading: boolean
   uploadGroupIds: string[]
   uploadVisibilityLocked: boolean
   uploadMessage: UploadMessage | null
@@ -55,6 +58,8 @@ export function PhotoPage({
   uploadQueue,
   uploading,
   groups,
+  searchOptions,
+  searchOptionsLoading,
   uploadGroupIds,
   uploadVisibilityLocked,
   uploadMessage,
@@ -152,6 +157,8 @@ export function PhotoPage({
         currentUserId={currentUserId}
         photos={photos}
         filters={filters}
+        searchOptions={searchOptions}
+        searchOptionsLoading={searchOptionsLoading}
         timeline={timeline}
         totalCount={totalCount}
         hasMore={hasMore}

@@ -44,6 +44,8 @@ describe('PhotoPickerDialog', () => {
       filters: { excludeAlbumId: 'album-1', sharingGroupId: 'group-1' },
     })
     await user.click(screen.getByRole('button', { name: '検索条件を表示' }))
+    expect(screen.queryByLabelText('共有グループ')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('投稿者')).toBeInTheDocument()
     await user.type(screen.getByRole('searchbox'), '旅行')
     await user.click(screen.getByRole('button', { name: '絞り込む' }))
 

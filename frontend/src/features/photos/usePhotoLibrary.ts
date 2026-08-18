@@ -9,6 +9,7 @@ import { getGroups } from '../groups/api'
 import {
   addBulkPhotoSharing,
   getPhoto,
+  getPhotoSearchOptions,
   getPhotoTimeline,
   getStorageStatus,
   removePhotoGroupShareAsAdmin,
@@ -50,6 +51,11 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     enabled: storageEnabled,
   })
   const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
+  const searchOptionsQuery = useQuery({
+    queryKey: queryKeys.photoSearchOptions,
+    queryFn: ({ signal }) => getPhotoSearchOptions(signal),
+    enabled: libraryEnabled,
+  })
   const timelineQuery = useQuery({
     queryKey: queryKeys.photoTimeline(timelineYear),
     queryFn: ({ signal }) => getPhotoTimeline(timelineYear, signal),
@@ -67,6 +73,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     timelineQuery.error,
     photoList.error,
     detailQuery.error,
+    searchOptionsQuery.error,
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
@@ -202,6 +209,8 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     totalCount: photoList.totalCount,
     timeline: timelineQuery.data ?? null,
     groups: groupsQuery.data ?? [],
+    searchOptions: searchOptionsQuery.data ?? null,
+    searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
     loading:
       groupsQuery.isPending ||

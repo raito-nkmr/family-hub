@@ -8,6 +8,7 @@ import type {
   PhotoActivitySeenUpdate,
   PhotoActivityItemResponse,
   PhotoResponse,
+  PhotoSearchOptionsResponse,
   PhotoTimelineResponse,
   PhotoUpdate,
   PhotoVisibility as ApiPhotoVisibility,
@@ -25,6 +26,7 @@ import {
   completeUploadItemApiV1UploadBatchesItemsItemIdCompletePost,
   createUploadBatchApiV1UploadBatchesPost,
   getPhotoMetadataApiV1PhotosPhotoIdGet,
+  getPhotoSearchOptionsApiV1PhotosSearchOptionsGet,
   getPhotoTimelineApiV1PhotosTimelineGet,
   getStorageStatusApiV1PhotosStorageStatusGet,
   getUploadBatchApiV1UploadBatchesBatchIdGet,
@@ -44,6 +46,7 @@ import { sdkData } from '../../shared/api/sdkClient'
 export type StorageStatusCode = ApiStorageStatusCode
 export type StorageStatus = StorageStatusResponse
 export type Photo = PhotoResponse
+export type PhotoSearchOptions = PhotoSearchOptionsResponse
 export type PhotoListItem = PhotoListItemResponse
 export type PhotoPage = PhotoListResponse
 export type PhotoActivity = PhotoActivityResponse
@@ -99,6 +102,10 @@ export async function getPhotos(
       signal,
     }),
   )
+}
+
+export function getPhotoSearchOptions(signal?: AbortSignal): Promise<PhotoSearchOptions> {
+  return sdkData(getPhotoSearchOptionsApiV1PhotosSearchOptionsGet({ signal }))
 }
 
 export function getPhoto(photoId: string, signal?: AbortSignal): Promise<Photo> {

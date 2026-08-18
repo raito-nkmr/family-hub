@@ -16,6 +16,7 @@ export const queryKeys = {
   recentPhotos: ['photos', 'recent', 4] as const,
   photosPrefix: ['photos', 'list'] as const,
   photos: (filters: unknown) => ['photos', 'list', filters] as const,
+  photoSearchOptions: ['photos', 'search-options'] as const,
   photo: (photoId: string) => ['photos', 'detail', photoId] as const,
   photoTimelinePrefix: ['photos', 'timeline'] as const,
   photoTimeline: (year: number) => ['photos', 'timeline', year] as const,

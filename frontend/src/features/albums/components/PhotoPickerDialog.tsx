@@ -6,7 +6,7 @@ import { Dialog } from '../../../shared/ui/Dialog'
 import { AddPhotoIcon, CancelIcon } from '../../../shared/ui/icons'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
 import { useUnauthorizedError } from '../../../shared/api/useUnauthorizedError'
-import type { PhotoFilters } from '../../photos/api'
+import type { PhotoFilters, PhotoSearchOptions } from '../../photos/api'
 import { PhotoPreview } from '../../photos/public'
 import { PhotoSearchPanel } from '../../photos/components/PhotoSearchPanel'
 import { usePhotoList } from '../../photos/usePhotoList'
@@ -14,6 +14,8 @@ import { usePhotoList } from '../../photos/usePhotoList'
 interface PhotoPickerDialogProps {
   albumId: string
   groupId: string
+  searchOptions?: PhotoSearchOptions | null
+  searchOptionsLoading?: boolean
   submitting: boolean
   error: string | null
   onUnauthorized: () => void
@@ -24,6 +26,8 @@ interface PhotoPickerDialogProps {
 export function PhotoPickerDialog({
   albumId,
   groupId,
+  searchOptions = null,
+  searchOptionsLoading = false,
   submitting,
   error,
   onUnauthorized,
@@ -66,7 +70,15 @@ export function PhotoPickerDialog({
         <span>{t('albums.selectedCount', { count: selectedCount })}</span>
       </div>
 
-      <PhotoSearchPanel filters={searchFilters} timeline={null} disabled={photoList.loading} onSearch={search} />
+      <PhotoSearchPanel
+        filters={searchFilters}
+        searchOptions={searchOptions}
+        searchOptionsLoading={searchOptionsLoading}
+        showSharingGroupFilter={false}
+        timeline={null}
+        disabled={photoList.loading}
+        onSearch={search}
+      />
 
       {photoList.loading ? (
         <div className="feature-loading" aria-label={t('photos.loadingList')}>

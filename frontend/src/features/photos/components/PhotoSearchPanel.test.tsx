@@ -45,11 +45,63 @@ describe('PhotoSearchPanel', () => {
     expect(screen.getByDisplayValue('2026-07-01')).toBeInTheDocument()
   })
 
+  it('shows uploader and shared-group options and submits their URL-backed filters', async () => {
+    const user = userEvent.setup()
+    const onSearch = vi.fn()
+    render(
+      <PhotoSearchPanel
+        filters={{}}
+        timeline={null}
+        searchOptions={{
+          uploaders: [{ id: 'user-1', name: 'owner' }],
+          groups: [{ id: 'group-1', name: 'Family' }],
+        }}
+        disabled={false}
+        onSearch={onSearch}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '検索条件を表示' }))
+    await user.selectOptions(screen.getByLabelText('投稿者'), 'user-1')
+    await user.selectOptions(screen.getByLabelText('共有グループ'), 'group-1')
+    await user.click(screen.getByRole('button', { name: '絞り込む' }))
+
+    expect(onSearch).toHaveBeenCalledWith({ uploaderId: 'user-1', sharingGroupId: 'group-1' })
+  })
+
+  it('synchronizes local fields when URL-backed filters change', async () => {
+    const searchOptions = { uploaders: [{ id: 'user-1', name: 'owner' }], groups: [] }
+    const { rerender } = render(
+      <PhotoSearchPanel
+        filters={{ q: '旅行' }}
+        searchOptions={searchOptions}
+        timeline={null}
+        disabled={false}
+        onSearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('searchbox')).toHaveValue('旅行')
+    rerender(
+      <PhotoSearchPanel
+        filters={{ q: '新着', uploaderId: 'user-1' }}
+        searchOptions={searchOptions}
+        timeline={null}
+        disabled={false}
+        onSearch={vi.fn()}
+      />,
+    )
+
+    await screen.findByDisplayValue('新着')
+    expect(screen.getByLabelText('投稿者')).toHaveValue('user-1')
+  })
+
   it('does not count fixed album picker filters as user-applied conditions', () => {
     render(
       <PhotoSearchPanel
         filters={{ excludeAlbumId: 'album-1', sharingGroupId: 'group-1' }}
         timeline={null}
+        showSharingGroupFilter={false}
         disabled={false}
         onSearch={vi.fn()}
       />,

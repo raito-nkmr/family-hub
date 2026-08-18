@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CancelIcon, ExportIcon, PhotoIcon, RefreshIcon, SelectIcon, ShareIcon } from '../../../shared/ui/icons'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
-import type { PhotoFilters, PhotoListItem, PhotoTimeline } from '../api'
+import type { PhotoFilters, PhotoListItem, PhotoSearchOptions, PhotoTimeline } from '../api'
 import { PhotoCard } from './PhotoCard'
 import { PhotoGridDensity } from './PhotoGridDensity'
 import { PhotoSearchPanel } from './PhotoSearchPanel'
@@ -13,6 +13,8 @@ interface PhotoLibraryProps {
   currentUserId: string
   photos: PhotoListItem[]
   filters: PhotoFilters
+  searchOptions?: PhotoSearchOptions | null
+  searchOptionsLoading?: boolean
   timeline: PhotoTimeline | null
   totalCount: number
   loading: boolean
@@ -68,6 +70,8 @@ export function PhotoLibrary({
   currentUserId,
   photos,
   filters,
+  searchOptions = null,
+  searchOptionsLoading = false,
   timeline,
   totalCount,
   loading,
@@ -186,8 +190,9 @@ export function PhotoLibrary({
         </div>
       ) : (
         <PhotoSearchPanel
-          key={JSON.stringify(filters)}
           filters={filters}
+          searchOptions={searchOptions}
+          searchOptionsLoading={searchOptionsLoading}
           timeline={timeline}
           disabled={loading}
           onSearch={onSearch}

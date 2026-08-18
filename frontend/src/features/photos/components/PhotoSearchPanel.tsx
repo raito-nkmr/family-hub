@@ -1,11 +1,14 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FilterIcon, FilterOffIcon } from '../../../shared/ui/icons'
-import type { PhotoFilters, PhotoTimeline, PhotoVisibility } from '../api'
+import type { PhotoFilters, PhotoSearchOptions, PhotoTimeline, PhotoVisibility } from '../api'
 
 interface PhotoSearchPanelProps {
   filters: PhotoFilters
   timeline: PhotoTimeline | null
+  searchOptions?: PhotoSearchOptions | null
+  searchOptionsLoading?: boolean
+  showSharingGroupFilter?: boolean
   disabled: boolean
   onSearch: (filters: PhotoFilters) => void
   onTimelineYearChange?: (year: number) => void
@@ -20,6 +23,9 @@ function monthRange(monthValue: string): Pick<PhotoFilters, 'dateFrom' | 'dateTo
 export function PhotoSearchPanel({
   filters,
   timeline,
+  searchOptions = null,
+  searchOptionsLoading = false,
+  showSharingGroupFilter = true,
   disabled,
   onSearch,
   onTimelineYearChange,
@@ -33,9 +39,43 @@ export function PhotoSearchPanel({
   const [mineOnly, setMineOnly] = useState(filters.mineOnly ?? false)
   const [favoriteOnly, setFavoriteOnly] = useState(filters.favorite ?? false)
   const [visibility, setVisibility] = useState<PhotoVisibility | ''>(filters.visibility ?? '')
+  const [uploaderId, setUploaderId] = useState(filters.uploaderId ?? '')
+  const [sharingGroupId, setSharingGroupId] = useState(filters.sharingGroupId ?? '')
   const [capturedStatus, setCapturedStatus] = useState<'all' | 'known' | 'unknown'>(
     filters.capturedAtKnown === true ? 'known' : filters.capturedAtKnown === false ? 'unknown' : 'all',
   )
+
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setKeyword(filters.q ?? '')
+      setDateFrom(filters.dateFrom ?? '')
+      setDateTo(filters.dateTo ?? '')
+      setMineOnly(filters.mineOnly ?? false)
+      setFavoriteOnly(filters.favorite ?? false)
+      setVisibility(filters.visibility ?? '')
+      setUploaderId(filters.uploaderId ?? '')
+      setSharingGroupId(filters.sharingGroupId ?? '')
+      setCapturedStatus(
+        filters.capturedAtKnown === true ? 'known' : filters.capturedAtKnown === false ? 'unknown' : 'all',
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    filters.q,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.mineOnly,
+    filters.favorite,
+    filters.visibility,
+    filters.uploaderId,
+    filters.sharingGroupId,
+    filters.capturedAtKnown,
+  ])
+
   const activeFilterCount = [
     filters.q,
     filters.dateFrom,
@@ -43,6 +83,8 @@ export function PhotoSearchPanel({
     filters.mineOnly,
     filters.favorite,
     filters.visibility,
+    filters.uploaderId,
+    showSharingGroupFilter && filters.sharingGroupId,
     filters.capturedAtKnown !== undefined,
   ].filter(Boolean).length
 
@@ -55,7 +97,9 @@ export function PhotoSearchPanel({
       mineOnly: mineOnly || undefined,
       favorite: favoriteOnly || undefined,
       visibility: visibility || undefined,
+      uploaderId: uploaderId || undefined,
       capturedAtKnown: capturedStatus === 'all' ? undefined : capturedStatus === 'known',
+      ...(showSharingGroupFilter ? { sharingGroupId: sharingGroupId || undefined } : {}),
     })
     setExpanded(false)
   }
@@ -67,6 +111,8 @@ export function PhotoSearchPanel({
     setMineOnly(false)
     setFavoriteOnly(false)
     setVisibility('')
+    setUploaderId('')
+    setSharingGroupId('')
     setCapturedStatus('all')
     onSearch({})
     setExpanded(false)
@@ -107,6 +153,41 @@ export function PhotoSearchPanel({
             <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
           </label>
           <label>
+            <span>{t('photoSearch.uploader')}</span>
+            <select
+              value={uploaderId}
+              disabled={disabled || searchOptionsLoading || mineOnly}
+              onChange={(event) => {
+                setUploaderId(event.target.value)
+                if (event.target.value) setMineOnly(false)
+              }}
+            >
+              <option value="">{t('photoSearch.all')}</option>
+              {searchOptions?.uploaders.map((uploader) => (
+                <option key={uploader.id} value={uploader.id}>
+                  {uploader.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {showSharingGroupFilter && (
+            <label>
+              <span>{t('photoSearch.sharedGroup')}</span>
+              <select
+                value={sharingGroupId}
+                disabled={disabled || searchOptionsLoading}
+                onChange={(event) => setSharingGroupId(event.target.value)}
+              >
+                <option value="">{t('photoSearch.all')}</option>
+                {searchOptions?.groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
             <span>{t('photoSearch.endDate')}</span>
             <input
               type="date"
@@ -135,7 +216,14 @@ export function PhotoSearchPanel({
             </select>
           </label>
           <label className="photo-search__mine">
-            <input type="checkbox" checked={mineOnly} onChange={(event) => setMineOnly(event.target.checked)} />
+            <input
+              type="checkbox"
+              checked={mineOnly}
+              onChange={(event) => {
+                setMineOnly(event.target.checked)
+                if (event.target.checked) setUploaderId('')
+              }}
+            />
             <span>{t('photoSearch.mineOnly')}</span>
           </label>
           <label className="photo-search__mine">

@@ -21,6 +21,8 @@ export function PhotoRoute({ currentUserId, dashboard }: PhotoRouteProps) {
       uploadQueue={dashboard.uploadQueue}
       uploading={dashboard.uploading}
       groups={dashboard.groups}
+      searchOptions={dashboard.searchOptions}
+      searchOptionsLoading={dashboard.searchOptionsLoading}
       uploadGroupIds={dashboard.uploadGroupIds}
       uploadVisibilityLocked={dashboard.uploadVisibilityLocked}
       uploadMessage={dashboard.uploadMessage}
@@ -55,8 +57,10 @@ export function PhotoActivityRoute({ activity, onSelectPhoto }: PhotoActivityRou
       loadingMore={activity.loadingMore}
       hasMore={activity.hasMore}
       error={activity.error}
+      markSeenError={activity.markSeenError}
       onRefresh={() => void activity.refresh()}
       onLoadMore={() => void activity.loadMore()}
+      onRetryMarkSeen={activity.retryMarkSeen}
       onSelectPhoto={onSelectPhoto}
     />
   )
