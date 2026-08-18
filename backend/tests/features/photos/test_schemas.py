@@ -11,6 +11,7 @@ from app.features.photos.schemas import (
     PhotoResponse,
     PhotoSharing,
     PhotoUpdate,
+    photo_response_from_model,
 )
 from tests.features.photos.factories import make_photo
 
@@ -39,6 +40,17 @@ def test_photo_response_rejects_naive_datetime() -> None:
 
     with pytest.raises(ValidationError, match="photo datetimes must be timezone-aware"):
         PhotoResponse.model_validate(photo)
+
+
+def test_photo_response_only_contains_share_groups_visible_to_viewer() -> None:
+    photo = make_photo(visibility=PhotoVisibility.SHARED)
+    hidden_group_id = photo.shares[0].group_id
+
+    response = photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
+
+    assert response.sharing.type is PhotoVisibility.SHARED
+    assert response.sharing.group_ids == []
+    assert hidden_group_id not in response.sharing.group_ids
 
 
 def test_photo_update_normalizes_memo_and_requires_a_change() -> None:

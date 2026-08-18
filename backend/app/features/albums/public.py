@@ -5,8 +5,15 @@ from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
 from app.features.albums.models import Album, AlbumPhoto
+from app.features.groups.public import FamilyGroupMember
 
-__all__ = ["Album", "AlbumPhoto", "photo_is_in_album", "remove_photo_from_group_albums"]
+__all__ = [
+    "Album",
+    "AlbumPhoto",
+    "album_is_visible_to_user",
+    "photo_is_in_album",
+    "remove_photo_from_group_albums",
+]
 
 
 def photo_is_in_album(photo_id, album_id):
@@ -15,6 +22,18 @@ def photo_is_in_album(photo_id, album_id):
         select(AlbumPhoto.photo_id).where(
             AlbumPhoto.photo_id == photo_id,
             AlbumPhoto.album_id == album_id,
+        )
+    )
+
+
+def album_is_visible_to_user(album_id, user_id):
+    """Return a SQL predicate for membership in an accessible album group."""
+    return exists(
+        select(Album.id)
+        .join(FamilyGroupMember, FamilyGroupMember.group_id == Album.group_id)
+        .where(
+            Album.id == album_id,
+            FamilyGroupMember.user_id == user_id,
         )
     )
 

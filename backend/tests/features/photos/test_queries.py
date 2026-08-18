@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.features.photos.models import PhotoVisibility
 from app.features.photos.queries import (
     InvalidPhotoCursorError,
+    PhotoAlbumNotFoundError,
     PhotoListFilters,
     PhotoQueryService,
 )
@@ -94,6 +95,43 @@ def test_list_photos_rejects_invalid_cursor() -> None:
 
     with pytest.raises(InvalidPhotoCursorError):
         service.list_photos(uuid4(), PhotoListFilters(cursor="not-a-cursor"))
+
+
+def test_list_photos_hides_inaccessible_album_filters_as_not_found() -> None:
+    session = MagicMock(spec=Session)
+    session.scalar.return_value = None
+    service = PhotoQueryService(session, "Asia/Tokyo")
+    album_id = uuid4()
+
+    with pytest.raises(PhotoAlbumNotFoundError):
+        service.list_photos(uuid4(), PhotoListFilters(album_id=album_id))
+
+    session.execute.assert_not_called()
+
+
+def test_search_options_returns_visible_uploaders_and_groups_in_stable_order() -> None:
+    session = MagicMock(spec=Session)
+    uploader_id = uuid4()
+    group_id = uuid4()
+    session.execute.return_value.all.side_effect = [
+        [(uploader_id, "Alice")],
+        [(group_id, "Family")],
+    ]
+    service = PhotoQueryService(session, "Asia/Tokyo")
+
+    result = service.search_options(uuid4())
+
+    assert [(item.id, item.name) for item in result.uploaders] == [(uploader_id, "Alice")]
+    assert [(item.id, item.name) for item in result.groups] == [(group_id, "Family")]
+    uploader_sql = str(
+        session.execute.call_args_list[0]
+        .args[0]
+        .compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    group_sql = str(session.execute.call_args_list[1].args[0].compile(dialect=postgresql.dialect()))
+    assert "photos.lifecycle_state = 'active'" in uploader_sql
+    assert "ORDER BY photos.uploaded_by_username ASC, photos.uploaded_by_user_id ASC" in uploader_sql
+    assert "ORDER BY family_groups.name ASC, family_groups.id ASC" in group_sql
 
 
 def test_timeline_groups_photos_by_jst_month() -> None:

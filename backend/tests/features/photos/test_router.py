@@ -11,7 +11,7 @@ from app.core.config import Settings
 from app.core.middleware import SINGLE_PHOTO_MULTIPART_OVERHEAD_BYTES
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.photos.activity import PhotoActivityItem, PhotoActivityPage
-from app.features.photos.dependencies import get_photo_storage, get_photo_trash_service
+from app.features.photos.dependencies import get_photo_access_service, get_photo_storage, get_photo_trash_service
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoVisibility
 from app.features.photos.queries import PhotoListFilters, PhotoListItem, PhotoListPage, PhotoTimelineMonth
 from app.features.photos.registration import (
@@ -129,6 +129,7 @@ async def test_list_trash_returns_paginated_response_without_favorite_n_plus_one
     service = PhotoServiceStub([photo, make_photo(uploaded_by_user_id=TEST_USER.id)])
     app = create_app(Settings(app_env="test"))
     app.dependency_overrides[require_authenticated_user] = get_authenticated_user
+    app.dependency_overrides[get_photo_access_service] = lambda: service
     app.dependency_overrides[get_photo_trash_service] = lambda: service
     transport = ASGITransport(app=app)
 
@@ -294,6 +295,10 @@ class PhotoServiceStub:
 
     def is_favorite(self, photo_id: UUID, user_id: UUID) -> bool:
         return False
+
+    def visible_share_group_ids(self, photo_ids: set[UUID], viewer_user_id: UUID) -> dict[UUID, set[UUID]]:
+        assert viewer_user_id == TEST_USER.id
+        return {photo.id: {share.group_id for share in photo.shares} for photo in self.photos if photo.id in photo_ids}
 
     def update_photo(
         self,

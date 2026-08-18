@@ -9,14 +9,20 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import and_, case, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
 
-from app.features.albums.public import photo_is_in_album
-from app.features.groups.public import FamilyGroupMember
+from app.features.albums.public import Album, album_is_visible_to_user, photo_is_in_album
+from app.features.groups.public import FamilyGroup, FamilyGroupMember
 from app.features.photos.access import photo_is_in_library, photo_is_shared
 from app.features.photos.models import Photo, PhotoFavorite, PhotoMetadata, PhotoShare, PhotoVisibility
 
 
 class InvalidPhotoCursorError(ValueError):
     pass
+
+
+class PhotoAlbumNotFoundError(ValueError):
+    def __init__(self, album_id: UUID) -> None:
+        super().__init__(f"Album {album_id} was not found")
+        self.album_id = album_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +70,18 @@ class PhotoTimelineMonth:
 
 
 @dataclass(frozen=True, slots=True)
+class PhotoSearchOption:
+    id: UUID
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class PhotoSearchOptions:
+    uploaders: list[PhotoSearchOption]
+    groups: list[PhotoSearchOption]
+
+
+@dataclass(frozen=True, slots=True)
 class _PhotoCursor:
     sort_at: datetime
     photo_id: UUID
@@ -75,6 +93,7 @@ class PhotoQueryService:
         self._timezone = ZoneInfo(default_timezone)
 
     def list_photos(self, viewer_user_id: UUID, filters: PhotoListFilters) -> PhotoListPage:
+        self._validate_album_filter(viewer_user_id, filters)
         sort_at = func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at, Photo.uploaded_at)
         shared_condition = photo_is_shared()
         favorite = exists(
@@ -151,6 +170,24 @@ class PhotoQueryService:
             next_cursor = self._encode_cursor(_PhotoCursor(sort_at=last.sort_at, photo_id=last.id))
         return PhotoListPage(items=items, next_cursor=next_cursor, total_count=total_count)
 
+    def search_options(self, viewer_user_id: UUID) -> PhotoSearchOptions:
+        uploader_rows = self._session.execute(
+            select(Photo.uploaded_by_user_id, Photo.uploaded_by_username)
+            .where(photo_is_in_library(viewer_user_id))
+            .distinct()
+            .order_by(Photo.uploaded_by_username.asc(), Photo.uploaded_by_user_id.asc())
+        ).all()
+        group_rows = self._session.execute(
+            select(FamilyGroup.id, FamilyGroup.name)
+            .join(FamilyGroupMember, FamilyGroupMember.group_id == FamilyGroup.id)
+            .where(FamilyGroupMember.user_id == viewer_user_id)
+            .order_by(FamilyGroup.name.asc(), FamilyGroup.id.asc())
+        ).all()
+        return PhotoSearchOptions(
+            uploaders=[PhotoSearchOption(id=user_id, name=username) for user_id, username in uploader_rows],
+            groups=[PhotoSearchOption(id=group_id, name=name) for group_id, name in group_rows],
+        )
+
     def timeline(self, viewer_user_id: UUID, year: int) -> list[PhotoTimelineMonth]:
         start = datetime.combine(date(year, 1, 1), time.min, self._timezone).astimezone(UTC)
         end = datetime.combine(date(year + 1, 1, 1), time.min, self._timezone).astimezone(UTC)
@@ -221,10 +258,27 @@ class PhotoQueryService:
             )
             conditions.append(favorite_exists if filters.favorite else not_(favorite_exists))
         if filters.album_id:
-            conditions.append(photo_is_in_album(Photo.id, filters.album_id))
+            conditions.extend(
+                [
+                    album_is_visible_to_user(filters.album_id, viewer_user_id),
+                    photo_is_in_album(Photo.id, filters.album_id),
+                ]
+            )
         elif filters.exclude_album_id:
-            conditions.append(not_(photo_is_in_album(Photo.id, filters.exclude_album_id)))
+            conditions.extend(
+                [
+                    album_is_visible_to_user(filters.exclude_album_id, viewer_user_id),
+                    not_(photo_is_in_album(Photo.id, filters.exclude_album_id)),
+                ]
+            )
         return conditions
+
+    def _validate_album_filter(self, viewer_user_id: UUID, filters: PhotoListFilters) -> None:
+        album_id = filters.album_id or filters.exclude_album_id
+        if album_id is None:
+            return
+        if self._session.scalar(select(Album.id).where(album_is_visible_to_user(album_id, viewer_user_id))) is None:
+            raise PhotoAlbumNotFoundError(album_id)
 
     def _start_of_day(self, value: date) -> datetime:
         return datetime.combine(value, time.min, self._timezone).astimezone(UTC)

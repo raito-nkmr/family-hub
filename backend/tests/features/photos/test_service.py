@@ -236,6 +236,30 @@ def test_update_photo_does_not_repeat_activity_for_an_existing_share() -> None:
         expected_version=1,
     )
 
+
+def test_update_photo_preserves_share_from_group_the_owner_can_no_longer_see() -> None:
+    session = MagicMock(spec=Session)
+    hidden_group_id = uuid4()
+    photo = make_photo(visibility=PhotoVisibility.SHARED, group_id=hidden_group_id)
+    session.scalar.return_value = photo
+    session.scalars.return_value.all.return_value = []
+    service, storage = make_service(session)
+
+    result = service.update_photo(
+        photo.id,
+        photo.uploaded_by_user_id,
+        photo.uploaded_by_username,
+        memo=None,
+        update_memo=False,
+        sharing_group_ids=set(),
+        expected_version=1,
+    )
+
+    assert result.sharing["group_ids"] == [hidden_group_id]
+    assert storage.update_sidecar.call_args.args[0].sharing_audiences == (
+        {"type": "group", "id": str(hidden_group_id)},
+    )
+
     session.add.assert_not_called()
 
 
@@ -246,6 +270,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
     group_id = uuid4()
     photo = make_photo(visibility=PhotoVisibility.SHARED, group_id=group_id)
     session.scalar.return_value = photo
+    session.scalars.return_value.all.return_value = [group_id]
     remove_from_albums = MagicMock()
     monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_group_albums", remove_from_albums)
     service, _ = make_service(session)

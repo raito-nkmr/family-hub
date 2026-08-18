@@ -30,7 +30,12 @@ from app.features.photos.dependencies import (
 from app.features.photos.export_router import router as export_router
 from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.models import Photo
-from app.features.photos.queries import InvalidPhotoCursorError, PhotoListFilters, PhotoQueryService
+from app.features.photos.queries import (
+    InvalidPhotoCursorError,
+    PhotoAlbumNotFoundError,
+    PhotoListFilters,
+    PhotoQueryService,
+)
 from app.features.photos.registration import (
     DuplicatePhotoError,
     InvalidPhotoError,
@@ -48,10 +53,13 @@ from app.features.photos.schemas import (
     PhotoListQuery,
     PhotoListResponse,
     PhotoResponse,
+    PhotoSearchOptionResponse,
+    PhotoSearchOptionsResponse,
     PhotoTimelineMonthResponse,
     PhotoTimelineResponse,
     PhotoUpdate,
     StorageStatusResponse,
+    photo_response_from_model,
 )
 from app.features.photos.service import (
     InvalidPhotoSharingError,
@@ -77,13 +85,11 @@ router.include_router(trash_router)
 
 
 def _photo_response(photo: Photo, service: PhotoAccessService, user_id: UUID) -> PhotoResponse:
-    return PhotoResponse.model_validate(photo).model_copy(
-        update={
-            "is_favorite": service.is_favorite(photo.id, user_id),
-            "captured_at": photo.metadata_record.captured_at_override or photo.captured_at,
-            "captured_at_original": photo.captured_at,
-            "captured_at_override": photo.metadata_record.captured_at_override,
-        }
+    visible_group_ids = service.visible_share_group_ids({photo.id}, user_id).get(photo.id, set())
+    return photo_response_from_model(
+        photo,
+        visible_group_ids=visible_group_ids,
+        is_favorite=service.is_favorite(photo.id, user_id),
     )
 
 
@@ -168,12 +174,28 @@ def list_photo_metadata(
                 favorite=filters.favorite,
             ),
         )
+    except PhotoAlbumNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Album not found") from error
     except InvalidPhotoCursorError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid photo cursor") from error
     return PhotoListResponse(
         items=[PhotoListItemResponse.model_validate(photo) for photo in page.items],
         next_cursor=page.next_cursor,
         total_count=page.total_count,
+    )
+
+
+@router.get("/search-options", response_model=PhotoSearchOptionsResponse)
+def get_photo_search_options(
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[PhotoQueryService, Depends(get_photo_query_service)],
+) -> PhotoSearchOptionsResponse:
+    options = service.search_options(authenticated_user.id)
+    return PhotoSearchOptionsResponse(
+        uploaders=[
+            PhotoSearchOptionResponse.model_validate(option, from_attributes=True) for option in options.uploaders
+        ],
+        groups=[PhotoSearchOptionResponse.model_validate(option, from_attributes=True) for option in options.groups],
     )
 
 

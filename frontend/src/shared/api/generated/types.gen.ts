@@ -1347,7 +1347,7 @@ export type PhotoResponse = {
    * Sha256
    */
   sha256: string
-  sharing: PhotoSharing
+  sharing: PhotoResponseSharing
   /**
    * Size Bytes
    */
@@ -1377,6 +1377,45 @@ export type PhotoResponse = {
    * Width
    */
   width: number | null
+}
+
+/**
+ * PhotoResponseSharing
+ */
+export type PhotoResponseSharing = {
+  /**
+   * Group Ids
+   */
+  group_ids?: Array<string>
+  type: PhotoVisibility
+}
+
+/**
+ * PhotoSearchOptionResponse
+ */
+export type PhotoSearchOptionResponse = {
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * PhotoSearchOptionsResponse
+ */
+export type PhotoSearchOptionsResponse = {
+  /**
+   * Groups
+   */
+  groups: Array<PhotoSearchOptionResponse>
+  /**
+   * Uploaders
+   */
+  uploaders: Array<PhotoSearchOptionResponse>
 }
 
 /**
@@ -3689,6 +3728,23 @@ export type ExportPhotoOriginalsApiV1PhotosExportGetResponses = {
    */
   200: unknown
 }
+
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/photos/search-options'
+}
+
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: PhotoSearchOptionsResponse
+}
+
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponse =
+  GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses[keyof GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses]
 
 export type GetStorageStatusApiV1PhotosStorageStatusGetData = {
   body?: never

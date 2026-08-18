@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.features.albums.public import remove_photo_from_group_albums
 from app.features.audit.public import record_administrative_event
-from app.features.groups.public import lock_group_admin, lock_user_group_ids
+from app.features.groups.public import FamilyGroupMember, lock_group_admin, lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
 from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
@@ -84,31 +84,40 @@ class PhotoMetadataService:
                 captured_at_override.astimezone(UTC) if captured_at_override is not None else None
             )
         if sharing_group_ids is not None:
+            visible_existing_group_ids = set(
+                self._session.scalars(
+                    select(FamilyGroupMember.group_id).where(
+                        FamilyGroupMember.user_id == acting_user_id,
+                        FamilyGroupMember.group_id.in_(previous_group_ids),
+                    )
+                ).all()
+            )
+            next_group_ids = set(sharing_group_ids) | (previous_group_ids - visible_existing_group_ids)
             shared_at = datetime.now(UTC)
             photo.shares[:] = []
             photo.shares.extend(
                 PhotoShare(id=uuid4(), photo_id=photo.id, group_id=group_id, created_at=shared_at)
-                for group_id in sorted(sharing_group_ids, key=str)
+                for group_id in sorted(next_group_ids, key=str)
             )
             activity_event = create_photo_activity_event(
                 photo.id,
                 acting_user_id,
                 acting_username,
                 PhotoActivityEventType.SHARED,
-                sharing_group_ids - previous_group_ids,
+                next_group_ids - previous_group_ids,
                 shared_at,
             )
             if activity_event is not None:
                 self._session.add(activity_event)
                 enqueue_group_notification(
                     self._session,
-                    sharing_group_ids - previous_group_ids,
+                    next_group_ids - previous_group_ids,
                     NotificationType.PHOTO_SHARED,
                     f"photo:{activity_event.operation_id}",
                     {"url": "/photos/new", "operation_id": str(activity_event.operation_id)},
                     exclude_user_id=acting_user_id,
                 )
-            remove_photo_from_group_albums(self._session, photo.id, previous_group_ids - sharing_group_ids)
+            remove_photo_from_group_albums(self._session, photo.id, previous_group_ids - next_group_ids)
         photo.metadata_record.version += 1
         photo.metadata_record.updated_at = datetime.now(UTC)
         next_metadata = build_sidecar_metadata(photo)

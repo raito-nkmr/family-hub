@@ -1,17 +1,17 @@
 import base64
 import binascii
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.features.albums.models import Album, AlbumPhoto
 from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_user_group_ids
-from app.features.photos.public import Photo, PhotoCatalog
+from app.features.photos.public import Photo, PhotoCatalog, PhotoLifecycleState
 
 
 class AlbumNotFoundError(Exception):
@@ -61,6 +61,7 @@ class AlbumDetail:
     album: AlbumSummary
     photos: list[Photo]
     next_cursor: str | None = None
+    visible_group_ids: dict[UUID, set[UUID]] = field(default_factory=dict)
 
 
 class AlbumService:
@@ -71,8 +72,16 @@ class AlbumService:
     def list_albums(self, viewer_user_id: UUID) -> list[AlbumSummary]:
         fallback_cover = (
             select(AlbumPhoto.photo_id)
-            .where(AlbumPhoto.album_id == Album.id)
-            .order_by(AlbumPhoto.added_at, AlbumPhoto.photo_id)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == Album.id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
+            .order_by(
+                case((AlbumPhoto.photo_id == Album.cover_photo_id, 0), else_=1),
+                AlbumPhoto.added_at,
+                AlbumPhoto.photo_id,
+            )
             .limit(1)
             .correlate(Album)
             .scalar_subquery()
@@ -80,11 +89,12 @@ class AlbumService:
         statement = (
             select(
                 Album,
-                func.count(AlbumPhoto.photo_id),
+                func.count(Photo.id).filter(Photo.lifecycle_state == PhotoLifecycleState.ACTIVE),
                 FamilyGroup.name,
-                func.coalesce(Album.cover_photo_id, fallback_cover),
+                fallback_cover,
             )
             .outerjoin(AlbumPhoto, AlbumPhoto.album_id == Album.id)
+            .outerjoin(Photo, Photo.id == AlbumPhoto.photo_id)
             .outerjoin(FamilyGroup, FamilyGroup.id == Album.group_id)
             .where(self._can_access(viewer_user_id))
             .group_by(Album.id, FamilyGroup.name)
@@ -105,7 +115,14 @@ class AlbumService:
     ) -> AlbumDetail:
         album = self._get_album_model(album_id, viewer_user_id)
         cursor_added_at, cursor_photo_id = self._decode_photo_cursor(cursor) if cursor else (None, None)
-        page_statement = select(AlbumPhoto.photo_id, AlbumPhoto.added_at).where(AlbumPhoto.album_id == album_id)
+        page_statement = (
+            select(AlbumPhoto.photo_id, AlbumPhoto.added_at)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == album_id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
+        )
         if cursor_added_at is not None and cursor_photo_id is not None:
             page_statement = page_statement.where(
                 (AlbumPhoto.added_at > cursor_added_at)
@@ -120,13 +137,27 @@ class AlbumService:
         photos_by_id = {photo.id: photo for photo in self._photo_catalog.list_by_ids(photo_ids, viewer_user_id)}
         photos = [photos_by_id[photo_id] for photo_id in photo_ids if photo_id in photos_by_id]
         photo_count = self._session.scalar(
-            select(func.count()).select_from(AlbumPhoto).where(AlbumPhoto.album_id == album_id)
+            select(func.count())
+            .select_from(AlbumPhoto)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == album_id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
         )
         group_name = self._session.scalar(select(FamilyGroup.name).where(FamilyGroup.id == album.group_id))
         fallback_cover_id = self._session.scalar(
             select(AlbumPhoto.photo_id)
-            .where(AlbumPhoto.album_id == album_id)
-            .order_by(AlbumPhoto.added_at, AlbumPhoto.photo_id)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == album_id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
+            .order_by(
+                case((AlbumPhoto.photo_id == album.cover_photo_id, 0), else_=1),
+                AlbumPhoto.added_at,
+                AlbumPhoto.photo_id,
+            )
             .limit(1)
         )
         next_cursor = None
@@ -134,9 +165,10 @@ class AlbumService:
             last = visible_rows[-1]
             next_cursor = self._encode_photo_cursor(last.added_at, last.photo_id)
         return AlbumDetail(
-            album=self._summary(album, photo_count or 0, group_name, album.cover_photo_id or fallback_cover_id),
+            album=self._summary(album, photo_count or 0, group_name, fallback_cover_id),
             photos=photos,
             next_cursor=next_cursor,
+            visible_group_ids=self._photo_catalog.visible_share_group_ids(photo_ids, viewer_user_id),
         )
 
     def create_album(
@@ -182,22 +214,46 @@ class AlbumService:
         if update_description:
             album.description = description
         if update_cover:
-            if cover_photo_id is not None and self._session.get(AlbumPhoto, (album_id, cover_photo_id)) is None:
-                raise PhotoNotInAlbumError(album_id, cover_photo_id)
+            if cover_photo_id is not None:
+                active_cover = self._session.scalar(
+                    select(Photo.id)
+                    .join(AlbumPhoto, AlbumPhoto.photo_id == Photo.id)
+                    .where(
+                        AlbumPhoto.album_id == album_id,
+                        AlbumPhoto.photo_id == cover_photo_id,
+                        Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+                    )
+                )
+                if active_cover is None:
+                    raise PhotoNotInAlbumError(album_id, cover_photo_id)
             album.cover_photo_id = cover_photo_id
         album.updated_at = datetime.now(UTC)
         self._commit()
         photo_count = self._session.scalar(
-            select(func.count()).select_from(AlbumPhoto).where(AlbumPhoto.album_id == album_id)
+            select(func.count())
+            .select_from(AlbumPhoto)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == album_id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
         )
         group_name = self._session.scalar(select(FamilyGroup.name).where(FamilyGroup.id == album.group_id))
         fallback_cover_id = self._session.scalar(
             select(AlbumPhoto.photo_id)
-            .where(AlbumPhoto.album_id == album_id)
-            .order_by(AlbumPhoto.added_at, AlbumPhoto.photo_id)
+            .join(Photo, Photo.id == AlbumPhoto.photo_id)
+            .where(
+                AlbumPhoto.album_id == album_id,
+                Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+            )
+            .order_by(
+                case((AlbumPhoto.photo_id == album.cover_photo_id, 0), else_=1),
+                AlbumPhoto.added_at,
+                AlbumPhoto.photo_id,
+            )
             .limit(1)
         )
-        return self._summary(album, photo_count or 0, group_name, album.cover_photo_id or fallback_cover_id)
+        return self._summary(album, photo_count or 0, group_name, fallback_cover_id)
 
     def delete_album(self, album_id: UUID, acting_user_id: UUID) -> None:
         album = self._get_album_model(album_id, acting_user_id, lock=True)

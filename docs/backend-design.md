@@ -213,6 +213,12 @@ service boundary as well as at the router boundary. Return `404` for resources w
 Sessions use a random HttpOnly cookie token and store only its SHA-256 hash. Mutations require the session-bound CSRF token.
 Use `Cache-Control: private, no-store` for authenticated APIs and binaries.
 
+Photo search provides `GET /api/v1/photos/search-options` for authenticated users who have completed password change.
+The response contains stable, name-then-ID-sorted uploader and current-group candidates; uploaders are limited to
+authors of active photos visible to the caller. Photo detail responses expose only share groups the caller currently
+belongs to, and may therefore return an empty `group_ids` list for a shared photo. Owner metadata updates preserve
+existing shares that the owner cannot currently see.
+
 ## File storage and thumbnails
 
 ```text
@@ -350,7 +356,9 @@ Person detection is excluded from the current backend contract; see [`proposals/
 
 Photos move between `active`, `trashed`, and `purge_pending` without moving originals. Trash removes a photo from ordinary
 authorization, lists, New, albums, and exports. Only the owner can view or restore it; shares, album relationships, memo, and
-favorite data remain for restoration. The lifecycle is also stored in sidecar schema 7.
+favorite data remain for restoration. Album counts, pages, and covers consider active photos only, while the `AlbumPhoto`
+relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
+sidecar schema 7.
 
 Permanent deletion first commits `purge_pending`, then idempotently deletes original, sidecar, and derivatives, and finally
 deletes database rows. `python -m app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
