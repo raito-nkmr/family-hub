@@ -177,6 +177,7 @@ Index(
     Photo.id.desc(),
 )
 Index("ix_photos_uploaded_by_user_id", Photo.uploaded_by_user_id)
+Index("ix_photos_trashed_by_user_id", Photo.trashed_by_user_id)
 Index("ix_photos_lifecycle_purge_after", Photo.lifecycle_state, Photo.purge_after)
 Index(
     "ix_photos_original_filename_trgm",
@@ -369,6 +370,10 @@ class UploadBatch(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_upload_batches"),
         CheckConstraint("status IN ('active', 'completed', 'canceled')", name="ck_upload_batches_status"),
+        CheckConstraint(
+            "(status = 'active' AND completed_at IS NULL) OR (status <> 'active' AND completed_at IS NOT NULL)",
+            name="ck_upload_batches_completed_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -425,6 +430,16 @@ class UploadItem(Base):
         ),
         CheckConstraint("size_bytes > 0", name="ck_upload_items_size_bytes_positive"),
         CheckConstraint("received_bytes >= 0 AND received_bytes <= size_bytes", name="ck_upload_items_received_bytes"),
+        CheckConstraint(
+            "(status IN ('queued', 'uploading', 'processing') AND completed_at IS NULL "
+            "AND photo_id IS NULL AND error_code IS NULL) OR "
+            "(status = 'succeeded' AND completed_at IS NOT NULL AND error_code IS NULL) OR "
+            "(status = 'duplicate' AND completed_at IS NOT NULL AND photo_id IS NULL "
+            "AND error_code = 'duplicate') OR "
+            "(status = 'failed' AND completed_at IS NOT NULL AND photo_id IS NULL "
+            "AND error_code IS NOT NULL)",
+            name="ck_upload_items_lifecycle_fields",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -448,4 +463,6 @@ class UploadItem(Base):
 
 
 Index("ix_upload_batches_owner_user_id_created_at", UploadBatch.owner_user_id, UploadBatch.created_at.desc())
+Index("ix_upload_batch_group_shares_group_id", UploadBatchGroupShare.group_id)
 Index("ix_upload_items_batch_id", UploadItem.batch_id)
+Index("ix_upload_items_photo_id", UploadItem.photo_id)

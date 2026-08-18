@@ -145,7 +145,8 @@ logic becomes difficult to read.
 Maintenance exposes administrator storage summaries and maintenance history. Integrity checks, database backup, secondary-HDD
 snapshots, and trash purge run only as management commands and systemd timers, never from HTTP.
 
-Notifications own session-bound Web Push subscriptions, preferences, and outbox. Photo sharing and shopping additions create
+Notifications own session-bound Web Push subscriptions, preferences, and outbox. The database composite foreign key keeps
+the stored subscription user and session owner identical. Photo sharing and shopping additions create
 outbox entries in the same transaction as the business change; cleaning due notifications are enqueued periodically. Workers
 exclude expired sessions, claim with timestamps and tokens, requeue stale claims, and retry only failed devices. Endpoints are
 HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository.
@@ -360,7 +361,8 @@ favorite data remain for restoration. Album counts, pages, and covers consider a
 relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
 sidecar schema 7.
 
-Permanent deletion first commits `purge_pending`, then idempotently deletes original, sidecar, and derivatives, and finally
-deletes database rows. `python -m app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
+Permanent deletion first commits `purge_pending`, then clears album covers for the photo in the same database transaction,
+idempotently deletes original, sidecar, and derivatives, and finally deletes database rows. `python -m
+app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
 
 日本語版: [backend-design.ja.md](./backend-design.ja.md)

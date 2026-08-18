@@ -46,6 +46,9 @@ current relational contract.
 - Give constraints and indexes stable names managed by Alembic.
 - Avoid PostgreSQL-specific ENUMs for now; use strings with `CHECK` constraints so values remain easier to change.
 
+Columns named `updated_at` use a server default for INSERTs only. Application services set them explicitly on every
+supported update; the schema does not use a general-purpose update trigger.
+
 ## Timestamps
 
 Database and API values are UTC; user-facing values are JST.
@@ -87,12 +90,15 @@ Stores one-time account invitations issued by system administrators. It contains
 SHA-256 token hash, creator, creation and expiry times, and optional used and revoked times. Only one unused, unrevoked
 invitation may exist for a username. Acceptance locks the row, validates expiry, use, revocation, and username uniqueness,
 then creates the user and sets `used_at` in one transaction. The raw token is returned only once and is never stored.
+Creating a replacement invitation revokes any previous unused invitation for the same username, including an expired one,
+in the same transaction before inserting the replacement.
 
 ### `user_sessions`
 
 Stores server-side sessions. The raw cookie token is not stored; only its lowercase SHA-256 hash is stored in the unique
 `token_hash` column. The table also stores a session-bound CSRF token, creation time, last-use time, absolute expiry, and
-optional revocation time. Index `user_id` as `ix_user_sessions_user_id` to revoke all sessions efficiently.
+optional revocation time. `expires_at` must be later than `created_at`. Index `user_id` as `ix_user_sessions_user_id` to
+revoke all sessions efficiently.
 
 ### `family_groups`
 
@@ -287,7 +293,9 @@ other regenerable derived data such as person-analysis results.
 `administrative_audit_events` stores administrative scope, actor ID and username snapshot, target, non-secret JSON details,
 and time. It deliberately has no foreign keys to actors or groups so audit rows survive physical deletion.
 
-`push_subscriptions` associates an endpoint and encryption keys with a user and login session. `notification_preferences`
+`push_subscriptions` associates an endpoint and encryption keys with a user and login session. A composite foreign key to
+`(user_sessions.id, user_sessions.user_id)` prevents a subscription from pairing one user with another user's session.
+`notification_preferences`
 stores photo-sharing, cleaning-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
 and deduplication key and is created in the same transaction as the business operation. `claimed_at` and `claim_token` track
 worker ownership. `notification_deliveries` uses the outbox/subscription pair as a composite key and stores per-device

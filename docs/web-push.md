@@ -42,7 +42,8 @@ entries for the same user. The settings UI saves the enabled state of all three 
 
 A Push subscription is associated with both a user and the login session that registered it. Delivery targets must belong
 to an active user and must not be associated with a revoked, absolutely expired, idle-expired, or pre-password-change
-session. Devices whose sessions were invalidated by logout or a password change do not receive notifications.
+session. PostgreSQL also enforces that the stored user is the owner of the stored session. Devices whose sessions were
+invalidated by logout or a password change do not receive notifications.
 
 The number of subscriptions per user is limited by `PUSH_MAX_SUBSCRIPTIONS_PER_USER`, which defaults to 10. The unsubscribe
 API can delete only subscriptions belonging to the current user and current login session. Subscriptions for which the

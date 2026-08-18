@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.features.albums.public import clear_photo_as_cover
 from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite, PhotoLifecycleState
 from app.features.photos.registration import build_sidecar_metadata
 from app.features.photos.service import (
@@ -195,6 +196,7 @@ class PhotoTrashService:
 
     def _delete_pending_photo(self, photo: Photo) -> None:
         derivative_keys = tuple(derivative.storage_key for derivative in photo.derivatives)
+        clear_photo_as_cover(self._session, photo.id)
         try:
             self._storage.delete_photo_files(photo.storage_key, derivative_keys)
         except PhotoStorageError as error:

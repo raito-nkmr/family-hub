@@ -42,6 +42,10 @@ class MaintenanceRun(Base):
             "(status = 'running' AND finished_at IS NULL) OR (status <> 'running' AND finished_at IS NOT NULL)",
             name="ck_maintenance_runs_finished_at",
         ),
+        CheckConstraint(
+            "finished_at IS NULL OR finished_at >= started_at",
+            name="ck_maintenance_runs_finished_after_started",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)

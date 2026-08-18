@@ -47,3 +47,5 @@ Index(
     ShoppingItem.purchased_at,
     ShoppingItem.created_at,
 )
+Index("ix_shopping_items_created_by_user_id", ShoppingItem.created_by_user_id)
+Index("ix_shopping_items_purchased_by_user_id", ShoppingItem.purchased_by_user_id)

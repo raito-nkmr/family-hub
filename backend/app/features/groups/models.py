@@ -72,6 +72,10 @@ class FamilyGroupMembershipInvitation(Base):
             "status IN ('pending', 'accepted', 'rejected', 'canceled')",
             name="ck_group_membership_invitations_status",
         ),
+        CheckConstraint(
+            "(status = 'pending' AND responded_at IS NULL) OR (status <> 'pending' AND responded_at IS NOT NULL)",
+            name="ck_group_membership_invitations_responded_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -110,6 +114,8 @@ Index(
     unique=True,
     postgresql_where=FamilyGroupMembershipInvitation.status == "pending",
 )
+Index("ix_group_membership_invitations_group_id", FamilyGroupMembershipInvitation.group_id)
+Index("ix_group_membership_invitations_requested_by_user_id", FamilyGroupMembershipInvitation.requested_by_user_id)
 Index(
     "ix_group_membership_invitations_user_status",
     FamilyGroupMembershipInvitation.user_id,
