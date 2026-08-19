@@ -104,6 +104,8 @@ photo shares, activity-group relations, and upload-batch shares. Photos remain; 
 Membership removal and photo, upload, album, cleaning, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
 albums, cleaning tasks, and shopping items in that order.
+Upload batch creation locks the requested groups before checking membership. Notification fan-out locks all target groups in
+stable ID order before reading members, preventing membership removal from racing the read-and-enqueue operation.
 
 Mutations that can change the last active system or group administrator use one PostgreSQL transaction advisory lock. The
 lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
@@ -338,9 +340,11 @@ rebuild are not implemented.
 
 ## Storage availability
 
-Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals` and `incoming`
-are writable, free space meets the safety threshold, and path resolution cannot escape the allowed root. A directory merely
-existing is not sufficient; this prevents writing to an identically named internal-SSD directory when the HDD is detached.
+Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals`, `incoming`, and
+`database-backups` are writable, free space meets the safety threshold, and path resolution cannot escape the allowed root.
+Integrity checks and database backups use the same validated storage-path derivation and reject absolute paths, `..`, and
+symlinks without reading outside the root. A directory merely existing is not sufficient; this prevents writing to an
+identically named internal-SSD directory when the HDD is detached.
 
 ## Database access and settings
 
@@ -400,8 +404,10 @@ favorite data remain for restoration. Album counts, pages, and covers consider a
 relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
 sidecar schema 7.
 
-Permanent deletion first commits `purge_pending`, then clears album covers for the photo in the same database transaction,
-idempotently deletes original, sidecar, and derivatives, and finally deletes database rows. `python -m
+Permanent deletion requests for `trashed` photos are accepted only after `purge_after`; an early request is rejected with `409`.
+The request first commits `purge_pending`, then clears album covers for the photo in the same database transaction, idempotently
+deletes original, sidecar, and derivatives, and finally deletes database rows. A photo already in `purge_pending` can be retried
+regardless of its retention timestamp so interrupted work remains recoverable. `python -m
 app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
 
 日本語版: [backend-design.ja.md](./backend-design.ja.md)

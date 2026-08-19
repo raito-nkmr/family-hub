@@ -75,7 +75,7 @@ The library can select up to 100 owned photos and add groups as sharing targets 
 already shared with a selected group are unchanged. After a successful upload, the upload panel can pass saved photos to
 the same bulk-sharing flow.
 
-The implemented scope also includes an owner trash, restore, retryable permanent deletion after retention, administrator
+The implemented scope also includes an owner trash, restore, retryable permanent deletion after a 30-day retention period, administrator
 storage and maintenance status, database backup, versioned snapshots to a disconnected external HDD, a PWA app shell, iPhone Home Screen
 instructions, and the Web Push backend foundation. The install prompt appears only in a normal browser tab, persists its
 dismissed state in the browser, can be shown again from Account, and is hidden in standalone mode. Trash uses the same 2/3/4
@@ -397,7 +397,6 @@ configured on the browser or server operating system.
 
 - Maximum file size
 - Derivative-cache storage limit and deletion/regeneration policy
-- Trash retention period
 - Whether to provide independent LAN access when Cloudflare is unavailable
 
 日本語版: [product-brief.ja.md](./product-brief.ja.md)
