@@ -50,8 +50,9 @@ purposes, group visibility, retention, deletion, backup, external services, cook
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Cleaning, Shopping, and Other appear in bottom
-navigation. New, Library, and Albums are tabs inside Photos; Groups, invitation administration, and Account are under Other.
-Screens wider than 900 px switch to a left sidebar and expand the photo area and other features.
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Groups, invitation administration, Account, and the
+administrator-only System screen are under Other. Screens wider than 900 px switch to a left sidebar and expand the photo
+area and other features.
 
 The photo list uses 50-item cursor pagination with infinite scrolling, a year/month timeline, date range, uploader, shared
 group, favorite, capture-time presence, and memo/original-filename search. The album photo picker uses the same pagination,

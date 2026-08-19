@@ -128,13 +128,13 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
+`storage.py` validates HDD state, receives resumable chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
 thumbnails from images or the first video frame, and `video_validation.py` validates supported video containers with
 `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
 catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
-content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `upload_service.py`
-handles single-photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
+content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `registration.py` handles
+finalized photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
 `export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
@@ -379,7 +379,7 @@ recovery, deduplication, per-device retries, and maintenance terminal states.
 
 ### Routers and migrations
 
-Replace FastAPI dependencies with test Session and Storage implementations. Test multipart upload, response schemas, and
+Replace FastAPI dependencies with test Session and Storage implementations. Test resumable chunk upload, response schemas, and
 domain-exception-to-HTTP conversion. CI must apply the latest migrations to an empty PostgreSQL database, while integration
 and unit tests remain separately runnable.
 
