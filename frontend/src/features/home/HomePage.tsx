@@ -4,16 +4,15 @@ import { appPaths } from '../../app/routes'
 import { formatDateTime } from '../../shared/lib/format'
 import {
   CheckCircleIcon,
-  ApkInstallIcon,
   CleaningIcon,
   PhotoActivityIcon,
   PhotoLibraryIcon,
   RefreshIcon,
   ShoppingCartIcon,
-  CloseIcon,
 } from '../../shared/ui/icons'
 import { getCleaningDueStatus } from '../cleaning/status'
 import type { FamilyGroup } from '../groups/api'
+import { PwaInstallCard } from '../pwa/PwaInstallCard'
 import type { PhotoListItem } from '../photos/api'
 import { PhotoCard } from '../photos/components/PhotoCard'
 import type { GroupCleaningTask, GroupShoppingItem } from './useHome'
@@ -69,27 +68,11 @@ export function HomePage({
       </header>
 
       {showPwaInstallPrompt && (
-        <section className="pwa-install-card home-pwa-card" aria-labelledby="home-pwa-heading">
-          <img className="pwa-install-card__icon" src="/app-icon-180.png" alt="" />
-          <div className="pwa-install-card__content">
-            <h2 id="home-pwa-heading">{t('pwa.cardTitle')}</h2>
-            <p>{t('pwa.cardDescription')}</p>
-          </div>
-          <div className="pwa-install-card__actions">
-            <button className="secondary-button icon-button" type="button" onClick={onShowPwaInstallGuide}>
-              <ApkInstallIcon />
-              {t('pwa.showGuide')}
-            </button>
-            <button
-              className="pwa-install-card__dismiss"
-              type="button"
-              aria-label={t('pwa.dismissPrompt')}
-              onClick={onDismissPwaInstallPrompt}
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        </section>
+        <PwaInstallCard
+          variant="home"
+          onShowInstallGuide={onShowPwaInstallGuide}
+          onDismiss={onDismissPwaInstallPrompt}
+        />
       )}
 
       {error && (

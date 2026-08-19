@@ -32,6 +32,10 @@
   width: 22px;
 }
 
+.material-symbol-icon {
+  fill: currentColor;
+}
+
 .spinner {
   width: 16px;
   height: 16px;

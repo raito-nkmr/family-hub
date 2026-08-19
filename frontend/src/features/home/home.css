@@ -27,10 +27,6 @@
   gap: 1rem;
 }
 
-.home-pwa-card {
-  margin-bottom: 1rem;
-}
-
 .home-panel {
   display: flex;
   min-width: 0;

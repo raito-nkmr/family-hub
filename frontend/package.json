@@ -17,7 +17,8 @@
     "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts",
     "api:generate": "bash ../scripts/generate-api-types.sh",
     "api:check": "bash ../scripts/check-api-types.sh",
-    "check": "npm run api:check && npm run format:check && npm run lint && npm run test:run && npm run build"
+    "icons:check": "bash ../scripts/check-icon-colors.sh",
+    "check": "npm run api:check && npm run icons:check && npm run format:check && npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-jp": "^5.3.0",

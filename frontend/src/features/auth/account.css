@@ -39,17 +39,6 @@
   box-shadow: 0 8px 22px rgb(16 42 67 / 8%);
 }
 
-.account-panel--pwa {
-  display: flex;
-  grid-column: 1 / -1;
-  gap: 1rem;
-  align-items: center;
-}
-
-.account-panel--pwa .secondary-button {
-  flex: 0 0 auto;
-}
-
 .account-panel h2,
 .account-panel__heading p {
   margin: 0;
@@ -118,15 +107,6 @@
 
   .account-grid {
     grid-template-columns: 1fr;
-  }
-
-  .account-panel--pwa {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .account-panel--pwa .secondary-button {
-    margin-left: 68px;
   }
 
   .session-list li {

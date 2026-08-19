@@ -1,5 +1,6 @@
 .pwa-install-card {
   display: flex;
+  min-width: 0;
   gap: 1rem;
   align-items: center;
   padding: 1rem 1.1rem;
@@ -7,6 +8,14 @@
   border: 1px solid var(--color-border-default);
   border-radius: 14px;
   box-shadow: 0 8px 22px rgb(16 42 67 / 8%);
+}
+
+.pwa-install-card--home {
+  margin-bottom: 1rem;
+}
+
+.pwa-install-card--account {
+  grid-column: 1 / -1;
 }
 
 .pwa-install-card__icon {
@@ -18,7 +27,7 @@
 
 .pwa-install-card__content {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
 }
 
 .pwa-install-card__content h2,
@@ -35,6 +44,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .pwa-install-card__dismiss {
@@ -123,12 +133,19 @@
 
 @media (max-width: 640px) {
   .pwa-install-card {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .pwa-install-card__content,
+  .pwa-install-card__actions {
+    grid-column: 2;
   }
 
   .pwa-install-card__actions {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
