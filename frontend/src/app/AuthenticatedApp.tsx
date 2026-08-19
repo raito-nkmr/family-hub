@@ -234,8 +234,8 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
 
       {photoDashboard.selectedPhoto && (
         <PhotoModal
-          key={photoDashboard.selectedPhoto.id}
           photo={photoDashboard.selectedPhoto}
+          photoDetailLoading={photoDashboard.photoDetailLoading}
           currentUserId={currentUser.id}
           updatingMetadata={photoDashboard.updatingMetadata}
           error={photoDashboard.metadataError}

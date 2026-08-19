@@ -4,7 +4,7 @@ import { formatBytes, formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
 import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
-import { DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
+import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoDownloadUrl, type Photo } from '../api'
 import { formatPhotoContentType } from '../contentType'
@@ -12,6 +12,7 @@ import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoModalProps {
   photo: Photo
+  photoDetailLoading?: boolean
   currentUserId: string
   updatingMetadata: boolean
   error: string | null
@@ -31,6 +32,7 @@ const SWIPE_THRESHOLD_PX = 50
 
 export function PhotoModal({
   photo,
+  photoDetailLoading = false,
   currentUserId,
   updatingMetadata,
   error,
@@ -48,7 +50,9 @@ export function PhotoModal({
   const { t } = useTranslation()
   const confirm = useConfirmation()
   const isOwner = photo.uploaded_by_user_id === currentUserId
-  const [memo, setMemo] = useState(photo.memo ?? '')
+  const metadataBusy = updatingMetadata || photoDetailLoading
+  const [memoState, setMemoState] = useState(() => ({ photoId: photo.id, value: photo.memo ?? '' }))
+  const memo = memoState.photoId === photo.id ? memoState.value : (photo.memo ?? '')
   const captureDateSource = photo.captured_at_override ?? photo.captured_at
   const [captureDateState, setCaptureDateState] = useState(() => ({
     photoId: photo.id,
@@ -59,7 +63,8 @@ export function PhotoModal({
     captureDateState.photoId === photo.id && captureDateState.source === captureDateSource
       ? captureDateState.value
       : toDateTimeLocal(captureDateSource)
-  const [moderationPassword, setModerationPassword] = useState('')
+  const [moderationPasswordState, setModerationPasswordState] = useState(() => ({ photoId: photo.id, value: '' }))
+  const moderationPassword = moderationPasswordState.photoId === photo.id ? moderationPasswordState.value : ''
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
   const moderatedGroups = groups.filter(
     (group) => (photo.sharing.group_ids ?? []).includes(group.id) && group.current_user_role === 'admin',
@@ -75,7 +80,7 @@ export function PhotoModal({
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     const start = swipeStartRef.current
     swipeStartRef.current = null
-    if (!start || updatingMetadata || event.changedTouches.length !== 1) return
+    if (!start || metadataBusy || event.changedTouches.length !== 1) return
     const touch = event.changedTouches[0]
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
@@ -103,6 +108,28 @@ export function PhotoModal({
       size="large"
       surface="media"
       onClose={onClose}
+      overlayContent={
+        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
+          <button
+            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
+            type="button"
+            disabled={metadataBusy || !onPreviousPhoto}
+            aria-label={t('photoDetails.previousPhoto')}
+            onClick={onPreviousPhoto}
+          >
+            <BackIcon />
+          </button>
+          <button
+            className="modal__edge-navigation-button modal__edge-navigation-button--next"
+            type="button"
+            disabled={metadataBusy || !onNextPhoto}
+            aria-label={t('photoDetails.nextPhoto')}
+            onClick={onNextPhoto}
+          >
+            <BackIcon />
+          </button>
+        </nav>
+      }
     >
       <div
         className="modal__image-wrap"
@@ -112,7 +139,7 @@ export function PhotoModal({
           swipeStartRef.current = null
         }}
       >
-        <PhotoPreview photo={photo} className="modal__image" source="original" />
+        <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
       </div>
       <div className="modal__details">
         <div>
@@ -122,7 +149,7 @@ export function PhotoModal({
             <button
               className={`secondary-button icon-button favorite-button ${photo.is_favorite ? 'favorite-button--active' : ''}`}
               type="button"
-              disabled={updatingMetadata}
+              disabled={metadataBusy}
               aria-pressed={photo.is_favorite ?? false}
               onClick={onToggleFavorite}
             >
@@ -137,7 +164,7 @@ export function PhotoModal({
               <button
                 className="danger-button icon-button"
                 type="button"
-                disabled={updatingMetadata}
+                disabled={metadataBusy}
                 onClick={() => {
                   void confirm(t('photoTrash.trashConfirm', { filename: photo.original_filename })).then(
                     (confirmed) => confirmed && onTrash(),
@@ -174,7 +201,7 @@ export function PhotoModal({
             <dt>{t('photoDetails.visibility')}</dt>
             <dd>
               {isOwner ? (
-                <fieldset className="photo-sharing" disabled={updatingMetadata}>
+                <fieldset className="photo-sharing" disabled={metadataBusy}>
                   <legend className="sr-only">{t('photoDetails.visibilityLabel')}</legend>
                   <small>
                     {(photo.sharing.group_ids ?? []).length === 0
@@ -210,8 +237,10 @@ export function PhotoModal({
                         type="password"
                         value={moderationPassword}
                         autoComplete="current-password"
-                        disabled={updatingMetadata}
-                        onChange={(event) => setModerationPassword(event.target.value)}
+                        disabled={metadataBusy}
+                        onChange={(event) =>
+                          setModerationPasswordState({ photoId: photo.id, value: event.target.value })
+                        }
                       />
                     </label>
                   )}
@@ -224,10 +253,10 @@ export function PhotoModal({
                           <button
                             className="danger-button"
                             type="button"
-                            disabled={updatingMetadata || !moderationPassword}
+                            disabled={metadataBusy || !moderationPassword}
                             onClick={() => {
                               onModerateGroupShare(group.id, moderationPassword)
-                              setModerationPassword('')
+                              setModerationPasswordState({ photoId: photo.id, value: '' })
                             }}
                           >
                             {t('photoDetails.removeFromGroup')}
@@ -255,17 +284,13 @@ export function PhotoModal({
               <input
                 type="datetime-local"
                 value={captureDate}
-                disabled={updatingMetadata}
+                disabled={metadataBusy}
                 onChange={(event) =>
                   setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
                 }
               />
               <div>
-                <button
-                  className="success-button icon-button"
-                  type="submit"
-                  disabled={updatingMetadata || !captureDate}
-                >
+                <button className="success-button icon-button" type="submit" disabled={metadataBusy || !captureDate}>
                   <SaveIcon />
                   {updatingMetadata ? t('common.saving') : t('photoDetails.saveCaptureDate')}
                 </button>
@@ -273,7 +298,7 @@ export function PhotoModal({
                   <button
                     className="secondary-button"
                     type="button"
-                    disabled={updatingMetadata}
+                    disabled={metadataBusy}
                     onClick={() => onCaptureDateSave(null)}
                   >
                     {t('photoDetails.resetCaptureDate')}
@@ -290,16 +315,16 @@ export function PhotoModal({
               value={memo}
               maxLength={2000}
               rows={5}
-              disabled={updatingMetadata}
+              disabled={metadataBusy}
               placeholder={t('photoDetails.memoPlaceholder')}
-              onChange={(event) => setMemo(event.target.value)}
+              onChange={(event) => setMemoState({ photoId: photo.id, value: event.target.value })}
             />
             <div>
               <small>{memo.length} / 2000</small>
               <button
                 className="success-button icon-button"
                 type="submit"
-                disabled={updatingMetadata || memo.trim() === (photo.memo ?? '')}
+                disabled={metadataBusy || memo.trim() === (photo.memo ?? '')}
               >
                 <SaveIcon />
                 {updatingMetadata ? t('common.saving') : t('photoDetails.saveMemo')}

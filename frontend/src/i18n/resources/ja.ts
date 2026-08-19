@@ -253,6 +253,9 @@ export const ja: TranslationShape = {
   },
   photoDetails: {
     close: '拡大表示を閉じる',
+    navigationLabel: '写真の移動',
+    previousPhoto: '前の写真を表示',
+    nextPhoto: '次の写真を表示',
     eyebrow: '写真の詳細',
     capturedAt: '撮影日時',
     captureDateEdit: '撮影日時を補正',

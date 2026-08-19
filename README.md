@@ -12,7 +12,7 @@ layout.
   - Cursor-based infinite scrolling, timeline navigation, and server-side search
   - Image and video uploads with first-frame thumbnails and in-browser playback
   - Favorites, shared photos, photo activity, shared memos, and group-based visibility
-  - Mobile detail-view swipes between adjacent photos in the library
+  - Desktop edge clicks and mobile detail-view swipes between adjacent photos in the library
   - Group albums with selectable cover photos
   - Bulk sharing to multiple family groups
   - Individual downloads and streamed ZIP exports for owned photos

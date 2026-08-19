@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
@@ -66,6 +66,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     queryKey: queryKeys.photo(selectedPhotoId ?? ''),
     queryFn: ({ signal }) => getPhoto(selectedPhotoId!, signal),
     enabled: selectedPhotoId !== null,
+    placeholderData: keepPreviousData,
   })
   const unauthorizedCandidate = [
     storageQuery.error,
@@ -77,7 +78,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
-  const selectedPhoto = detailQuery.data ?? null
+  const selectedPhoto = selectedPhotoId === null ? null : (detailQuery.data ?? null)
   const selectedPhotoIndex = photoList.photos.findIndex((photo) => photo.id === selectedPhotoId)
   const previousPhoto = selectedPhotoIndex > 0 ? photoList.photos[selectedPhotoIndex - 1] : null
   const nextPhoto = selectedPhotoIndex >= 0 ? (photoList.photos[selectedPhotoIndex + 1] ?? null) : null
@@ -215,6 +216,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     searchOptions: searchOptionsQuery.data ?? null,
     searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
+    photoDetailLoading: detailQuery.isFetching,
     previousPhoto,
     nextPhoto,
     loading:

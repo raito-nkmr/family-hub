@@ -255,6 +255,9 @@ export const en = {
   },
   photoDetails: {
     close: 'Close photo preview',
+    navigationLabel: 'Photo navigation',
+    previousPhoto: 'Show previous photo',
+    nextPhoto: 'Show next photo',
     eyebrow: 'Photo details',
     capturedAt: 'Captured',
     captureDateEdit: 'Capture date and time',

@@ -166,6 +166,36 @@ describe('usePhotoDashboard', () => {
     expect(result.current.nextPhoto?.id).toBe('photo-3')
   })
 
+  it('keeps the current detail while the next photo loads', async () => {
+    const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
+    let resolveSecond: ((value: Photo) => void) | undefined
+    vi.mocked(getPhoto).mockImplementation(async (photoId) => {
+      if (photoId === secondPhoto.id) {
+        return new Promise((resolve) => {
+          resolveSecond = resolve
+        })
+      }
+      return photo
+    })
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.selectPhoto(photo))
+    let secondRequest!: Promise<void>
+    act(() => {
+      secondRequest = result.current.selectPhoto(secondPhoto)
+    })
+
+    await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(photo.id))
+    resolveSecond?.(secondPhoto)
+    await act(() => secondRequest)
+
+    await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(secondPhoto.id))
+  })
+
   it('ignores an old cursor page that completes after a new search', async () => {
     const oldPagePhoto = { ...photo, id: 'old-page-photo' }
     const searchedPhoto = { ...photo, id: 'searched-photo' }

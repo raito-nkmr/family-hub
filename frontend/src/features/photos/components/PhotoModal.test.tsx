@@ -31,6 +31,33 @@ const photo: Photo = {
 }
 
 describe('PhotoModal', () => {
+  it('moves to adjacent photos when desktop edge controls are clicked', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '前の写真を表示' }))
+    fireEvent.click(screen.getByRole('button', { name: '次の写真を表示' }))
+
+    expect(onPreviousPhoto).toHaveBeenCalledOnce()
+    expect(onNextPhoto).toHaveBeenCalledOnce()
+  })
+
   it('moves to adjacent photos for horizontal touch gestures', () => {
     const onPreviousPhoto = vi.fn()
     const onNextPhoto = vi.fn()

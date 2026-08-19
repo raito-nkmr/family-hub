@@ -309,6 +309,59 @@
   width: 19px;
 }
 
+.modal__edge-navigation {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.modal__edge-navigation-button {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: grid;
+  width: clamp(2.5rem, 5vw, 4rem);
+  padding: 0;
+  color: rgb(255 255 255 / 78%);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  opacity: 0.7;
+  place-items: center;
+  pointer-events: auto;
+  transition:
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.modal__edge-navigation-button:hover:not(:disabled),
+.modal__edge-navigation-button:focus-visible {
+  background: rgb(255 255 255 / 9%);
+  opacity: 1;
+}
+
+.modal__edge-navigation-button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.modal__edge-navigation-button--previous {
+  left: 0;
+}
+
+.modal__edge-navigation-button--next {
+  right: 0;
+}
+
+.modal__edge-navigation-button--next svg {
+  transform: rotate(180deg);
+}
+
+.modal__edge-navigation-button svg {
+  width: 1.8rem;
+}
+
 .modal__image-wrap {
   display: grid;
   height: clamp(440px, 60svh, 700px);
