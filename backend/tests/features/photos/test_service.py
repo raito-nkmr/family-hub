@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 from uuid import uuid4
@@ -27,6 +27,7 @@ from app.features.photos.service import (
     PhotoDeletePersistenceError,
     PhotoExportSelectionError,
     PhotoNotFoundError,
+    PhotoPurgeNotDueError,
     PhotoUpdateConflictError,
     PhotoUpdateForbiddenError,
     PhotoUpdateStorageError,
@@ -140,6 +141,59 @@ def test_permanent_delete_logs_sidecar_restore_failure(monkeypatch: pytest.Monke
         photo.id,
     )
     session.rollback.assert_called_once_with()
+
+
+def test_permanent_delete_rejects_photo_before_retention_period() -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    photo.lifecycle_state = PhotoLifecycleState.TRASHED
+    photo.trashed_at = datetime.now(UTC)
+    photo.trashed_by_user_id = photo.uploaded_by_user_id
+    photo.purge_after = datetime.now(UTC) + timedelta(days=1)
+    session.scalar.return_value = photo
+    service, storage = make_trash_service(session)
+
+    with pytest.raises(PhotoPurgeNotDueError):
+        service.permanently_delete_photo(photo.id, photo.uploaded_by_user_id)
+
+    storage.update_sidecar.assert_not_called()
+    session.commit.assert_not_called()
+
+
+def test_permanent_delete_allows_photo_after_retention_period() -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    photo.lifecycle_state = PhotoLifecycleState.TRASHED
+    photo.trashed_at = datetime(2026, 7, 1, tzinfo=UTC)
+    photo.trashed_by_user_id = photo.uploaded_by_user_id
+    photo.purge_after = datetime(2026, 7, 31, tzinfo=UTC)
+    session.scalar.return_value = photo
+    service, storage = make_trash_service(session)
+
+    service.permanently_delete_photo(photo.id, photo.uploaded_by_user_id)
+
+    storage.delete_photo_files.assert_called_once_with(
+        photo.storage_key,
+        tuple(derivative.storage_key for derivative in photo.derivatives),
+        photo_id=photo.id,
+    )
+    session.delete.assert_called_once_with(photo)
+    assert session.commit.call_count == 2
+
+
+def test_permanent_delete_retries_purge_pending_photo_even_if_retention_date_is_future() -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    photo.lifecycle_state = PhotoLifecycleState.PURGE_PENDING
+    photo.purge_after = datetime.now(UTC) + timedelta(days=1)
+    session.scalar.return_value = photo
+    service, storage = make_trash_service(session)
+
+    service.permanently_delete_photo(photo.id, photo.uploaded_by_user_id)
+
+    storage.delete_photo_files.assert_called_once()
+    session.delete.assert_called_once_with(photo)
+    session.commit.assert_called_once_with()
 
 
 def test_set_favorite_uses_idempotent_postgresql_insert() -> None:
@@ -338,7 +392,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos]
+    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
 
     result = service.bulk_add_sharing(
@@ -403,7 +457,7 @@ def test_bulk_add_sharing_restores_updated_sidecars_on_storage_failure() -> None
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos]
+    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
     update_count = 0
 

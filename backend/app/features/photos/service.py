@@ -53,6 +53,10 @@ class PhotoDeletePersistenceError(Exception):
     pass
 
 
+class PhotoPurgeNotDueError(Exception):
+    pass
+
+
 class InvalidTrashCursorError(ValueError):
     pass
 

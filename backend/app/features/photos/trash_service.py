@@ -19,6 +19,7 @@ from app.features.photos.service import (
     PhotoDeletePersistenceError,
     PhotoDeleteStorageError,
     PhotoNotFoundError,
+    PhotoPurgeNotDueError,
     TrashedPhotoPage,
 )
 from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
@@ -133,6 +134,8 @@ class PhotoTrashService:
         if photo is None:
             raise PhotoNotFoundError(photo_id)
         if photo.lifecycle_state == PhotoLifecycleState.TRASHED:
+            if photo.purge_after is None or photo.purge_after > datetime.now(UTC):
+                raise PhotoPurgeNotDueError(photo_id)
             previous_metadata = build_sidecar_metadata(photo)
             photo.lifecycle_state = PhotoLifecycleState.PURGE_PENDING
             photo.purge_requested_at = datetime.now(UTC)
