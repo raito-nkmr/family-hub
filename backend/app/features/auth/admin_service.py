@@ -46,6 +46,7 @@ class AdministrativeUserSummary:
     created_at: datetime
     active_session_count: int
     group_names: list[str]
+    group_admin_group_names: list[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,13 +66,16 @@ class AdministrativeService:
         now = datetime.now(UTC)
         users = list(self._session.scalars(select(User).order_by(User.username)).all())
         rows = self._session.execute(
-            select(FamilyGroupMember.user_id, FamilyGroup.name)
+            select(FamilyGroupMember.user_id, FamilyGroup.name, FamilyGroupMember.role)
             .join(FamilyGroup, FamilyGroup.id == FamilyGroupMember.group_id)
             .order_by(FamilyGroup.name)
         ).all()
         groups: dict[UUID, list[str]] = {}
-        for user_id, name in rows:
+        group_admin_groups: dict[UUID, list[str]] = {}
+        for user_id, name, role in rows:
             groups.setdefault(user_id, []).append(name)
+            if GroupRole(role) is GroupRole.ADMIN:
+                group_admin_groups.setdefault(user_id, []).append(name)
         session_counts = dict(
             self._session.execute(
                 select(UserSession.user_id, func.count())
@@ -88,6 +92,7 @@ class AdministrativeService:
                 created_at=user.created_at,
                 active_session_count=int(session_counts.get(user.id, 0)),
                 group_names=groups.get(user.id, []),
+                group_admin_group_names=group_admin_groups.get(user.id, []),
             )
             for user in users
         ]

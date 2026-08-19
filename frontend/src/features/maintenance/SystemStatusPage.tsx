@@ -59,6 +59,11 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
     onError: () => setActionError(t('systemStatus.adminActionFailed')),
   })
   const status = statusQuery.data
+  const activeSystemAdministratorCount =
+    administrationQuery.data?.users.filter((user) => user.is_active && user.system_role === 'admin').length ?? 0
+  const activeGroupAdministratorCounts = new Map(
+    administrationQuery.data?.groups.map((group) => [group.name, group.active_admin_count] as const) ?? [],
+  )
 
   return (
     <main className="maintenance-page">
@@ -164,44 +169,70 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {administrationQuery.data?.users.map((user) => (
-                    <tr key={user.id}>
-                      <td data-label={t('auth.username')}>{user.username}</td>
-                      <td data-label={t('systemStatus.state')}>
-                        {t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}
-                      </td>
-                      <td data-label={t('systemStatus.role')}>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
-                      <td data-label={t('systemStatus.groups')}>{user.group_names.join(', ') || '—'}</td>
-                      <td data-label={t('systemStatus.actions')}>
-                        <button
-                          type="button"
-                          className={user.is_active ? 'danger-button icon-button' : 'success-button icon-button'}
-                          disabled={userMutation.isPending || !currentPassword}
-                          onClick={() =>
-                            userMutation.mutate({ type: 'status', userId: user.id, isActive: !user.is_active })
-                          }
-                        >
-                          {user.is_active ? <BlockIcon /> : <CheckIcon />}
-                          {user.is_active ? t('systemStatus.deactivate') : t('systemStatus.activate')}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary-button icon-button"
-                          disabled={userMutation.isPending || !currentPassword}
-                          onClick={() =>
-                            userMutation.mutate({
-                              type: 'role',
-                              userId: user.id,
-                              role: user.system_role === 'admin' ? 'user' : 'admin',
-                            })
-                          }
-                        >
-                          {user.system_role === 'admin' ? <RemoveModeratorIcon /> : <AddModeratorIcon />}
-                          {user.system_role === 'admin' ? t('systemStatus.demote') : t('systemStatus.promote')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {administrationQuery.data?.users.map((user) => {
+                    const isLastActiveSystemAdministrator =
+                      user.is_active && user.system_role === 'admin' && activeSystemAdministratorCount <= 1
+                    const isLastActiveGroupAdministrator =
+                      user.is_active &&
+                      user.group_admin_group_names.some(
+                        (groupName) => (activeGroupAdministratorCounts.get(groupName) ?? 0) <= 1,
+                      )
+                    return (
+                      <tr key={user.id}>
+                        <td data-label={t('auth.username')}>{user.username}</td>
+                        <td data-label={t('systemStatus.state')}>
+                          {t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}
+                        </td>
+                        <td data-label={t('systemStatus.role')}>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
+                        <td data-label={t('systemStatus.groups')}>{user.group_names.join(', ') || '—'}</td>
+                        <td data-label={t('systemStatus.actions')}>
+                          <button
+                            type="button"
+                            className={user.is_active ? 'danger-button icon-button' : 'success-button icon-button'}
+                            disabled={
+                              userMutation.isPending ||
+                              !currentPassword ||
+                              isLastActiveSystemAdministrator ||
+                              isLastActiveGroupAdministrator
+                            }
+                            title={
+                              isLastActiveSystemAdministrator
+                                ? t('systemStatus.lastSystemAdministratorProtected')
+                                : isLastActiveGroupAdministrator
+                                  ? t('systemStatus.lastGroupAdministratorProtected')
+                                  : undefined
+                            }
+                            onClick={() =>
+                              userMutation.mutate({ type: 'status', userId: user.id, isActive: !user.is_active })
+                            }
+                          >
+                            {user.is_active ? <BlockIcon /> : <CheckIcon />}
+                            {user.is_active ? t('systemStatus.deactivate') : t('systemStatus.activate')}
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary-button icon-button"
+                            disabled={userMutation.isPending || !currentPassword || isLastActiveSystemAdministrator}
+                            title={
+                              isLastActiveSystemAdministrator
+                                ? t('systemStatus.lastSystemAdministratorProtected')
+                                : undefined
+                            }
+                            onClick={() =>
+                              userMutation.mutate({
+                                type: 'role',
+                                userId: user.id,
+                                role: user.system_role === 'admin' ? 'user' : 'admin',
+                              })
+                            }
+                          >
+                            {user.system_role === 'admin' ? <RemoveModeratorIcon /> : <AddModeratorIcon />}
+                            {user.system_role === 'admin' ? t('systemStatus.demote') : t('systemStatus.promote')}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

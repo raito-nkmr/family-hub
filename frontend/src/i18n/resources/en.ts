@@ -460,6 +460,8 @@ export const en = {
     activate: 'Reactivate',
     demote: 'Change to regular user',
     promote: 'Change to system administrator',
+    lastSystemAdministratorProtected: 'At least one active system administrator must remain.',
+    lastGroupAdministratorProtected: 'At least one active administrator must remain in each group.',
     adminActionFailed: 'The administrative action could not be completed.',
     groupHealth: 'Group health',
     groupHealthSummary: '{{members}} members · {{admins}} active admins',

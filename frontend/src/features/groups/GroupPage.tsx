@@ -155,45 +155,54 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             </div>
             {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
             <div className="group-member-list">
-              {selectedGroup.members.map((member) => (
-                <article className="group-member-card" key={member.user_id}>
-                  <span className="group-member-card__avatar">{member.username.slice(0, 1).toUpperCase()}</span>
-                  <div className="group-member-card__identity">
-                    <strong>{member.username}</strong>
-                    <span>{t(member.is_active ? 'groups.active' : 'groups.inactive')}</span>
-                  </div>
-                  <time dateTime={member.joined_at}>
-                    {t('groups.joined', { date: formatDateTime(member.joined_at) })}
-                  </time>
-                  {selectedGroup.current_user_role === 'admin' ? (
-                    <div className="group-member-card__actions">
-                      <select
-                        value={member.role}
-                        aria-label={t('groups.roleLabel', { username: member.username })}
-                        disabled={state.memberActionId !== null}
-                        onChange={(event) => void state.changeRole(member, event.target.value as GroupRole)}
-                      >
-                        <option value="member">{t('common.member')}</option>
-                        <option value="admin">{t('common.admin')}</option>
-                      </select>
-                      <button
-                        className="group-member-card__remove"
-                        type="button"
-                        aria-label={t('groups.removeLabel', { username: member.username })}
-                        disabled={state.memberActionId !== null}
-                        onClick={() => void state.removeMember(member)}
-                      >
-                        <DeleteIcon />
-                        {t('groups.remove')}
-                      </button>
+              {selectedGroup.members.map((member) => {
+                const isLastActiveGroupAdministrator =
+                  administrationQuery.data !== undefined &&
+                  member.is_active &&
+                  member.role === 'admin' &&
+                  administrationQuery.data.active_admin_count <= 1
+                return (
+                  <article className="group-member-card" key={member.user_id}>
+                    <span className="group-member-card__avatar">{member.username.slice(0, 1).toUpperCase()}</span>
+                    <div className="group-member-card__identity">
+                      <strong>{member.username}</strong>
+                      <span>{t(member.is_active ? 'groups.active' : 'groups.inactive')}</span>
                     </div>
-                  ) : (
-                    <span className="group-member-card__role">
-                      {t(member.role === 'admin' ? 'common.admin' : 'common.member')}
-                    </span>
-                  )}
-                </article>
-              ))}
+                    <time dateTime={member.joined_at}>
+                      {t('groups.joined', { date: formatDateTime(member.joined_at) })}
+                    </time>
+                    {selectedGroup.current_user_role === 'admin' ? (
+                      <div className="group-member-card__actions">
+                        <select
+                          value={member.role}
+                          aria-label={t('groups.roleLabel', { username: member.username })}
+                          disabled={state.memberActionId !== null || isLastActiveGroupAdministrator}
+                          title={isLastActiveGroupAdministrator ? t('errors.groupLastAdmin') : undefined}
+                          onChange={(event) => void state.changeRole(member, event.target.value as GroupRole)}
+                        >
+                          <option value="member">{t('common.member')}</option>
+                          <option value="admin">{t('common.admin')}</option>
+                        </select>
+                        <button
+                          className="group-member-card__remove"
+                          type="button"
+                          aria-label={t('groups.removeLabel', { username: member.username })}
+                          disabled={state.memberActionId !== null || isLastActiveGroupAdministrator}
+                          title={isLastActiveGroupAdministrator ? t('errors.groupLastAdmin') : undefined}
+                          onClick={() => void state.removeMember(member)}
+                        >
+                          <DeleteIcon />
+                          {t('groups.remove')}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="group-member-card__role">
+                        {t(member.role === 'admin' ? 'common.admin' : 'common.member')}
+                      </span>
+                    )}
+                  </article>
+                )
+              })}
             </div>
           </section>
         </main>

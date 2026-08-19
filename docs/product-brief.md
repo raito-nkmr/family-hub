@@ -194,7 +194,8 @@ From an iPhone connected to the home Wi-Fi, log in, upload one photo, save it sa
 ## Authentication policy
 
 The target is approximately ten family users, not public self-registration. Create the initial system administrator with a
-backend command. A system administrator then issues a one-time invitation URL for a specified username. Usernames may
+backend command. The management command refuses to create a regular user until at least one active system administrator
+exists. A system administrator then issues a one-time invitation URL for a specified username. Usernames may
 contain Unicode letters and numbers, including Japanese, plus periods, underscores, and hyphens. Invitation URLs contain no
 username; only a URL-safe random token is stored in the fragment.
 

@@ -40,6 +40,7 @@ class AdministrativeUserResponse(UserResponse):
     created_at: datetime
     active_session_count: int
     group_names: list[str]
+    group_admin_group_names: list[str]
 
 
 class AdministrativeUserListResponse(BaseModel):

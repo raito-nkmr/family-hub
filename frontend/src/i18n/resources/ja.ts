@@ -454,6 +454,8 @@ export const ja: TranslationShape = {
     activate: '再有効化',
     demote: '一般ユーザーに変更',
     promote: 'システム管理者に変更',
+    lastSystemAdministratorProtected: '有効なシステム管理者を1人以上残す必要があります。',
+    lastGroupAdministratorProtected: '各グループには有効な管理者を1人以上残す必要があります。',
     adminActionFailed: '管理操作に失敗しました。',
     groupHealth: 'グループ健全性',
     groupHealthSummary: 'メンバー{{members}}人 · 有効な管理者{{admins}}人',

@@ -174,6 +174,10 @@ export type AdministrativeUserResponse = {
    */
   created_at: string
   /**
+   * Group Admin Group Names
+   */
+  group_admin_group_names: Array<string>
+  /**
    * Group Names
    */
   group_names: Array<string>

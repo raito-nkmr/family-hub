@@ -8,6 +8,8 @@ import pytest
 from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
+from app.commands.set_user_role import set_user_role
+from app.features.audit.models import AdministrativeAuditEvent
 from app.features.auth.admin_service import (
     AdministrativeService,
     UserOwnsGroupsWithoutAnotherAdminError,
@@ -24,6 +26,75 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(TEST_DATABASE_URL is None, reason="TEST_DATABASE_URL is not configured"),
 ]
+
+
+def test_role_commands_serialize_without_removing_the_last_system_administrator() -> None:
+    assert TEST_DATABASE_URL is not None
+    engine = create_engine(TEST_DATABASE_URL, connect_args={"options": "-c timezone=UTC"})
+    first_user_id = uuid4()
+    second_user_id = uuid4()
+    usernames = (f"role-race-first-{first_user_id.hex}", f"role-race-second-{second_user_id.hex}")
+    start = Event()
+    now = datetime.now(UTC)
+
+    with Session(engine) as session:
+        session.add_all(
+            [
+                User(
+                    id=first_user_id,
+                    username=usernames[0],
+                    password_hash="unused",
+                    is_active=True,
+                    system_role=SystemRole.ADMIN,
+                    created_at=now,
+                    password_changed_at=now,
+                ),
+                User(
+                    id=second_user_id,
+                    username=usernames[1],
+                    password_hash="unused",
+                    is_active=True,
+                    system_role=SystemRole.ADMIN,
+                    created_at=now,
+                    password_changed_at=now,
+                ),
+            ]
+        )
+        session.commit()
+
+    def demote(username: str) -> str:
+        assert start.wait(timeout=5)
+        with Session(engine) as session:
+            try:
+                set_user_role(session, username, SystemRole.USER)
+            except SystemExit:
+                return "rejected"
+        return "changed"
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(demote, username) for username in usernames]
+            start.set()
+            outcomes = [future.result(timeout=10) for future in futures]
+
+        assert sorted(outcomes) == ["changed", "rejected"]
+        with Session(engine) as session:
+            active_admin_count = session.scalar(
+                select(func.count())
+                .select_from(User)
+                .where(User.system_role == SystemRole.ADMIN, User.is_active.is_(True))
+            )
+            assert active_admin_count == 1
+    finally:
+        with Session(engine) as session:
+            session.execute(
+                delete(AdministrativeAuditEvent).where(
+                    AdministrativeAuditEvent.target_id.in_([str(first_user_id), str(second_user_id)])
+                )
+            )
+            session.execute(delete(User).where(User.id.in_((first_user_id, second_user_id))))
+            session.commit()
+        engine.dispose()
 
 
 def test_admin_mutations_serialize_without_removing_the_last_active_group_admin() -> None:

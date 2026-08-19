@@ -48,7 +48,9 @@ backend/
 
 Commands include user and dummy-user creation, password reset, database and secondary-storage backup, photo-integrity
 checking, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and delivery, monitoring reporting,
-and role management. Do not create empty packages or placeholder tests before they are needed.
+and role management. User creation permits regular users only after an active system administrator exists; initial setup
+must explicitly create the administrator. Role management uses the same transaction advisory lock as web administration.
+Do not create empty packages or placeholder tests before they are needed.
 
 ## Responsibilities
 
@@ -221,6 +223,10 @@ The response contains stable, name-then-ID-sorted uploader and current-group can
 authors of active photos visible to the caller. Photo detail responses expose only share groups the caller currently
 belongs to, and may therefore return an empty `group_ids` list for a shared photo. Owner metadata updates preserve
 existing shares that the owner cannot currently see.
+
+The administrator user list includes both `group_names` and `group_admin_group_names`. The latter lets the administration
+client disable user deactivation when the user is the last active administrator of one of those groups; the server-side
+invariant checks remain authoritative for stale or concurrent client data.
 
 ## File storage and thumbnails
 
