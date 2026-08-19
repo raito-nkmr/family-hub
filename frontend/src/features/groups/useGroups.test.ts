@@ -2,7 +2,16 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api/client'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
-import { createGroup, getGroup, getGroups, updateGroupMemberRole, type GroupDetail, type GroupMember } from './api'
+import {
+  addGroupMember,
+  createGroup,
+  getGroup,
+  getGroups,
+  renameGroup,
+  updateGroupMemberRole,
+  type GroupDetail,
+  type GroupMember,
+} from './api'
 import { useGroups } from './useGroups'
 
 vi.mock('./api', () => ({
@@ -11,6 +20,7 @@ vi.mock('./api', () => ({
   getGroup: vi.fn(),
   getGroupMemberCandidates: vi.fn(),
   getGroups: vi.fn(),
+  renameGroup: vi.fn(),
   removeGroupMember: vi.fn(),
   updateGroupMemberRole: vi.fn(),
 }))
@@ -129,5 +139,46 @@ describe('useGroups', () => {
 
     await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
     expect(getGroup).toHaveBeenCalledWith(group.id, expect.any(AbortSignal))
+  })
+
+  it('keeps a successful invitation successful when refreshing the group fails', async () => {
+    vi.mocked(getGroup).mockResolvedValueOnce(group).mockRejectedValue(new Error('refresh failed'))
+    vi.mocked(addGroupMember).mockResolvedValue({
+      id: 'invitation-1',
+      group_id: group.id,
+      group_name: group.name,
+      user_id: 'user-2',
+      username: 'new member',
+      role: 'member',
+      status: 'pending',
+      created_at: '2026-07-15T00:00:00Z',
+    })
+    const { result } = renderHook(() => useGroups({ currentUserId: 'user-1', onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper('/groups?group=group-1'),
+    })
+
+    await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
+    await act(() => result.current.addMember('user-2', 'member'))
+    await waitFor(() => expect(vi.mocked(getGroup).mock.calls.length).toBeGreaterThan(1))
+
+    expect(addGroupMember).toHaveBeenCalledWith(group.id, 'user-2', 'member')
+    expect(result.current.dialogError).toBeNull()
+  })
+
+  it('reports a failed group rename without claiming success', async () => {
+    vi.mocked(getGroup).mockResolvedValue(group)
+    vi.mocked(renameGroup).mockRejectedValue(new Error('rename failed'))
+    const { result } = renderHook(() => useGroups({ currentUserId: 'user-1', onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper('/groups?group=group-1'),
+    })
+
+    await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
+    let renamed: boolean | undefined
+    await act(async () => {
+      renamed = await result.current.rename('新しい名前')
+    })
+
+    expect(renamed).toBe(false)
+    expect(result.current.pageError).toBe('グループ名を変更できませんでした。')
   })
 })

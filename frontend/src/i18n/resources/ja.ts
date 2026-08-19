@@ -431,6 +431,7 @@ export const ja: TranslationShape = {
     loadFailed: 'ゴミ箱を読み込めませんでした。',
     trashFailed: '写真をゴミ箱へ移動できませんでした。',
     restoreFailed: '写真を復元できませんでした。',
+    deleteNotDue: '保持期間が終わるまで、この写真は完全に削除できません。',
     deleteFailed: '写真を完全に削除できませんでした。処理開始後の失敗はサーバーが再試行します。',
   },
   systemStatus: {
@@ -756,6 +757,7 @@ export const ja: TranslationShape = {
     shoppingRestore: '買うものリストに戻せませんでした。リストを更新して再度お試しください。',
     groupLoad: 'グループを読み込めませんでした。',
     groupCreate: 'グループを作成できませんでした。',
+    groupRename: 'グループ名を変更できませんでした。',
     groupAlreadyExists: '同名のグループが既に存在します。',
     groupAlreadyMember: 'このユーザーはすでにグループへ参加しています。',
     groupUserNotFound: '有効なユーザーが見つかりません。',

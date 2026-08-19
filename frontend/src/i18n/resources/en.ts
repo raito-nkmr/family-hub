@@ -437,6 +437,7 @@ export const en = {
     loadFailed: 'Could not load the trash.',
     trashFailed: 'Could not move the photo to trash.',
     restoreFailed: 'Could not restore the photo.',
+    deleteNotDue: 'This photo must remain in the trash until the retention period ends.',
     deleteFailed: 'Could not permanently delete the photo. The server will retry if deletion started.',
   },
   systemStatus: {
@@ -767,6 +768,7 @@ export const en = {
     shoppingRestore: 'Could not put the item back. Refresh the list and try again.',
     groupLoad: 'Could not load groups.',
     groupCreate: 'Could not create the group.',
+    groupRename: 'Could not rename the group.',
     groupAlreadyExists: 'A group with this name already exists.',
     groupAlreadyMember: 'This user is already in the group.',
     groupUserNotFound: 'No active user was found.',

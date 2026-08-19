@@ -65,9 +65,10 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
   const addMemberMutation = useMutation({
     mutationFn: ({ groupId, userId, role }: { groupId: string; userId: string; role: GroupRole }) =>
       addGroupMember(groupId, userId, role),
-    onSuccess: async (updated) => {
-      updateGroupCaches(queryClient, updated)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.groupCandidates(updated.id) })
+    onSuccess: (_invitation, { groupId }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.group(groupId) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groupCandidates(groupId) })
     },
   })
   const renameMutation = useMutation({
@@ -181,13 +182,15 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
   }
 
   const rename = async (name: string) => {
-    if (!selectedGroupId) return
+    if (!selectedGroupId) return false
     setPageMutationError(null)
     try {
       await renameMutation.mutateAsync({ groupId: selectedGroupId, name })
+      return true
     } catch (error) {
       if (isApiErrorWithStatus(error, 409)) setPageMutationError(i18n.t('errors.groupAlreadyExists'))
-      else handleGroupError(error, i18n.t('errors.groupCreate'), onUnauthorized, setPageMutationError)
+      else handleGroupError(error, i18n.t('errors.groupRename'), onUnauthorized, setPageMutationError)
+      return false
     }
   }
 

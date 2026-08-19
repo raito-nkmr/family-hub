@@ -10,6 +10,7 @@ import {
   getGroupAuditEvents,
   getGroups,
   getMyGroupMembershipInvitations,
+  renameGroup,
   type GroupDetail,
   type FamilyGroup,
 } from './api'
@@ -25,6 +26,7 @@ vi.mock('./api', () => ({
   getGroupMemberCandidates: vi.fn(),
   getGroups: vi.fn(),
   getMyGroupMembershipInvitations: vi.fn(),
+  renameGroup: vi.fn(),
   removeGroupMember: vi.fn(),
   updateGroupMemberRole: vi.fn(),
 }))
@@ -92,6 +94,35 @@ describe('GroupPage', () => {
 
     await waitFor(() => expect(screen.getByText('グループ管理情報を読み込めませんでした。')).toBeInTheDocument())
     expect(screen.getByText('グループの監査ログを読み込めませんでした。')).toBeInTheDocument()
+  })
+
+  it('keeps the rename input after the rename request fails', async () => {
+    const group: FamilyGroup = {
+      id: 'group-1',
+      name: '同居家族',
+      created_by_user_id: 'user-1',
+      created_at: '2026-07-15T00:00:00Z',
+      updated_at: '2026-07-15T00:00:00Z',
+      current_user_role: 'admin',
+      member_count: 0,
+    }
+    vi.mocked(getGroups).mockResolvedValue([group])
+    vi.mocked(getGroup).mockResolvedValue({ ...group, members: [] })
+    vi.mocked(getGroupAdministration).mockRejectedValue(new ApiError(503, 'unavailable'))
+    vi.mocked(getGroupAuditEvents).mockRejectedValue(new ApiError(503, 'unavailable'))
+    vi.mocked(renameGroup).mockRejectedValue(new ApiError(503, 'unavailable'))
+    const user = userEvent.setup()
+
+    render(<GroupPage currentUserId="user-1" onUnauthorized={vi.fn()} />, {
+      wrapper: createAppWrapper('/groups?group=group-1'),
+    })
+
+    const input = await screen.findByLabelText('グループ名を変更')
+    await user.type(input, '新しい名前')
+    await user.click(screen.getByRole('button', { name: '保存する' }))
+
+    await waitFor(() => expect(screen.getByText('グループ名を変更できませんでした。')).toBeInTheDocument())
+    expect(input).toHaveValue('新しい名前')
   })
 
   it('returns control to the app when membership invitations expire', async () => {

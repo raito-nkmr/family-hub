@@ -62,8 +62,7 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
     event.preventDefault()
     const name = renameValue.trim()
     if (!name) return
-    await state.rename(name)
-    setRenameValue('')
+    if (await state.rename(name)) setRenameValue('')
   }
 
   if (selectedGroup) {
