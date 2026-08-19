@@ -58,7 +58,6 @@ the volume as an external volume in advance so `compose down --volumes` cannot r
 `127.0.0.1:15432`. Development FastAPI listens on `127.0.0.1:18000`, and Vite listens on `127.0.0.1:15173` while its
 `/api` proxy uses the development backend port. Keep the backend ports separated so the development frontend cannot
 accidentally connect to production FastAPI at `127.0.0.1:8000`.
-
 For real-device LAN testing, bind development FastAPI to `0.0.0.0`, allow the Vite LAN origin in both
 `CORS_ORIGINS` and `AUTH_TRUSTED_ORIGINS`, and use the development frontend URL on the device. The development React
 client sends resumable upload chunks directly to port `18000`; other API requests continue to use the Vite proxy.
