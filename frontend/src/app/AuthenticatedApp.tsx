@@ -115,7 +115,7 @@ function AuthenticatedAppShell({
     enabled: true,
     libraryEnabled: activeView === 'photos',
     storageEnabled: activeView !== null && ['home', ...photoViews].includes(activeView),
-    groupsEnabled: activeView === 'home' || activeView === 'photos',
+    groupsEnabled: activeView === 'home' || activeView === 'photos' || activeView === 'albums',
     onUnauthorized: handleUnauthorized,
   })
   const photoActivity = usePhotoActivity({

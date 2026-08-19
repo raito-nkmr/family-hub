@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../shared/api/client'
 import { getTrashedPhotos, permanentlyDeletePhoto, restorePhoto, type Photo } from './api'
 import { PhotoTrashPage } from './PhotoTrashPage'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
@@ -117,6 +118,31 @@ describe('PhotoTrashPage', () => {
 
     await waitFor(() => expect(permanentlyDeletePhoto).toHaveBeenCalledWith('photo-1', expect.anything()))
     expect(onLibraryChanged).toHaveBeenCalledOnce()
+  })
+
+  it('disables permanent deletion before the retention period ends', async () => {
+    const futurePhoto = { ...photo, purge_after: '2099-08-17T00:00:00Z' }
+    vi.mocked(getTrashedPhotos).mockResolvedValue({ items: [futurePhoto], next_cursor: null, total_count: 1 })
+    const user = userEvent.setup()
+    render(<PhotoTrashPage onUnauthorized={vi.fn()} onLibraryChanged={vi.fn()} />, { wrapper: createAppWrapper() })
+
+    await user.click(await screen.findByRole('button', { name: 'ゴミ箱のtrashed.jpgを開く' }))
+
+    expect(screen.getByRole('button', { name: '完全に削除' })).toBeDisabled()
+    expect(permanentlyDeletePhoto).not.toHaveBeenCalled()
+  })
+
+  it('shows a retention-specific message when permanent deletion is rejected', async () => {
+    vi.mocked(permanentlyDeletePhoto).mockRejectedValue(new ApiError(409, 'not due'))
+    const duePhoto = { ...photo, purge_after: '2000-08-17T00:00:00Z' }
+    vi.mocked(getTrashedPhotos).mockResolvedValue({ items: [duePhoto], next_cursor: null, total_count: 1 })
+    const user = userEvent.setup()
+    render(<PhotoTrashPage onUnauthorized={vi.fn()} onLibraryChanged={vi.fn()} />, { wrapper: createAppWrapper() })
+
+    await user.click(await screen.findByRole('button', { name: 'ゴミ箱のtrashed.jpgを開く' }))
+    await user.click(screen.getByRole('button', { name: '完全に削除' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('保持期間が終わるまで、この写真は完全に削除できません。')
   })
 
   it('announces an asynchronous load error', async () => {
