@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 from app.commands.check_photo_integrity import check_photo_integrity
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import DerivativeNotFoundError
+from app.features.photos.storage import DerivativeNotFoundError, InvalidStorageKeyError
 from tests.features.photos.factories import make_photo
 
 
@@ -34,6 +34,8 @@ def test_check_photo_integrity_reports_clean_files(tmp_path: Path) -> None:
     session.scalars.return_value.all.return_value = [photo]
     storage = Mock()
     storage.get_original_path.return_value = original_path
+    storage.get_original_file_paths.return_value = (original_path, original_path.with_suffix(".json"))
+    storage.get_derivative_file_path.return_value = derivative_path
     storage.get_derivative_path.return_value = derivative_path
 
     report = check_photo_integrity(session, storage, storage_root, derivative_root)
@@ -55,6 +57,8 @@ def test_check_photo_integrity_reports_missing_mismatched_and_orphan_files(tmp_p
     session.scalars.return_value.all.return_value = [photo]
     storage = Mock()
     storage.get_original_path.return_value = original_path
+    storage.get_original_file_paths.return_value = (original_path, sidecar_path)
+    storage.get_derivative_file_path.return_value = derivative_path
     storage.get_derivative_path.side_effect = DerivativeNotFoundError
     derivative_path.unlink()
 
@@ -76,6 +80,8 @@ def test_check_photo_integrity_verifies_hashes_only_when_requested(tmp_path: Pat
     session.scalars.return_value.all.return_value = [photo]
     storage = Mock()
     storage.get_original_path.return_value = original_path
+    storage.get_original_file_paths.return_value = (original_path, original_path.with_suffix(".json"))
+    storage.get_derivative_file_path.return_value = derivative_path
     storage.get_derivative_path.return_value = derivative_path
 
     normal_report = check_photo_integrity(session, storage, storage_root, derivative_root)
@@ -109,3 +115,17 @@ def test_check_photo_integrity_reports_orphan_incoming_parts(tmp_path: Path) -> 
         ("orphan_part", str(derivative_part)),
         ("orphan_part", str(storage_part)),
     ]
+
+
+def test_check_photo_integrity_does_not_read_invalid_storage_key(tmp_path: Path) -> None:
+    photo = make_photo()
+    session = Mock()
+    session.scalars.return_value.all.side_effect = [[photo], []]
+    storage = Mock()
+    storage.get_original_file_paths.side_effect = InvalidStorageKeyError("invalid storage key")
+    storage.get_derivative_path.side_effect = DerivativeNotFoundError
+
+    report = check_photo_integrity(session, storage, tmp_path / "storage", tmp_path / "derivatives")
+
+    assert ("original_invalid", str(photo.id)) in {(issue.code, issue.photo_id) for issue in report.issues}
+    storage.get_original_path.assert_not_called()

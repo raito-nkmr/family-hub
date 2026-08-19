@@ -328,7 +328,7 @@ class PhotoStorage:
                 return self._status(StorageStatusCode.READ_ONLY)
             if not _is_writable(root):
                 return self._status(StorageStatusCode.NOT_WRITABLE)
-            for directory_name in ("originals", "incoming"):
+            for directory_name in ("originals", "incoming", "database-backups"):
                 directory = root / directory_name
                 if directory.is_symlink():
                     return self._status(StorageStatusCode.SYMLINK_NOT_ALLOWED)
@@ -354,28 +354,9 @@ class PhotoStorage:
         if not status.available:
             raise StorageUnavailableError(status.status)
 
-        key = PurePosixPath(storage_key)
-        if (
-            key.is_absolute()
-            or not key.parts
-            or key.parts[0] != "originals"
-            or ".." in key.parts
-            or "\\" in storage_key
-        ):
-            raise InvalidStorageKeyError("Storage key must be a relative path below originals")
-
-        if self._root is None:
-            raise StorageUnavailableError(StorageStatusCode.NOT_CONFIGURED)
-
+        candidate, _ = self.get_original_file_paths(storage_key)
         root = Path(os.path.abspath(self._root))
-        candidate = root.joinpath(*key.parts)
         try:
-            current = root
-            for part in key.parts:
-                current /= part
-                if current.is_symlink():
-                    raise InvalidStorageKeyError("Symlinks are not allowed in original paths")
-
             resolved_candidate = candidate.resolve(strict=True)
             resolved_candidate.relative_to(root)
         except (FileNotFoundError, NotADirectoryError) as error:
@@ -389,18 +370,26 @@ class PhotoStorage:
             raise OriginalNotFoundError(f"Stored original is not a file: {storage_key}")
         return resolved_candidate
 
-    def get_derivative_path(self, storage_key: str) -> Path:
-        key = self._validate_derivative_key(storage_key)
-        root = Path(os.path.abspath(self._derivative_root))
+    def get_original_file_paths(self, storage_key: str) -> tuple[Path, Path]:
+        """Return safe original and sidecar candidates without requiring either file to exist."""
+        status = self._get_read_status()
+        if not status.available:
+            raise StorageUnavailableError(status.status)
+        if self._root is None:
+            raise StorageUnavailableError(StorageStatusCode.NOT_CONFIGURED)
+
+        key = self._validate_original_key(storage_key)
+        root = Path(os.path.abspath(self._root))
         candidate = root.joinpath(*key.parts)
+        self._validate_path_components(candidate, root, "original")
+        return candidate, candidate.with_suffix(".json")
+
+    def get_derivative_path(self, storage_key: str) -> Path:
+        candidate = self.get_derivative_file_path(storage_key)
+        root = Path(os.path.abspath(self._derivative_root))
         try:
-            if root.is_symlink() or not root.is_dir():
+            if not root.is_dir():
                 raise DerivativeNotFoundError("Photo derivative root is unavailable")
-            current = root
-            for part in key.parts:
-                current /= part
-                if current.is_symlink():
-                    raise InvalidStorageKeyError("Symlinks are not allowed in derivative paths")
             resolved_candidate = candidate.resolve(strict=True)
             resolved_candidate.relative_to(root.resolve(strict=True))
         except (FileNotFoundError, NotADirectoryError) as error:
@@ -412,6 +401,16 @@ class PhotoStorage:
         if not resolved_candidate.is_file():
             raise DerivativeNotFoundError(f"Stored derivative is not a file: {storage_key}")
         return resolved_candidate
+
+    def get_derivative_file_path(self, storage_key: str) -> Path:
+        """Return a safe derivative candidate without requiring the file to exist."""
+        key = self._validate_derivative_key(storage_key)
+        root = Path(os.path.abspath(self._derivative_root))
+        if root.is_symlink():
+            raise InvalidStorageKeyError("Photo derivative root must not be a symlink")
+        candidate = root.joinpath(*key.parts)
+        self._validate_path_components(candidate, root, "derivative")
+        return candidate
 
     def _get_read_status(self) -> StorageStatus:
         if self._root is None or not self._expected_marker:
@@ -649,6 +648,13 @@ class PhotoStorage:
             raise InvalidStorageKeyError("Storage directory resolves outside the storage root") from error
         return directory
 
+    def get_database_backup_directory(self, timestamp: str) -> Path:
+        """Return a validated, writable directory for a database backup timestamp."""
+        if re.fullmatch(r"\d{8}T\d{6}Z", timestamp) is None:
+            raise InvalidStorageKeyError("Database backup timestamp is invalid")
+        self._require_writable_storage(0)
+        return self._get_or_create_directory(PurePosixPath("database-backups", timestamp[:4], timestamp[4:6]))
+
     def _get_or_create_derivative_directory(self, relative_path: PurePosixPath) -> Path:
         root = Path(os.path.abspath(self._derivative_root))
         if root.is_symlink():
@@ -687,6 +693,20 @@ class PhotoStorage:
         ):
             raise InvalidStorageKeyError("Storage key must be a relative path below originals")
         return key
+
+    @staticmethod
+    def _validate_path_components(candidate: Path, root: Path, description: str) -> None:
+        try:
+            current = root
+            for part in candidate.relative_to(root).parts:
+                current /= part
+                if current.is_symlink():
+                    raise InvalidStorageKeyError(f"Symlinks are not allowed in {description} paths")
+            candidate.parent.resolve(strict=False).relative_to(root.resolve(strict=False))
+        except ValueError as error:
+            raise InvalidStorageKeyError(f"{description.title()} path resolves outside its storage root") from error
+        except OSError as error:
+            raise PhotoStorageError(f"Could not inspect {description} path") from error
 
     @staticmethod
     def _validate_derivative_key(storage_key: str) -> PurePosixPath:

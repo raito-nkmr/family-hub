@@ -158,7 +158,7 @@ def test_storage_rejects_non_writable_mount(tmp_path: Path, monkeypatch: pytest.
     assert status.status is StorageStatusCode.NOT_WRITABLE
 
 
-@pytest.mark.parametrize("directory_name", ["originals", "incoming"])
+@pytest.mark.parametrize("directory_name", ["originals", "incoming", "database-backups"])
 def test_storage_rejects_non_writable_storage_directory(
     directory_name: str,
     tmp_path: Path,
@@ -176,7 +176,7 @@ def test_storage_rejects_non_writable_storage_directory(
     assert status.status is StorageStatusCode.NOT_WRITABLE
 
 
-@pytest.mark.parametrize("directory_name", ["originals", "incoming"])
+@pytest.mark.parametrize("directory_name", ["originals", "incoming", "database-backups"])
 def test_storage_rejects_symlinked_storage_directory(
     directory_name: str,
     tmp_path: Path,
@@ -291,6 +291,8 @@ def test_get_original_path_rejects_unsafe_keys(
 
     with pytest.raises(InvalidStorageKeyError):
         storage.get_original_path(storage_key)
+    with pytest.raises(InvalidStorageKeyError):
+        storage.get_original_file_paths(storage_key)
 
 
 def test_get_original_path_rejects_symlink(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -303,6 +305,27 @@ def test_get_original_path_rejects_symlink(tmp_path: Path, monkeypatch: pytest.M
 
     with pytest.raises(InvalidStorageKeyError):
         storage.get_original_path("originals/photo.jpg")
+
+
+def test_get_database_backup_directory_creates_validated_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+
+    result = storage.get_database_backup_directory("20260819T000000Z")
+
+    assert result == tmp_path / "database-backups" / "2026" / "08"
+    assert result.is_dir()
+
+
+@pytest.mark.parametrize("timestamp", ["../20260819T000000Z", "2026/0819T000000Z", "invalid"])
+def test_get_database_backup_directory_rejects_unsafe_timestamp(
+    timestamp: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+
+    with pytest.raises(InvalidStorageKeyError):
+        storage.get_database_backup_directory(timestamp)
 
 
 def test_get_original_path_reports_missing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
