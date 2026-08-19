@@ -84,7 +84,7 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
         <div className="maintenance-grid">
           <section className="maintenance-card maintenance-card--wide">
             <h2>{t('systemStatus.primaryStorage')}</h2>
-            <dl className="metadata-list">
+            <dl className="maintenance-metadata-list">
               <div>
                 <dt>{t('systemStatus.state')}</dt>
                 <dd>{t(`storage.${status.storage.status}`)}</dd>

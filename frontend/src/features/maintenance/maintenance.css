@@ -15,6 +15,37 @@
   grid-column: span 2;
 }
 
+.maintenance-metadata-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.maintenance-metadata-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--color-bg-subtle);
+}
+
+.maintenance-metadata-list dt,
+.maintenance-metadata-list dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.maintenance-metadata-list dt {
+  color: var(--color-text-secondary);
+}
+
+.maintenance-metadata-list dd {
+  overflow-wrap: anywhere;
+  font-weight: 650;
+  text-align: right;
+}
+
 .maintenance-runs {
   display: grid;
   gap: 0.65rem;
@@ -75,5 +106,14 @@
 
   .maintenance-card--wide {
     grid-column: auto;
+  }
+
+  .maintenance-metadata-list > div {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .maintenance-metadata-list dd {
+    text-align: left;
   }
 }
