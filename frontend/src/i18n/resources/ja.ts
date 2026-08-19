@@ -72,7 +72,7 @@ export const ja: TranslationShape = {
     cardTitle: 'Family Hubをアプリのように使う',
     cardDescription: 'iPhoneのホーム画面に追加すると、すぐに開けて全画面で使えます。',
     accountTitle: 'Family Hubをホーム画面に追加',
-    accountDescription: 'iPhoneへの追加手順は、ここからいつでも確認できます。',
+    accountDescription: 'iPhoneアプリとしての利用方法はこちらから確認できます。',
     showGuide: '追加方法を見る',
     dismissPrompt: 'アプリ化の案内を閉じる',
     guideTitle: 'iPhoneにFamily Hubを追加',

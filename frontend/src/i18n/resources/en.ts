@@ -71,7 +71,7 @@ export const en = {
     cardTitle: 'Use Family Hub like an app',
     cardDescription: 'Add it to your iPhone Home Screen for quick access and a full-screen experience.',
     accountTitle: 'Add Family Hub to your Home Screen',
-    accountDescription: 'Open the iPhone installation guide whenever you need it.',
+    accountDescription: 'Learn how to use Family Hub as an iPhone app here.',
     showGuide: 'How to add it',
     dismissPrompt: 'Dismiss the app installation suggestion',
     guideTitle: 'Add Family Hub to your iPhone',
