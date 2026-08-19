@@ -21,17 +21,32 @@ from app.features.albums.service import (
     PhotoNotFoundError,
     PhotoNotInAlbumError,
 )
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
-from app.features.photos.public import PhotoResponse
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
+from app.features.photos.public import photo_response_from_model
 
-router = APIRouter(tags=["albums"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["albums"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 
 
-def _detail_response(detail: AlbumDetail) -> AlbumDetailResponse:
+def _detail_response(
+    detail: AlbumDetail,
+) -> AlbumDetailResponse:
     return AlbumDetailResponse(
         **AlbumResponse.model_validate(detail.album).model_dump(),
         photos=[
-            PhotoResponse.model_validate(photo).model_copy(update={"is_favorite": False}) for photo in detail.photos
+            photo_response_from_model(
+                photo,
+                visible_group_ids=detail.visible_group_ids.get(photo.id, set()),
+                is_favorite=False,
+            )
+            for photo in detail.photos
         ],
         next_cursor=detail.next_cursor,
     )
@@ -95,7 +110,9 @@ def get_album(
     cursor: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
 ) -> AlbumDetailResponse:
     try:
-        return _detail_response(service.get_album(album_id, authenticated_user.id, limit=limit, cursor=cursor))
+        return _detail_response(
+            service.get_album(album_id, authenticated_user.id, limit=limit, cursor=cursor),
+        )
     except AlbumNotFoundError as error:
         _raise_http_error(error)
     except InvalidAlbumPhotoCursorError as error:
@@ -157,7 +174,9 @@ def add_album_photos(
     service: Annotated[AlbumService, Depends(get_album_service)],
 ) -> AlbumDetailResponse:
     try:
-        return _detail_response(service.add_photos(album_id, body.photo_ids, authenticated_user.id))
+        return _detail_response(
+            service.add_photos(album_id, body.photo_ids, authenticated_user.id),
+        )
     except (AlbumNotFoundError, PhotoNotFoundError, AlbumPersistenceError) as error:
         _raise_http_error(error)
 

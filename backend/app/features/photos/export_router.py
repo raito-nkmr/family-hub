@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user
-from app.features.photos.dependencies import get_photo_service
+from app.features.photos.dependencies import get_photo_export_service
 from app.features.photos.export import stream_photo_export
+from app.features.photos.export_service import PhotoExportService
 from app.features.photos.schemas import PhotoExportRequest
 from app.features.photos.service import (
     PhotoContentUnavailableError,
     PhotoExportSelectionError,
-    PhotoService,
 )
 
 router = APIRouter()
@@ -20,7 +20,7 @@ router = APIRouter()
 def export_photo_originals(
     body: Annotated[PhotoExportRequest, Query()],
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoService, Depends(get_photo_service)],
+    service: Annotated[PhotoExportService, Depends(get_photo_export_service)],
 ) -> StreamingResponse:
     try:
         entries = service.get_photo_export_entries(body.photo_ids, authenticated_user.id)

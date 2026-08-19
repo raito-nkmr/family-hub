@@ -48,7 +48,9 @@ backend/
 
 Commands include user and dummy-user creation, password reset, database and secondary-storage backup, photo-integrity
 checking, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and delivery, monitoring reporting,
-and role management. Do not create empty packages or placeholder tests before they are needed.
+and role management. User creation permits regular users only after an active system administrator exists; initial setup
+must explicitly create the administrator. Role management uses the same transaction advisory lock as web administration.
+Do not create empty packages or placeholder tests before they are needed.
 
 ## Responsibilities
 
@@ -67,8 +69,8 @@ function or registry for Alembic.
 ### `features.health`
 
 Public liveness reports only that the application process is running. Loopback-only readiness checks PostgreSQL and photo
-storage readability and returns `503` when either is unavailable. Caddy blocks the exact readiness path with `404` on the
-public route. Detailed authenticated storage status belongs to the photo feature.
+storage readability and returns `503` when either is unavailable, without preventing the process from starting. Caddy blocks
+the exact readiness path with `404` on the public route. Detailed authenticated storage status belongs to the photo feature.
 
 ### `features.auth`
 
@@ -79,8 +81,13 @@ rate limiting, authentication dependencies, invitation handling, and a deliberat
 Login and password changes lock the target `User` row with `FOR UPDATE` before verifying the current hash. This prevents an
 old-password login from creating a new session concurrently with a password change.
 
-Other features may use only `features.auth.public`, `require_authenticated_user`, and `require_csrf_token`; they must not
-import auth internals directly.
+An operator password reset marks the user as requiring a password change. The user may authenticate only to retrieve the
+current session, change the password, or log out while this flag is set; all other authenticated feature APIs return `403`.
+Invitation acceptance is separate from operator reset: invitees choose their own password during one-time invitation
+acceptance, and those accounts do not receive the forced-change flag.
+
+Other features may use only `features.auth.public`, `require_authenticated_user`, `require_password_change_complete`, and
+`require_csrf_token`; they must not import auth internals directly.
 
 ### `features.groups`
 
@@ -97,6 +104,10 @@ photo shares, activity-group relations, and upload-batch shares. Photos remain; 
 Membership removal and photo, upload, album, cleaning, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
 albums, cleaning tasks, and shopping items in that order.
+
+Mutations that can change the last active system or group administrator use one PostgreSQL transaction advisory lock. The
+lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
+group-admin membership changes cannot leave an administrator invariant broken by a concurrent request.
 
 ### `features.cleaning`
 
@@ -117,9 +128,14 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP;
+`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
+thumbnails from images or the first video frame, and `video_validation.py` validates supported video containers with
+`ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
-catalog needed by other features.
+catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
+content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `upload_service.py`
+handles single-photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
+`export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
 
@@ -133,7 +149,8 @@ logic becomes difficult to read.
 Maintenance exposes administrator storage summaries and maintenance history. Integrity checks, database backup, secondary-HDD
 snapshots, and trash purge run only as management commands and systemd timers, never from HTTP.
 
-Notifications own session-bound Web Push subscriptions, preferences, and outbox. Photo sharing and shopping additions create
+Notifications own session-bound Web Push subscriptions, preferences, and outbox. The database composite foreign key keeps
+the stored subscription user and session owner identical. Photo sharing and shopping additions create
 outbox entries in the same transaction as the business change; cleaning due notifications are enqueued periodically. Workers
 exclude expired sessions, claim with timestamps and tokens, requeue stale claims, and retry only failed devices. Endpoints are
 HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository.
@@ -185,8 +202,9 @@ Reject upload and original retrieval with `503` when storage is unavailable and 
 
 ## Production boundary
 
-Cloudflare is the public entry point, Caddy is the only origin HTTP entry point, FastAPI listens on loopback, and PostgreSQL
-and the external HDD are not exposed to clients. Serve originals only through authenticated and authorized API endpoints.
+Cloudflare is the public entry point, Caddy is the only origin HTTP entry point, FastAPI listens on loopback, and PostgreSQL,
+the internal photo-storage HDD, and the disconnected external backup HDD are not exposed to clients. Serve originals only
+through authenticated and authorized API endpoints.
 See [`deployment.md`](./deployment.md) for Tunnel, Caddy, forwarded headers, cache, upload, ZIP, and acceptance details.
 
 ## API contract
@@ -201,10 +219,20 @@ service boundary as well as at the router boundary. Return `404` for resources w
 Sessions use a random HttpOnly cookie token and store only its SHA-256 hash. Mutations require the session-bound CSRF token.
 Use `Cache-Control: private, no-store` for authenticated APIs and binaries.
 
+Photo search provides `GET /api/v1/photos/search-options` for authenticated users who have completed password change.
+The response contains stable, name-then-ID-sorted uploader and current-group candidates; uploaders are limited to
+authors of active photos visible to the caller. Photo detail responses expose only share groups the caller currently
+belongs to, and may therefore return an empty `group_ids` list for a shared photo. Owner metadata updates preserve
+existing shares that the owner cannot currently see.
+
+The administrator user list includes both `group_names` and `group_admin_group_names`. The latter lets the administration
+client disable user deactivation when the user is the last active administrator of one of those groups; the server-side
+invariant checks remain authoritative for stale or concurrent client data.
+
 ## File storage and thumbnails
 
 ```text
-photo-storage/                       # External HDD
+photo-storage/                       # Internal HDD; PHOTO_STORAGE_ROOT
 ├── originals/YYYY/MM/<UUID>.<ext>
 │   └── <UUID>.json
 └── incoming/<UUID>.part
@@ -212,16 +240,22 @@ photo-storage/                       # External HDD
 backend/var/photo-derivatives/       # Regenerable internal-SSD data
 ├── thumbnails/YYYY/MM/<UUID>.webp
 └── incoming/<UUID>.thumbnail.part
+
+snapshots/<timestamp>/                # Disconnected external HDD; BACKUP_STORAGE_ROOT
+├── originals/
+└── database-backups/
 ```
 
 Keep `originals` and `incoming` on one filesystem so finalization can use an atomic rename. `PHOTO_STORAGE_ROOT` must point
 to the HDD mount point itself. A root `.photo-storage-marker` must match `PHOTO_STORAGE_MARKER`; the root and marker must not
 be symlinks. Linux mount information is checked when available, with a standard mount-point fallback. A bind mount is valid
-for internal-SSD development tests, but production must point at the external HDD mount.
+for internal-SSD development tests, but production must point at the internal photo-storage HDD mount. `BACKUP_STORAGE_ROOT`
+must point at a separate mounted external HDD and is used only by maintenance commands.
 
 Never use client filenames or extensions to construct paths. The server chooses extensions after content validation. Accept
-JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Use the first MPO image for validation and thumbnails while
-preserving the original multi-image file.
+JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Also accept MP4, QuickTime MOV, and M4V video files;
+`ffprobe` must find a supported container and a usable video stream. Use the first MPO image or first video frame for
+validation and thumbnails while preserving the original file.
 
 At finalization, create a WebP thumbnail with a longest edge of at most 480 px, quality 80, and method 4 on the internal SSD.
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
@@ -236,9 +270,31 @@ After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to r
 
 Register a batch, its share groups, and its items. Batches are valid for 24 hours. Serialize batch creation with a
 transaction-level advisory lock, then include unreceived bytes from existing active batches in the free-space check.
-Browsers send 4 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Reconcile the database position
-with `.part` size after interruption and resume only within the same open page. Expired batches are canceled and temporary
-files removed on access or new-batch creation.
+Browsers send 8 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
+timeout; after a transient failure, the client reconciles the server offset and retries the chunk up to three times.
+Reconcile the database position with `.part` size after interruption and resume only within the same open page. Expired
+batches are canceled and temporary files removed on access or new-batch creation.
+
+The current five-second request timeout is intentionally short for development diagnostics on the LAN. It makes a stalled
+request and its retries observable quickly; it is not the production timeout target and increasing it does not fix a
+retained Safari response. Before production acceptance, use an environment-specific timeout based on real iPhone Wi-Fi and
+mobile-network measurements, and ensure the development value is not included in the production build.
+
+Each chunk attempt carries a client-generated attempt ID, retry count, and direct or same-origin route label. Browser
+diagnostic messages and backend logs record the attempt ID, item ID, offsets, byte counts, response request ID, and timing.
+The backend separately records request-body reception, durable `.part` synchronization, and offset-conflict recovery so an
+interrupted request can be distinguished from a lost response. Do not log filenames, file contents, cookies, CSRF tokens, or
+other credentials as upload diagnostics.
+
+Successful `PATCH` responses use `200 OK` with a short, explicitly sized body instead of an empty `204`. After receiving the
+status and `Upload-Offset` header, the browser aborts that request's response stream without waiting for its body. This
+forces iPhone Safari to release a development-LAN cross-origin request instead of retaining six responses and indefinitely
+queueing the seventh. The client also accepts the former `204` response during a rolling deployment.
+
+The response-stream abort is a workaround for development uploads sent directly from the Vite origin on port `15173` to
+FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI.
+Before production acceptance, scope the abort behavior to the development direct-upload route or explicitly validate that
+it does not create client-closed responses through Cloudflare.
 
 The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
@@ -251,9 +307,9 @@ Validate HDD identity, mount, write access, and free space
   ↓
 Write chunks to incoming/<UUID>.part and calculate size and SHA-256
   ↓
-Validate size and actual JPEG/MPO, PNG, or HEIF/HEIC content
+Validate size and actual image or MP4/MOV/M4V video content
   ↓
-Read dimensions and EXIF capture time
+Read dimensions and EXIF or video creation time
   ↓
 Check same-owner SHA-256 duplicate
   ↓
@@ -266,9 +322,10 @@ Insert metadata, shares, and activity in PostgreSQL and commit
 Return 201 Created
 ```
 
-Do not trust `Content-Length`, filename, extension, or declared MIME type alone. Validate actual content with Pillow and
-`pillow-heif`; reject AVIF for the MVP. If any finalization step fails, remove completed files when possible and report
-unremovable files for integrity recovery.
+Do not trust `Content-Length`, filename, extension, or declared MIME type alone. Validate actual image content with Pillow and
+`pillow-heif`, and actual video content with `ffprobe`; reject AVIF and unsupported video containers. The runtime must have
+the `ffprobe` and `ffmpeg` commands available for video validation and thumbnail generation. If any finalization step fails,
+remove completed files when possible and report unremovable files for integrity recovery.
 
 ## Filesystem and database consistency
 
@@ -293,8 +350,9 @@ production schema implicitly with `create_all()`. Start with synchronous file an
 async database access.
 
 Use typed settings and never hard-code environment paths or credentials. Key settings include `DATABASE_URL`, trusted origins,
-session idle/absolute/touch limits, secure-cookie and login limits, invitation TTL, `PHOTO_STORAGE_ROOT`,
-`PHOTO_DERIVATIVE_ROOT`, storage marker, upload and free-space limits, default timezone, Push provider allowlist and
+session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
+`PHOTO_STORAGE_ROOT`, `PHOTO_DERIVATIVE_ROOT`, `BACKUP_STORAGE_ROOT`, storage markers, upload and free-space limits,
+default timezone, Push provider allowlist and
 subscription limit, and optional `MONITORING_PING_URL_*` values. Development defaults include 100 MiB maximum file size,
 1 MiB chunks, and 10 GiB minimum free space. Never place real `.env` values in code or documentation.
 
@@ -303,7 +361,8 @@ subscription limit, and optional `MONITORING_PING_URL_*` values. Development def
 ### Storage
 
 Use pytest temporary directories, never the real HDD. Test chunk writes, hashing, original/JSON renames, size limits,
-cleanup, sidecar schema and correspondence, orphan detection, and unavailable-storage conditions.
+cleanup, sidecar schema and correspondence, orphan detection, unavailable-storage conditions, and backup-root rejection
+when the external HDD is absent, unmounted, or has the wrong marker.
 
 ### Authentication
 
@@ -327,7 +386,7 @@ and unit tests remain separately runnable.
 ## Future design candidates and open decisions
 
 Candidates include a home aggregation API if existing calls become a problem, repair commands for integrity findings,
-background derivative regeneration, video, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
+background derivative regeneration, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
 marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, production hostname
 and Cloudflare plan, and independent LAN HTTPS when Cloudflare is unavailable.
 
@@ -337,9 +396,12 @@ Person detection is excluded from the current backend contract; see [`proposals/
 
 Photos move between `active`, `trashed`, and `purge_pending` without moving originals. Trash removes a photo from ordinary
 authorization, lists, New, albums, and exports. Only the owner can view or restore it; shares, album relationships, memo, and
-favorite data remain for restoration. The lifecycle is also stored in sidecar schema 7.
+favorite data remain for restoration. Album counts, pages, and covers consider active photos only, while the `AlbumPhoto`
+relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
+sidecar schema 7.
 
-Permanent deletion first commits `purge_pending`, then idempotently deletes original, sidecar, and derivatives, and finally
-deletes database rows. `python -m app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
+Permanent deletion first commits `purge_pending`, then clears album covers for the photo in the same database transaction,
+idempotently deletes original, sidecar, and derivatives, and finally deletes database rows. `python -m
+app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
 
 日本語版: [backend-design.ja.md](./backend-design.ja.md)

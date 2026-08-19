@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../../shared/lib/format'
+import { EmptyState } from '../../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
+import { PageMessage } from '../../../shared/ui/PageMessage'
 import { AlbumIcon, BackIcon, CheckIcon, DeleteIcon, EditIcon, PhotoIcon, PlusIcon } from '../../../shared/ui/icons'
 import { getPhotoThumbnailUrl } from '../../photos/api'
 import type { Photo } from '../../photos/public'
@@ -154,11 +156,7 @@ export function AlbumDetailView({
           </div>
         </div>
 
-        {error && (
-          <div className="page-message page-message--error" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <PageMessage>{error}</PageMessage>}
 
         {album.photos.length > 0 ? (
           <AlbumPhotoGrid
@@ -171,13 +169,12 @@ export function AlbumDetailView({
             onToggle={togglePhoto}
           />
         ) : (
-          <div className="empty-state album-empty-state">
-            <span>
-              <AlbumIcon />
-            </span>
-            <h3>{t('albums.emptyPhotos')}</h3>
-            <p>{t('albums.emptyPhotosHelp')}</p>
-          </div>
+          <EmptyState
+            className="album-empty-state"
+            icon={<AlbumIcon />}
+            title={t('albums.emptyPhotos')}
+            description={t('albums.emptyPhotosHelp')}
+          />
         )}
 
         <InfiniteScrollTrigger

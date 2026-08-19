@@ -3,8 +3,9 @@
 ## Purpose
 
 This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, cleaning,
-and shopping. Image files are stored on the external HDD; PostgreSQL stores metadata required for search and integrity
-checks. JSON sidecars with the same UUID as each original are also stored on the external HDD for recovery.
+and shopping. Image files are stored on the internal photo-storage HDD; PostgreSQL stores metadata required for search and
+integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
+disconnected external HDD stores versioned snapshots of the originals and database backups.
 
 The current application schema is consolidated into one baseline because the development database is reset when the
 baseline changes. Future approved schema changes should be added as new migrations. Tables for future features such as
@@ -46,6 +47,9 @@ current relational contract.
 - Give constraints and indexes stable names managed by Alembic.
 - Avoid PostgreSQL-specific ENUMs for now; use strings with `CHECK` constraints so values remain easier to change.
 
+Columns named `updated_at` use a server default for INSERTs only. Application services set them explicitly on every
+supported update; the schema does not use a general-purpose update trigger.
+
 ## Timestamps
 
 Database and API values are UTC; user-facing values are JST.
@@ -74,6 +78,7 @@ Stores family users created by a management command or administrator invitation.
 | `password_hash` | `TEXT` | No | Argon2id hash; never plaintext |
 | `is_active` | `BOOLEAN` | No | Blocks login and existing-session use when false |
 | `system_role` | `VARCHAR(16)` | No | `admin` or `user` |
+| `must_change_password` | `BOOLEAN` | No | Set by operator password resets; cleared after the user changes the password |
 | `created_at` | `TIMESTAMPTZ` | No | Creation time |
 | `password_changed_at` | `TIMESTAMPTZ` | No | Invalidates older sessions |
 
@@ -86,12 +91,15 @@ Stores one-time account invitations issued by system administrators. It contains
 SHA-256 token hash, creator, creation and expiry times, and optional used and revoked times. Only one unused, unrevoked
 invitation may exist for a username. Acceptance locks the row, validates expiry, use, revocation, and username uniqueness,
 then creates the user and sets `used_at` in one transaction. The raw token is returned only once and is never stored.
+Creating a replacement invitation revokes any previous unused invitation for the same username, including an expired one,
+in the same transaction before inserting the replacement.
 
 ### `user_sessions`
 
 Stores server-side sessions. The raw cookie token is not stored; only its lowercase SHA-256 hash is stored in the unique
 `token_hash` column. The table also stores a session-bound CSRF token, creation time, last-use time, absolute expiry, and
-optional revocation time. Index `user_id` as `ix_user_sessions_user_id` to revoke all sessions efficiently.
+optional revocation time. `expires_at` must be later than `created_at`. Index `user_id` as `ix_user_sessions_user_id` to
+revoke all sessions efficiently.
 
 ### `family_groups`
 
@@ -138,12 +146,13 @@ purchase time must both be null or both be set. Index `(group_id, purchased_at, 
 
 Stores one metadata row per original. Important fields are uploader and username snapshot, display filename, relative
 `storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, capture and upload timestamps, lifecycle
-state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner.
+state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner. The same row represents either an
+image or a supported video; `content_type` distinguishes them and dimensions describe the video stream when applicable.
 
 Constraints include unique `storage_key`, required existing owner, unique `(uploaded_by_user_id, sha256)`, positive size,
 lowercase 64-character SHA-256, paired dimensions or both null, and valid lifecycle/timestamp combinations. Do not include
-allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. The MVP accepts
-JPEG, primary-image MPO selected as JPEG, PNG, and HEIF/HEIC.
+allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. Supported media
+includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V.
 
 ### `photo_metadata`
 
@@ -258,8 +267,10 @@ originals/2026/07/550e8400-e29b-41d4-a716-446655440000.jpg
 ```
 
 `YYYY/MM` is based on upload time, not capture time. Changing capture metadata does not move an original. Do not use
-`original_filename` to construct paths. Store accepted JPEG, primary-image MPO, PNG, and HEIF/HEIC bytes without recompression
-or format conversion. Validate actual content during upload and recovery rather than trusting `content_type` alone.
+`original_filename` to construct paths. Store accepted JPEG, primary-image MPO, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V
+bytes without recompression or format conversion. Validate actual content during upload and recovery rather than trusting
+`content_type` alone. Video thumbnails are regenerable first-frame WebP derivatives; video conversion and streaming
+optimization are not part of this implementation.
 
 ## JSON sidecars
 
@@ -286,7 +297,9 @@ other regenerable derived data such as person-analysis results.
 `administrative_audit_events` stores administrative scope, actor ID and username snapshot, target, non-secret JSON details,
 and time. It deliberately has no foreign keys to actors or groups so audit rows survive physical deletion.
 
-`push_subscriptions` associates an endpoint and encryption keys with a user and login session. `notification_preferences`
+`push_subscriptions` associates an endpoint and encryption keys with a user and login session. A composite foreign key to
+`(user_sessions.id, user_sessions.user_id)` prevents a subscription from pairing one user with another user's session.
+`notification_preferences`
 stores photo-sharing, cleaning-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
 and deduplication key and is created in the same transaction as the business operation. `claimed_at` and `claim_token` track
 worker ownership. `notification_deliveries` uses the outbox/subscription pair as a composite key and stores per-device
@@ -302,7 +315,7 @@ photo, album, group, invitation, resumable-upload, and cleaning schema. All late
 rewrite the baseline. The project has since added derivatives, `pg_trgm` filename and memo search, shopping, memo editor
 metadata, favorites and album groups, activity events and read states, trash lifecycle, maintenance history, Push subscriptions
 and outbox, per-device delivery state, unique group names, audit events, and group membership invitations through subsequent
-migrations up to `20260723_13` and the current revisions.
+migrations up to `20260723_13` and the current revisions, including the forced-password-change flag for operator resets.
 
 Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
 with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with

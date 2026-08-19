@@ -11,6 +11,7 @@ from app.features.auth.dependencies import (
     get_cookie_name,
     get_login_rate_limiter,
     require_csrf_token,
+    require_password_change_complete,
     require_trusted_origin,
 )
 from app.features.auth.rate_limit import LoginRateLimiter
@@ -42,6 +43,7 @@ def _session_response(context: AuthContext) -> AuthSessionResponse:
             system_role=context.user.system_role,
         ),
         csrf_token=context.user_session.csrf_token,
+        must_change_password=context.user.must_change_password,
     )
 
 
@@ -104,6 +106,7 @@ def login(
             system_role=created.user.system_role,
         ),
         csrf_token=created.csrf_token,
+        must_change_password=created.user.must_change_password,
     )
 
 
@@ -134,7 +137,11 @@ def logout_all(
     _delete_session_cookie(response, request.app.state.settings)
 
 
-@router.get("/sessions", response_model=UserSessionListResponse)
+@router.get(
+    "/sessions",
+    response_model=UserSessionListResponse,
+    dependencies=[Depends(require_password_change_complete)],
+)
 def list_sessions(
     context: Annotated[AuthContext, Depends(get_auth_context)],
     service: Annotated[AuthService, Depends(get_auth_service)],
@@ -156,7 +163,7 @@ def list_sessions(
 @router.delete(
     "/sessions/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_csrf_token)],
+    dependencies=[Depends(require_csrf_token), Depends(require_password_change_complete)],
 )
 def revoke_session(
     session_id: UUID,

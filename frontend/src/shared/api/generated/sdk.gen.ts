@@ -106,6 +106,8 @@ import type {
   GetPhotoMetadataApiV1PhotosPhotoIdGetData,
   GetPhotoMetadataApiV1PhotosPhotoIdGetErrors,
   GetPhotoMetadataApiV1PhotosPhotoIdGetResponses,
+  GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData,
+  GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetData,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetErrors,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetResponses,
@@ -1237,6 +1239,17 @@ export const exportPhotoOriginalsApiV1PhotosExportGet = <ThrowOnError extends bo
     ExportPhotoOriginalsApiV1PhotosExportGetErrors,
     ThrowOnError
   >({ url: '/api/v1/photos/export', ...options })
+
+/**
+ * Get Photo Search Options
+ */
+export const getPhotoSearchOptionsApiV1PhotosSearchOptionsGet = <ThrowOnError extends boolean = false>(
+  options?: Options<GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData, ThrowOnError>,
+): RequestResult<GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses, unknown, ThrowOnError>({
+    url: '/api/v1/photos/search-options',
+    ...options,
+  })
 
 /**
  * Get Storage Status

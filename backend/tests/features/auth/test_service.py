@@ -149,6 +149,7 @@ def test_change_password_rehashes_password_and_revokes_sessions(monkeypatch: pyt
 
     assert user.password_hash == "new-password-hash"
     assert user.password_changed_at >= context.user_session.created_at
+    assert user.must_change_password is False
     session.execute.assert_called_once()
     session.commit.assert_called_once_with()
 

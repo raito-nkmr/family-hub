@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
@@ -9,7 +9,7 @@ import { getGroups } from '../groups/api'
 import {
   addBulkPhotoSharing,
   getPhoto,
-  getPhotos,
+  getPhotoSearchOptions,
   getPhotoTimeline,
   getStorageStatus,
   removePhotoGroupShareAsAdmin,
@@ -23,6 +23,7 @@ import {
   type PhotoPage,
 } from './api'
 import { readPhotoSearchParams, readTimelineYear, writePhotoSearchParams } from './photoSearchParams'
+import { usePhotoList } from './usePhotoList'
 
 const currentTimelineYear = Number(
   new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tokyo', year: 'numeric' }).format(new Date()),
@@ -50,18 +51,17 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     enabled: storageEnabled,
   })
   const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
+  const searchOptionsQuery = useQuery({
+    queryKey: queryKeys.photoSearchOptions,
+    queryFn: ({ signal }) => getPhotoSearchOptions(signal),
+    enabled: libraryEnabled,
+  })
   const timelineQuery = useQuery({
     queryKey: queryKeys.photoTimeline(timelineYear),
     queryFn: ({ signal }) => getPhotoTimeline(timelineYear, signal),
     enabled: libraryEnabled,
   })
-  const photosQuery = useInfiniteQuery({
-    queryKey: queryKeys.photos(photoFilters),
-    queryFn: ({ pageParam, signal }) => getPhotos(photoFilters, pageParam, signal),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (page) => page.next_cursor ?? undefined,
-    enabled: libraryEnabled,
-  })
+  const photoList = usePhotoList({ filters: photoFilters, enabled: libraryEnabled })
   const detailQuery = useQuery({
     queryKey: queryKeys.photo(selectedPhotoId ?? ''),
     queryFn: ({ signal }) => getPhoto(selectedPhotoId!, signal),
@@ -71,16 +71,20 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     storageQuery.error,
     groupsQuery.error,
     timelineQuery.error,
-    photosQuery.error,
+    photoList.error,
     detailQuery.error,
+    searchOptionsQuery.error,
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
   const selectedPhoto = detailQuery.data ?? null
+  const selectedPhotoIndex = photoList.photos.findIndex((photo) => photo.id === selectedPhotoId)
+  const previousPhoto = selectedPhotoIndex > 0 ? photoList.photos[selectedPhotoIndex - 1] : null
+  const nextPhoto = selectedPhotoIndex >= 0 ? (photoList.photos[selectedPhotoIndex + 1] ?? null) : null
   const invalidateLibrary = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['photos', 'list'] }),
-      queryClient.invalidateQueries({ queryKey: ['photos', 'timeline'] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoStorage }),
     ])
   }
@@ -148,7 +152,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     try {
       const updated = await setPhotoFavorite(selectedPhoto.id, !selectedPhoto.is_favorite)
       queryClient.setQueryData(queryKeys.photo(updated.id), updated)
-      await queryClient.invalidateQueries({ queryKey: ['photos', 'list'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix })
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setMetadataError(i18n.t('photos.updateFailed'))
@@ -174,7 +178,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   const bulkAddSharing = async (photoIds: string[], groupIds: string[]): Promise<BulkSharingResult> => {
     try {
       const result = await addBulkPhotoSharing(photoIds, groupIds)
-      await queryClient.invalidateQueries({ queryKey: ['photos', 'list'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix })
       return result
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
@@ -189,7 +193,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       await trashPhoto(selectedPhoto.id)
       removePhotoFromPages(queryClient, photoFilters, selectedPhoto.id)
       setSelectedPhotoId(null)
-      await queryClient.invalidateQueries({ queryKey: ['photos', 'timeline'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix })
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setMetadataError(i18n.t('photoTrash.trashFailed'))
@@ -197,32 +201,35 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       setUpdatingMetadata(false)
     }
   }
-  const pages = photosQuery.data?.pages ?? []
-  const queryError = [storageQuery.error, groupsQuery.error, timelineQuery.error, photosQuery.error].some(Boolean)
+  const queryError = [storageQuery.error, groupsQuery.error, timelineQuery.error, photoList.error].some(Boolean)
     ? i18n.t('photos.loadFailed')
     : null
 
   return {
     storage: storageQuery.data ?? null,
-    photos: pages.flatMap((page) => page.items),
+    photos: photoList.photos,
     photoFilters,
-    totalCount: pages[0]?.total_count ?? 0,
+    totalCount: photoList.totalCount,
     timeline: timelineQuery.data ?? null,
     groups: groupsQuery.data ?? [],
+    searchOptions: searchOptionsQuery.data ?? null,
+    searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
+    previousPhoto,
+    nextPhoto,
     loading:
       groupsQuery.isPending ||
       (storageEnabled && storageQuery.isPending) ||
-      (libraryEnabled && (timelineQuery.isPending || photosQuery.isPending)),
-    loadingMore: photosQuery.isFetchingNextPage,
+      (libraryEnabled && (timelineQuery.isPending || photoList.loading)),
+    loadingMore: photoList.loadingMore,
     updatingMetadata,
     pageError: pageMutationError ?? queryError,
     metadataError,
-    hasMore: photosQuery.hasNextPage,
+    hasMore: photoList.hasMore,
     refresh: invalidateLibrary,
     search,
     loadMore: async () => {
-      if (photosQuery.hasNextPage && !photosQuery.isFetchingNextPage) await photosQuery.fetchNextPage()
+      await photoList.loadMore()
     },
     changeTimelineYear,
     changeSharing,

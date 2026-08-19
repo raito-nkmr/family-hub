@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from datetime import UTC, date, datetime
 from uuid import UUID
 
@@ -22,6 +23,16 @@ class StorageStatusResponse(BaseModel):
     total_bytes: int | None
 
 
+class PhotoSearchOptionResponse(BaseModel):
+    id: UUID
+    name: str
+
+
+class PhotoSearchOptionsResponse(BaseModel):
+    uploaders: list[PhotoSearchOptionResponse]
+    groups: list[PhotoSearchOptionResponse]
+
+
 class PhotoSharing(BaseModel):
     type: PhotoVisibility
     group_ids: list[UUID] = Field(default_factory=list, max_length=100)
@@ -42,6 +53,24 @@ class PhotoSharing(BaseModel):
         return self
 
 
+class PhotoResponseSharing(BaseModel):
+    type: PhotoVisibility
+    group_ids: list[UUID] = Field(default_factory=list, max_length=100)
+
+    @field_validator("group_ids")
+    @classmethod
+    def require_unique_group_ids(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("group_ids must not contain duplicates")
+        return value
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> "PhotoResponseSharing":
+        if self.type is PhotoVisibility.PRIVATE and self.group_ids:
+            raise ValueError("private sharing must not include groups")
+        return self
+
+
 class PhotoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -49,7 +78,7 @@ class PhotoResponse(BaseModel):
     uploaded_by_user_id: UUID
     uploaded_by_username: str
     visibility: PhotoVisibility
-    sharing: PhotoSharing
+    sharing: PhotoResponseSharing
     memo: str | None
     memo_updated_by_user_id: UUID
     memo_updated_by_username: str
@@ -89,6 +118,21 @@ class PhotoResponse(BaseModel):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("photo datetimes must be timezone-aware")
         return value.astimezone(UTC)
+
+
+def photo_response_from_model(photo, *, visible_group_ids: Collection[UUID], is_favorite: bool) -> PhotoResponse:
+    return PhotoResponse.model_validate(photo).model_copy(
+        update={
+            "is_favorite": is_favorite,
+            "sharing": PhotoResponseSharing(
+                type=photo.visibility,
+                group_ids=sorted(visible_group_ids, key=str),
+            ),
+            "captured_at": photo.metadata_record.captured_at_override or photo.captured_at,
+            "captured_at_original": photo.captured_at,
+            "captured_at_override": photo.metadata_record.captured_at_override,
+        }
+    )
 
 
 class TrashedPhotoListResponse(BaseModel):

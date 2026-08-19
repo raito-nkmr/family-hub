@@ -3,7 +3,6 @@ Description=Family Hub FastAPI backend
 Requires=family-hub-database.service
 After=network-online.target family-hub-database.service
 Wants=network-online.target
-RequiresMountsFor=/mnt/family-hub-storage
 
 [Service]
 Type=simple
@@ -20,7 +19,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/family-hub /mnt/family-hub-storage
+ReadWritePaths=/var/lib/family-hub /mnt/family-hub-data
 
 [Install]
 WantedBy=multi-user.target

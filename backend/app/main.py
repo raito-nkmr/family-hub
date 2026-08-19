@@ -6,7 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import Settings, get_settings
 from app.core.lifespan import create_lifespan
-from app.core.middleware import RequestLoggingMiddleware, SinglePhotoUploadSizeLimitMiddleware
+from app.core.middleware import (
+    PrivateApiCacheControlMiddleware,
+    RequestLoggingMiddleware,
+    SinglePhotoUploadSizeLimitMiddleware,
+)
 from app.features.albums.router import router as albums_router
 from app.features.auth.admin_router import router as admin_router
 from app.features.auth.invitation_router import admin_router as admin_invitation_router
@@ -52,8 +56,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Upload-Offset", "X-Request-ID"],
     )
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(PrivateApiCacheControlMiddleware)
     app.add_exception_handler(HTTPException, log_http_exception)
     app.include_router(root_router)
     app.include_router(health_router, prefix="/api/v1")

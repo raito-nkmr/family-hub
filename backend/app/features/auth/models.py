@@ -31,6 +31,8 @@ class User(Base):
         PrimaryKeyConstraint("id", name="pk_users"),
         UniqueConstraint("username", name="uq_users_username"),
         CheckConstraint("username = lower(username)", name="ck_users_username_lowercase"),
+        CheckConstraint("username = btrim(username)", name="ck_users_username_trimmed"),
+        CheckConstraint("char_length(username) BETWEEN 1 AND 64", name="ck_users_username_length"),
         CheckConstraint("system_role IN ('admin', 'user')", name="ck_users_system_role"),
     )
 
@@ -44,6 +46,7 @@ class User(Base):
         DateTime(timezone=True),
         server_default=func.current_timestamp(),
     )
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class UserSession(Base):
@@ -51,8 +54,10 @@ class UserSession(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_user_sessions"),
         UniqueConstraint("token_hash", name="uq_user_sessions_token_hash"),
+        UniqueConstraint("id", "user_id", name="uq_user_sessions_id_user_id"),
         CheckConstraint("token_hash ~ '^[0-9a-f]{64}$'", name="ck_user_sessions_token_hash_lower_hex"),
         CheckConstraint("csrf_token ~ '^[A-Za-z0-9_-]{43}$'", name="ck_user_sessions_csrf_token"),
+        CheckConstraint("expires_at > created_at", name="ck_user_sessions_expires_after_created"),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -76,6 +81,8 @@ class UserInvitation(Base):
         PrimaryKeyConstraint("id", name="pk_user_invitations"),
         UniqueConstraint("token_hash", name="uq_user_invitations_token_hash"),
         CheckConstraint("username = lower(username)", name="ck_user_invitations_username_lowercase"),
+        CheckConstraint("username = btrim(username)", name="ck_user_invitations_username_trimmed"),
+        CheckConstraint("char_length(username) BETWEEN 1 AND 64", name="ck_user_invitations_username_length"),
         CheckConstraint("token_hash ~ '^[0-9a-f]{64}$'", name="ck_user_invitations_token_hash_lower_hex"),
     )
 

@@ -65,4 +65,26 @@ describe('PhotoActivityPage', () => {
 
     expect(screen.getByText('新着写真はありません')).toBeInTheDocument()
   })
+
+  it('shows a manual retry action when marking activity as seen fails', async () => {
+    const user = userEvent.setup()
+    const onRetryMarkSeen = vi.fn()
+    render(
+      <PhotoActivityPage
+        items={[activity]}
+        loading={false}
+        loadingMore={false}
+        hasMore={false}
+        error={null}
+        markSeenError="新着写真を既読にできませんでした。"
+        onRefresh={vi.fn()}
+        onLoadMore={vi.fn()}
+        onRetryMarkSeen={onRetryMarkSeen}
+        onSelectPhoto={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '既読にする処理を再試行' }))
+    expect(onRetryMarkSeen).toHaveBeenCalledOnce()
+  })
 })

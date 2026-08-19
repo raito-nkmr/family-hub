@@ -89,6 +89,10 @@ def test_get_album_returns_bounded_photo_page_and_cursor() -> None:
     assert result.photos == [first]
     assert result.album.photo_count == 2
     assert result.next_cursor is not None
+    sql = str(
+        session.execute.call_args.args[0].compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    assert "photos.lifecycle_state = 'active'" in sql
 
 
 def test_get_album_rejects_invalid_photo_cursor() -> None:
@@ -144,7 +148,7 @@ def test_update_album_sets_cover_from_album_photo() -> None:
     session = MagicMock(spec=Session)
     album = make_album()
     cover_photo_id = uuid4()
-    session.scalar.side_effect = [album, album, 1, "同居家族", cover_photo_id]
+    session.scalar.side_effect = [album, album, cover_photo_id, 1, "同居家族", cover_photo_id]
     session.scalars.return_value.all.return_value = [album.group_id]
     session.get.return_value = AlbumPhoto(album_id=album.id, photo_id=cover_photo_id)
     service, _ = make_service(session)
@@ -162,6 +166,27 @@ def test_update_album_sets_cover_from_album_photo() -> None:
     assert album.cover_photo_id == cover_photo_id
     assert result.cover_photo_id == cover_photo_id
     assert "FOR UPDATE" in str(session.scalar.call_args_list[1].args[0])
+
+
+def test_update_album_rejects_trashed_cover_photo() -> None:
+    session = MagicMock(spec=Session)
+    album = make_album()
+    session.scalar.side_effect = [album, album, None]
+    session.scalars.return_value.all.return_value = [album.group_id]
+    service, _ = make_service(session)
+
+    with pytest.raises(PhotoNotInAlbumError):
+        service.update_album(
+            album.id,
+            title=None,
+            description=None,
+            update_description=False,
+            acting_user_id=uuid4(),
+            cover_photo_id=uuid4(),
+            update_cover=True,
+        )
+
+    session.commit.assert_not_called()
 
 
 def test_add_photos_rejects_missing_photos_before_mutation() -> None:

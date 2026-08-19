@@ -40,6 +40,7 @@ class AdministrativeUserResponse(UserResponse):
     created_at: datetime
     active_session_count: int
     group_names: list[str]
+    group_admin_group_names: list[str]
 
 
 class AdministrativeUserListResponse(BaseModel):
@@ -92,6 +93,7 @@ class AdministrativeAuditEventListResponse(BaseModel):
 class AuthSessionResponse(BaseModel):
     user: UserResponse
     csrf_token: str
+    must_change_password: bool
 
 
 class PasswordChangeRequest(BaseModel):
@@ -113,7 +115,7 @@ class UserSessionListResponse(BaseModel):
 
 class InvitationCreate(BaseModel):
     username: str
-    expires_in_hours: int = Field(default=24, ge=1, le=168)
+    expires_in_hours: Literal[24, 72, 168] = 24
 
     @field_validator("username")
     @classmethod

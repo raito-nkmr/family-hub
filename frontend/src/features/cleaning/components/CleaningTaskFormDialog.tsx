@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { CancelIcon, SaveIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { SaveIcon } from '../../../shared/ui/icons'
 import type { CleaningTask } from '../api'
 
 interface CleaningTaskFormDialogProps {
@@ -65,16 +66,7 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
             {error}
           </p>
         )}
-        <div className="dialog-actions">
-          <button
-            className="danger-button danger-button--filled icon-button"
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            <CancelIcon />
-            {t('common.cancel')}
-          </button>
+        <DialogActions disabled={submitting} onCancel={onClose}>
           <button
             className="success-button icon-button"
             type="submit"
@@ -83,7 +75,7 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
             <SaveIcon />
             {submitting ? t('common.saving') : t('common.save')}
           </button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   )

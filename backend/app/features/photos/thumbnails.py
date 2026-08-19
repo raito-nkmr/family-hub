@@ -1,4 +1,5 @@
 import os
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ THUMBNAIL_CONTENT_TYPE = "image/webp"
 THUMBNAIL_MAX_PIXELS = 480
 THUMBNAIL_WEBP_QUALITY = 80
 THUMBNAIL_WEBP_METHOD = 4
+VIDEO_THUMBNAIL_TIMEOUT_SECONDS = 120
 
 
 class ThumbnailGenerationError(Exception):
@@ -62,6 +64,58 @@ def generate_thumbnail(source_path: Path, destination_path: Path) -> ThumbnailMe
     ) as error:
         destination_path.unlink(missing_ok=True)
         raise ThumbnailGenerationError("Could not generate photo thumbnail") from error
+
+
+def generate_video_thumbnail(source_path: Path, destination_path: Path) -> ThumbnailMetadata:
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-nostdin",
+                "-y",
+                "-i",
+                str(source_path),
+                "-map",
+                "0:v:0",
+                "-frames:v",
+                "1",
+                "-vf",
+                "scale=w='min(480,iw)':h='min(480,ih)':force_original_aspect_ratio=decrease",
+                "-an",
+                "-sn",
+                "-dn",
+                "-c:v",
+                "libwebp",
+                "-quality",
+                str(THUMBNAIL_WEBP_QUALITY),
+                "-compression_level",
+                str(THUMBNAIL_WEBP_METHOD),
+                "-f",
+                "webp",
+                str(destination_path),
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            check=False,
+            timeout=VIDEO_THUMBNAIL_TIMEOUT_SECONDS,
+        )
+        if result.returncode != 0:
+            raise ThumbnailGenerationError("Could not generate video thumbnail")
+        with Image.open(destination_path) as thumbnail:
+            thumbnail.load()
+            width, height = thumbnail.size
+        if width <= 0 or height <= 0:
+            raise ThumbnailGenerationError("Generated video thumbnail has invalid dimensions")
+        return ThumbnailMetadata(width=width, height=height, size_bytes=destination_path.stat().st_size)
+    except ThumbnailGenerationError:
+        destination_path.unlink(missing_ok=True)
+        raise
+    except (OSError, subprocess.SubprocessError, SyntaxError, ValueError, UnidentifiedImageError) as error:
+        destination_path.unlink(missing_ok=True)
+        raise ThumbnailGenerationError("Could not generate video thumbnail") from error
 
 
 @contextmanager

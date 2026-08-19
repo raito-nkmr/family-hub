@@ -248,7 +248,7 @@ class UploadBatchService:
                 self._storage.cleanup_resumable(item.id)
             item.received_bytes = actual
             item.status = UploadItemStatus.UPLOADING if actual else UploadItemStatus.QUEUED
-            item.error_code = "storage_error"
+            item.error_code = None
             self._commit()
             raise UploadBatchStorageError(_storage_status(error)) from error
 

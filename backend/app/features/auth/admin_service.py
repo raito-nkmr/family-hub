@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, aliased
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.models import SystemRole, User, UserSession
 from app.features.auth.passwords import verify_password
-from app.features.groups.public import FamilyGroup, FamilyGroupMember, GroupRole
+from app.features.groups.public import FamilyGroup, FamilyGroupMember, GroupRole, lock_administrator_mutations
 
 
 class AdministrativeUserNotFoundError(Exception):
@@ -46,6 +46,7 @@ class AdministrativeUserSummary:
     created_at: datetime
     active_session_count: int
     group_names: list[str]
+    group_admin_group_names: list[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,13 +66,16 @@ class AdministrativeService:
         now = datetime.now(UTC)
         users = list(self._session.scalars(select(User).order_by(User.username)).all())
         rows = self._session.execute(
-            select(FamilyGroupMember.user_id, FamilyGroup.name)
+            select(FamilyGroupMember.user_id, FamilyGroup.name, FamilyGroupMember.role)
             .join(FamilyGroup, FamilyGroup.id == FamilyGroupMember.group_id)
             .order_by(FamilyGroup.name)
         ).all()
         groups: dict[UUID, list[str]] = {}
-        for user_id, name in rows:
+        group_admin_groups: dict[UUID, list[str]] = {}
+        for user_id, name, role in rows:
             groups.setdefault(user_id, []).append(name)
+            if GroupRole(role) is GroupRole.ADMIN:
+                group_admin_groups.setdefault(user_id, []).append(name)
         session_counts = dict(
             self._session.execute(
                 select(UserSession.user_id, func.count())
@@ -88,6 +92,7 @@ class AdministrativeService:
                 created_at=user.created_at,
                 active_session_count=int(session_counts.get(user.id, 0)),
                 group_names=groups.get(user.id, []),
+                group_admin_group_names=group_admin_groups.get(user.id, []),
             )
             for user in users
         ]
@@ -136,6 +141,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         target = self._lock_user(target_user_id)
         if target.is_active == is_active:
@@ -173,6 +179,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         target = self._lock_user(target_user_id)
         previous = SystemRole(target.system_role)
@@ -206,6 +213,7 @@ class AdministrativeService:
         administrator_username: str,
         current_password: str,
     ) -> None:
+        lock_administrator_mutations(self._session)
         administrator = self._reauthenticate(administrator_id, current_password)
         group = self._session.scalar(select(FamilyGroup).where(FamilyGroup.id == group_id).with_for_update())
         membership = self._session.get(FamilyGroupMember, (group_id, target_user_id))

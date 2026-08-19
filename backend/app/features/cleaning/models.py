@@ -66,3 +66,4 @@ Index(
     CleaningCompletion.completed_at.desc(),
     CleaningCompletion.id.desc(),
 )
+Index("ix_cleaning_completions_completed_by_user_id", CleaningCompletion.completed_by_user_id)

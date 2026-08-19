@@ -31,6 +31,66 @@ const photo: Photo = {
 }
 
 describe('PhotoModal', () => {
+  it('moves to adjacent photos for horizontal touch gestures', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    const { container } = render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const imageWrap = container.querySelector('.modal__image-wrap')!
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 105 }] })
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 180, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 100, clientY: 105 }] })
+
+    expect(onPreviousPhoto).toHaveBeenCalledOnce()
+    expect(onNextPhoto).toHaveBeenCalledOnce()
+  })
+
+  it('ignores short and mostly vertical touch gestures', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    const { container } = render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const imageWrap = container.querySelector('.modal__image-wrap')!
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 140, clientY: 101 }] })
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 250 }] })
+
+    expect(onPreviousPhoto).not.toHaveBeenCalled()
+    expect(onNextPhoto).not.toHaveBeenCalled()
+  })
+
   it('groups owner actions with consistent button styling', () => {
     render(
       <PhotoModal
@@ -57,6 +117,7 @@ describe('PhotoModal', () => {
     expect(favorite).toHaveClass('secondary-button', 'icon-button')
     expect(download).toHaveClass('secondary-button', 'icon-button')
     expect(trash).toHaveClass('danger-button', 'icon-button')
+    expect(screen.getByText('JPEG')).toBeInTheDocument()
   })
 
   it('lets a viewer edit the shared memo without exposing sharing controls', () => {
@@ -87,5 +148,52 @@ describe('PhotoModal', () => {
     expect(screen.getByText(/viewer/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /お気に入りに追加/ }))
     expect(onToggleFavorite).toHaveBeenCalledOnce()
+  })
+
+  it('syncs the capture date input after resetting an override', () => {
+    const onCaptureDateSave = vi.fn()
+    const overriddenPhoto = {
+      ...photo,
+      captured_at: '2026-07-14T00:00:00Z',
+      captured_at_override: '2026-07-15T03:04:00Z',
+    }
+    const { rerender } = render(
+      <PhotoModal
+        photo={overriddenPhoto}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onCaptureDateSave={onCaptureDateSave}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByDisplayValue('2026-07-15T12:04')
+    fireEvent.click(screen.getByRole('button', { name: '元のEXIF値に戻す' }))
+
+    expect(onCaptureDateSave).toHaveBeenCalledWith(null)
+
+    rerender(
+      <PhotoModal
+        photo={{ ...overriddenPhoto, captured_at_override: null }}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onCaptureDateSave={onCaptureDateSave}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByDisplayValue('2026-07-14T09:00')).toBe(input)
   })
 })

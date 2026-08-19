@@ -5,10 +5,10 @@ English version: [production-runbook.md](./production-runbook.md)
 ## 目的
 
 Family Hubの本番環境を、リポジトリ内のレビュー済み設定から再現するための手順を定める。目標設計は
-[`deployment.md`](./deployment.md)、現在の公開テスト環境は[`production-state.md`](./production-state.md)を参照する。
+[`deployment.md`](./deployment.md)を参照する。ホスト固有の本番状態は公開リポジトリの外で管理する。
 
-本書の本番構成は、ホスト上で動くCaddyとFastAPI、Docker Composeで動く専用PostgreSQL、および外付けHDDを使用する。
-開発用`compose.yaml`とそのDB volumeは本番構成へ含めない。
+本書の本番構成は、ホスト上で動くCaddyとFastAPI、Docker Composeで動く専用PostgreSQL、写真保存用の内蔵HDD、および
+世代バックアップ用に接続を解除した外付けHDDを使用する。開発用`compose.yaml`とそのDB volumeは本番構成へ含めない。
 
 ## 秘密情報の境界
 
@@ -24,13 +24,26 @@ Family Hubの本番環境を、リポジトリ内のレビュー済み設定か�
 
 エージェントは`.env`と上記の秘密ファイルを操作しない。作成と変更は運用管理者が直接行う。
 
+## ストレージマウント
+
+本番ホストは固定マウントポイントを使い、systemdのsandboxとアプリケーション設定が同じデバイスを参照するようにする。
+
+| マウントポイント | 役割 | 利用可能性 |
+| --- | --- | --- |
+| `/mnt/family-hub-data` | 内蔵HDD。主写真ストレージと外付けスナップショット用DBバックアップ | 写真操作に必須 |
+| `/mnt/family-hub-backup` | 外付けHDD。世代スナップショット専用 | バックアップ実行中だけマウント |
+
+`PHOTO_STORAGE_ROOT`は`/mnt/family-hub-data`自体を指し、一致する`.photo-storage-marker`を使う。
+`BACKUP_STORAGE_ROOT`は`/mnt/family-hub-backup`を指し、別の`.family-hub-backup-marker`を使う。
+バックアップマウントを`PHOTO_STORAGE_ROOT`へ設定せず、内蔵HDDが利用できないときにSSD上のfallbackパスを作成しない。
+
 ## 本番DBの境界
 
 | 項目 | 開発 | 本番 |
 | --- | --- | --- |
-| Compose file | `/path/to/repository/compose.yaml` | `/opt/family-hub/current/deploy/compose.production.yaml` |
+| Compose file | Repository `compose.yaml` | `/opt/family-hub/current/deploy/compose.production.yaml` |
 | Compose project | `fastapi-react-playground` | `family-hub-production` |
-| Host port | `127.0.0.1:5432` | `127.0.0.1:5433` |
+| Host port | `127.0.0.1:15432` | `127.0.0.1:5433` |
 | Volume | `fastapi-react-playground_postgres-data` | `family-hub-production-postgres-data` |
 | DB environment | `backend/.env` | `/etc/family-hub/database.env` |
 | Lifecycle | 開発者が`docker compose`で操作 | `family-hub-database.service`が操作 |
@@ -50,8 +63,7 @@ Family Hubの本番環境を、リポジトリ内のレビュー済み設定か�
 │   ├── alembic.ini
 │   ├── app/
 │   ├── pyproject.toml
-│   ├── requirements.txt
-│   └── requirements.lock
+│   └── uv.lock
 ├── frontend/
 │   └── dist/
 └── deploy/
@@ -59,15 +71,15 @@ Family Hubの本番環境を、リポジトリ内のレビュー済み設定か�
 ```
 
 `.env`、テストデータ、Pythonキャッシュ、`frontend/node_modules`、および開発用Compose volumeをreleaseへ含めない。
-Frontendはrelease作成前に`npm ci`、検証、`npm run build`を完了させ、`dist/`だけを配置する。Backendのvenvは
-releaseごとにコミット済みの`requirements.lock`から作成する。互換範囲の入力は`requirements.txt`と
-`requirements-dev.txt`に保持し、変更時は開発環境で`make backend-lock`を実行する。
+Frontendはrelease作成前に`npm ci`、検証、`npm run build`を完了させる。このbuildでは`VITE_UPLOAD_REQUEST_TIMEOUT_MS`へ
+実測した本番値を設定し、`dist/`だけを配置する。Backendの実行環境は、コミット済みの`pyproject.toml`と`uv.lock`から
+`uv sync --locked --no-dev`でreleaseごとに作成する。Backend依存関係を変更した場合は`make backend-lock`でlock fileを更新する。
 
-releaseルートでの作成例は次のとおり。
+本番ホストでは、release symlinkを切り替えた後に固定されたruntime環境をインストールする。
 
 ```bash
-python3.13 -m venv backend/.venv
-make backend-sync
+cd /opt/family-hub/current/backend
+uv sync --locked --no-dev
 ```
 
 ## 初回構築前の検証
@@ -94,6 +106,24 @@ systemd-analyze verify deploy/systemd/*.service deploy/systemd/*.timer
 
 さらに、BackendとFrontendの通常のチェックを完了させる。Caddyとsystemdの検証結果は、インストール先ホストの
 バージョンでも再確認する。
+
+公開ホスト名がreleaseを配信した後、信頼できる運用マシンから公開チェックを実行する。
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+```
+
+認証、CSRF、チャンクアップロードのlive checkは、専用テストアカウントで別に実行する。アカウントは必要なパスワード変更を完了し、
+テスト後に一時アップロードバッチをキャンセルする。
+
+```bash
+FAMILY_HUB_E2E_BASE_URL=https://family.example.com \
+FAMILY_HUB_E2E_USERNAME=<dedicated-test-user> \
+FAMILY_HUB_E2E_PASSWORD=<dedicated-test-password> \
+npm --prefix frontend run test:e2e:live
+```
+
+認証情報をリポジトリ、shell history、CIログ、スクリーンショットへ保存しない。
 
 ## 初回構築
 
@@ -233,7 +263,7 @@ pg_restore --version
 command -v rsync
 ```
 
-`rsync`は2台目HDDへのsnapshotを有効にする場合だけ必要である。2台目HDDがない間は
+`rsync`は外付けHDDへのsnapshotにだけ必要である。バックアップHDDをマウントし、マーカーを確認するまで
 `family-hub-secondary-backup.timer`を有効にしない。
 
 ### unitのインストール
@@ -278,7 +308,7 @@ sudo systemctl enable --now family-hub-db-backup.timer
 `BACKUP`は検証対象の実ファイルへ置き換える。
 
 ```bash
-BACKUP=/mnt/family-hub-storage/database-backups/YYYY/MM/family-hub-YYYYMMDDTHHMMSSZ.dump
+BACKUP=/mnt/family-hub-data/database-backups/YYYY/MM/family-hub-YYYYMMDDTHHMMSSZ.dump
 
 docker run --detach --rm \
   --name family-hub-restore-drill \

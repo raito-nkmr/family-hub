@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { AlbumIcon, CancelIcon, SaveIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { AlbumIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import type { Album } from '../api'
 
@@ -77,17 +78,12 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
           placeholder={t('albums.descriptionPlaceholder')}
           onChange={(event) => setDescription(event.target.value)}
         />
-        {error && <p className="dialog-error">{error}</p>}
-        <div className="dialog-actions">
-          <button
-            className="danger-button danger-button--filled icon-button"
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            <CancelIcon />
-            {t('common.cancel')}
-          </button>
+        {error && (
+          <p className="dialog-error" role="alert">
+            {error}
+          </p>
+        )}
+        <DialogActions disabled={submitting} onCancel={onClose}>
           <button
             className="primary-button icon-button"
             type="submit"
@@ -96,7 +92,7 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
             {album ? <SaveIcon /> : <AlbumIcon />}
             {submitting ? t('common.saving') : album ? t('albums.saveChanges') : t('albums.create')}
           </button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   )

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { FavoriteIcon } from '../../../shared/ui/icons'
 import type { PhotoListItem } from '../api'
+import { isVideoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoCardProps {
@@ -38,6 +39,7 @@ export function PhotoCard({
     >
       <div className="photo-card__image-wrap">
         <PhotoPreview photo={photo} className="photo-card__image" />
+        {isVideoContentType(photo.content_type) && <span className="photo-card__media-type">{t('photos.video')}</span>}
         {selecting && (
           <span className="photo-card__selection-mark" aria-hidden="true">
             {selected ? '✓' : ''}

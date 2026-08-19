@@ -3,8 +3,8 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../../../shared/api/client'
 import type { Theme } from '../../../shared/types/theme'
-import { FamilyGroupIcon, LoginIcon, MoonIcon, SunIcon } from '../../../shared/ui/icons'
-import { LanguageToggle } from '../../../shared/ui/LanguageToggle'
+import { PublicAuthLayout } from '../../../shared/ui/PublicAuthLayout'
+import { FamilyGroupIcon, LoginIcon } from '../../../shared/ui/icons'
 
 interface LoginScreenProps {
   initialError: string | null
@@ -45,62 +45,48 @@ export function LoginScreen({ initialError, theme, onLogin, onToggleTheme }: Log
   }
 
   return (
-    <main className="login-page">
-      <div className="login-page__actions">
-        <LanguageToggle />
-        <button
-          className="theme-toggle"
-          type="button"
-          aria-label={theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
-          aria-pressed={theme === 'dark'}
-          onClick={onToggleTheme}
-        >
-          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+    <PublicAuthLayout
+      theme={theme}
+      onToggleTheme={onToggleTheme}
+      icon={<FamilyGroupIcon />}
+      eyebrow={<span lang="en">{t('auth.eyebrow')}</span>}
+      title={t('auth.title')}
+      titleId="login-heading"
+      description={t('auth.description')}
+    >
+      <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
+        <label htmlFor={usernameId}>{t('auth.username')}</label>
+        <input
+          id={usernameId}
+          name="username"
+          type="text"
+          value={username}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          onChange={(event) => setUsername(event.target.value)}
+        />
+        <label htmlFor={passwordId}>{t('auth.password')}</label>
+        <input
+          id={passwordId}
+          name="password"
+          type="password"
+          value={password}
+          autoComplete="current-password"
+          required
+          onChange={(event) => setPassword(event.target.value)}
+        />
+        <button className="login-button icon-button" type="submit" disabled={submitting || !username || !password}>
+          <LoginIcon />
+          {submitting ? t('auth.signingIn') : t('auth.signIn')}
         </button>
-      </div>
-      <section className="login-panel" aria-labelledby="login-heading">
-        <span className="brand__mark login-panel__mark">
-          <FamilyGroupIcon />
-        </span>
-        <p className="eyebrow" lang="en">
-          {t('auth.eyebrow')}
+      </form>
+      {error && (
+        <p className="login-error" role="alert">
+          {error}
         </p>
-        <h1 id="login-heading">{t('auth.title')}</h1>
-        <p className="login-panel__description">{t('auth.description')}</p>
-        <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
-          <label htmlFor={usernameId}>{t('auth.username')}</label>
-          <input
-            id={usernameId}
-            name="username"
-            type="text"
-            value={username}
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-            onChange={(event) => setUsername(event.target.value)}
-          />
-          <label htmlFor={passwordId}>{t('auth.password')}</label>
-          <input
-            id={passwordId}
-            name="password"
-            type="password"
-            value={password}
-            autoComplete="current-password"
-            required
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          <button className="login-button icon-button" type="submit" disabled={submitting || !username || !password}>
-            <LoginIcon />
-            {submitting ? t('auth.signingIn') : t('auth.signIn')}
-          </button>
-        </form>
-        {error && (
-          <p className="login-error" role="alert">
-            {error}
-          </p>
-        )}
-      </section>
-    </main>
+      )}
+    </PublicAuthLayout>
   )
 }

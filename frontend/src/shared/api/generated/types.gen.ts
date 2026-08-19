@@ -174,6 +174,10 @@ export type AdministrativeUserResponse = {
    */
   created_at: string
   /**
+   * Group Admin Group Names
+   */
+  group_admin_group_names: Array<string>
+  /**
    * Group Names
    */
   group_names: Array<string>
@@ -389,6 +393,10 @@ export type AuthSessionResponse = {
    * Csrf Token
    */
   csrf_token: string
+  /**
+   * Must Change Password
+   */
+  must_change_password: boolean
   user: UserResponse
 }
 
@@ -931,7 +939,7 @@ export type InvitationCreate = {
   /**
    * Expires In Hours
    */
-  expires_in_hours?: number
+  expires_in_hours?: 24 | 72 | 168
   /**
    * Username
    */
@@ -1343,7 +1351,7 @@ export type PhotoResponse = {
    * Sha256
    */
   sha256: string
-  sharing: PhotoSharing
+  sharing: PhotoResponseSharing
   /**
    * Size Bytes
    */
@@ -1373,6 +1381,45 @@ export type PhotoResponse = {
    * Width
    */
   width: number | null
+}
+
+/**
+ * PhotoResponseSharing
+ */
+export type PhotoResponseSharing = {
+  /**
+   * Group Ids
+   */
+  group_ids?: Array<string>
+  type: PhotoVisibility
+}
+
+/**
+ * PhotoSearchOptionResponse
+ */
+export type PhotoSearchOptionResponse = {
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * PhotoSearchOptionsResponse
+ */
+export type PhotoSearchOptionsResponse = {
+  /**
+   * Groups
+   */
+  groups: Array<PhotoSearchOptionResponse>
+  /**
+   * Uploaders
+   */
+  uploaders: Array<PhotoSearchOptionResponse>
 }
 
 /**
@@ -3686,6 +3733,23 @@ export type ExportPhotoOriginalsApiV1PhotosExportGetResponses = {
   200: unknown
 }
 
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/photos/search-options'
+}
+
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: PhotoSearchOptionsResponse
+}
+
+export type GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponse =
+  GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses[keyof GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses]
+
 export type GetStorageStatusApiV1PhotosStorageStatusGetData = {
   body?: never
   path?: never
@@ -4471,7 +4535,7 @@ export type AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchResponses 
   /**
    * Successful Response
    */
-  204: void
+  200: string
 }
 
 export type AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchResponse =

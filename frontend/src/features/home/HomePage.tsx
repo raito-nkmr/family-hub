@@ -4,16 +4,17 @@ import { appPaths } from '../../app/routes'
 import { formatDateTime } from '../../shared/lib/format'
 import {
   CheckCircleIcon,
-  ApkInstallIcon,
   CleaningIcon,
   PhotoActivityIcon,
   PhotoLibraryIcon,
-  RefreshIcon,
   ShoppingCartIcon,
-  CloseIcon,
 } from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
 import { getCleaningDueStatus } from '../cleaning/status'
 import type { FamilyGroup } from '../groups/api'
+import { PwaInstallCard } from '../pwa/PwaInstallCard'
 import type { PhotoListItem } from '../photos/api'
 import { PhotoCard } from '../photos/components/PhotoCard'
 import type { GroupCleaningTask, GroupShoppingItem } from './useHome'
@@ -62,45 +63,20 @@ export function HomePage({
           <h1>{t('home.title')}</h1>
           <p>{t('home.description')}</p>
         </div>
-        <button className="refresh-button" type="button" onClick={onRefresh} disabled={loading}>
-          <RefreshIcon />
-          <span>{t('common.refresh')}</span>
-        </button>
+        <RefreshButton onClick={onRefresh} disabled={loading} />
       </header>
 
       {showPwaInstallPrompt && (
-        <section className="pwa-install-card home-pwa-card" aria-labelledby="home-pwa-heading">
-          <img className="pwa-install-card__icon" src="/app-icon-180.png" alt="" />
-          <div className="pwa-install-card__content">
-            <h2 id="home-pwa-heading">{t('pwa.cardTitle')}</h2>
-            <p>{t('pwa.cardDescription')}</p>
-          </div>
-          <div className="pwa-install-card__actions">
-            <button className="secondary-button icon-button" type="button" onClick={onShowPwaInstallGuide}>
-              <ApkInstallIcon />
-              {t('pwa.showGuide')}
-            </button>
-            <button
-              className="pwa-install-card__dismiss"
-              type="button"
-              aria-label={t('pwa.dismissPrompt')}
-              onClick={onDismissPwaInstallPrompt}
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        </section>
+        <PwaInstallCard
+          variant="home"
+          onShowInstallGuide={onShowPwaInstallGuide}
+          onDismiss={onDismissPwaInstallPrompt}
+        />
       )}
 
-      {error && (
-        <div className="page-message page-message--error" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <PageMessage>{error}</PageMessage>}
       {loading ? (
-        <div className="feature-loading" aria-label={t('home.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('home.loading')} />
       ) : (
         <div className="home-grid">
           <section className="home-panel home-panel--photos" aria-labelledby="home-photos-heading">

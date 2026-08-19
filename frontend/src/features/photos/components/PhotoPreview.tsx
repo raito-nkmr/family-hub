@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PhotoIcon } from '../../../shared/ui/icons'
 import { getPhotoContentUrl, getPhotoThumbnailUrl } from '../api'
+import { isVideoContentType } from '../contentType'
 
 interface PreviewPhoto {
   id: string
   original_filename: string
+  content_type?: string
 }
 
 export function PhotoPreview({
@@ -26,6 +28,22 @@ export function PhotoPreview({
         <PhotoIcon />
         <span>{t('photos.previewUnavailable')}</span>
       </div>
+    )
+  }
+
+  if (source === 'original' && isVideoContentType(photo.content_type)) {
+    return (
+      <video
+        className={className}
+        controls
+        playsInline
+        preload="metadata"
+        poster={getPhotoThumbnailUrl(photo.id)}
+        aria-label={photo.original_filename}
+        onError={() => setFailed(true)}
+      >
+        <source src={getPhotoContentUrl(photo.id)} type={photo.content_type} />
+      </video>
     )
   }
 

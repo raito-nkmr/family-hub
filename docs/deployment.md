@@ -58,19 +58,56 @@ the volume as an external volume in advance so `compose down --volumes` cannot r
 `127.0.0.1:15432`. Development FastAPI listens on `127.0.0.1:18000`, and Vite listens on `127.0.0.1:15173` while its
 `/api` proxy uses the development backend port. Keep the backend ports separated so the development frontend cannot
 accidentally connect to production FastAPI at `127.0.0.1:8000`.
+For real-device LAN testing, bind development FastAPI to `0.0.0.0`, allow the Vite LAN origin in both
+`CORS_ORIGINS` and `AUTH_TRUSTED_ORIGINS`, and use the development frontend URL on the device. The development React
+client sends resumable upload chunks directly to port `18000`; other API requests continue to use the Vite proxy.
 
 `family-hub-database.service` waits for Docker startup and a successful Compose health check. Backend and database-related
 maintenance units must declare this service in `Requires` and `After`; they must not depend on an OS-provided
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
 construction and cutover procedures.
 
-Uvicorn is managed by a service definition under `deploy/systemd/`. The HDD mount and production database service are
-startup requirements.
+Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
+startup requirement. The backend remains available for authentication, cleaning, shopping, groups, and other database-backed
+features when the photo HDD is unavailable; photo operations that need the HDD return `503` or an equivalent unavailable
+status.
 
 Application logs are written to stderr with an ISO-like timestamp, level, logger name, and request ID. The systemd backend
 unit collects them in the journal; use `journalctl -u family-hub-backend.service` for application and request logs. Set
 `APP_LOG_LEVEL` in the host environment file when a different application log level is needed. Request paths exclude query
 strings so search text and other user-entered values are not copied into application logs.
+
+Resumable chunk diagnostics use a client-generated upload attempt ID to correlate browser console entries with backend
+request-body reception, durable `.part` synchronization, offset changes, and response status. The browser logs entries with
+the `[photo-upload]` prefix and can read the backend `X-Request-ID` header for direct cross-origin development uploads.
+Compare `attemptId` in the browser with `attempt_id` in the backend log. An advanced server offset followed by a client
+timeout and a `409` retry at the old offset confirms that the server stored the chunk but the response did not reach the
+client. These diagnostics intentionally exclude filenames, media contents, cookies, CSRF tokens, and credentials.
+
+Successful resumable chunk responses use `200 OK` with a short, explicitly sized body. After reading the status and
+`Upload-Offset` header, the browser aborts that request's response stream without waiting for the body. This avoids iPhone
+Safari queueing the seventh request after retaining six cross-origin responses. Preserve `Upload-Offset` through development
+and production proxies because it remains the authoritative next position.
+
+This failure was confirmed during LAN development with a 50.5 MiB MOV: six 8 MiB `PATCH` requests reached FastAPI and were
+persisted, while the seventh request never reached the backend. Waiting for the empty or short response body could instead
+stall the first request. Capturing the response headers and then aborting only that request's response stream allowed the
+seventh chunk, item completion, and thumbnail retrieval to succeed without a retry.
+
+The development frontend uses a five-second upload timeout as a temporary diagnostic value. Production builds support the
+`VITE_UPLOAD_REQUEST_TIMEOUT_MS` build-time variable and use a 30-second fallback when it is absent or invalid. Before
+production acceptance, set the variable from real iPhone Wi-Fi and mobile-network measurements rather than relying on the
+fallback. The response-stream abort was added for the development cross-origin direct route and must either be limited to
+that route or verified not to produce client-closed responses through Cloudflare.
+
+For example, pass the measured value while building the release:
+
+```bash
+VITE_UPLOAD_REQUEST_TIMEOUT_MS=30000 npm run build
+```
+
+The value must be an integer from 1,000 through 300,000 milliseconds. Keep the production value in the host-side release
+build environment; do not put host-specific values or secrets in the repository.
 
 ```bash
 uv run --locked python -m uvicorn app.main:app \
@@ -165,6 +202,10 @@ Cloudflare-proxied requests have plan-specific body-size limits; Free and Pro pl
 Treat `PHOTO_MAX_UPLOAD_BYTES` as the whole-file application limit and `PHOTO_UPLOAD_CHUNK_BYTES` as the per-request
 chunk limit.
 
+The backend host must provide `ffprobe` and `ffmpeg` on `PATH` for MP4, QuickTime MOV, and M4V validation and thumbnail
+generation. Video originals are stored without conversion; playback uses the browser's native support for the returned MIME
+type.
+
 ## Web Push outbound communication
 
 Accept only HTTPS subscription endpoints whose provider hosts are listed in `PUSH_ALLOWED_ENDPOINT_HOSTS`. The default
@@ -219,15 +260,27 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 - The Named Tunnel reconnects automatically after reboot and does not depend on a Quick Tunnel.
 - The router has no inbound port forwards, and Caddy and Uvicorn listen only on loopback.
 - Protected APIs and photo originals cannot be fetched while unauthenticated.
-- Loopback `/api/v1/readiness` checks the database and photo storage, while the Caddy route returns `404`.
+- Loopback `/api/v1/readiness` reports both database and photo-storage status, while the Caddy route returns `404`. Photo
+  storage being unavailable must not prevent the backend process or non-photo APIs from running.
 - `AUTH_TRUSTED_ORIGINS`, CORS, and cookie attributes match the production origin.
 - Spoofed forwarding headers sent directly are not accepted as the client IP.
 - `/api/*` bypasses Cloudflare cache and authenticated binaries return `private, no-store`.
-- Near-limit photos can be saved through React chunked upload.
+- Near-limit photos and supported videos can be saved through React chunked upload.
 - ZIP export measurements are complete or operational limits have been decided.
-- PostgreSQL and the external HDD cannot be reached directly from Cloudflare, the LAN, or clients.
+- PostgreSQL, the internal photo-storage HDD, and the disconnected external backup HDD cannot be reached directly from
+  Cloudflare, the LAN, or clients.
 - Backup and restore procedures have been verified using separate media.
 - Dead-man monitoring detects start, success, and intentional failure for every enabled maintenance timer.
+
+The repository smoke checks can be run against the public origin after deployment:
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+```
+
+This checks public health, the externally blocked readiness route, unauthenticated API responses, SPA and Service Worker
+availability, and the expected cache-control headers. It does not replace the authenticated live E2E test or real-device
+upload and ZIP measurements.
 
 ## References
 

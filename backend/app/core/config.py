@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_login_attempts: int = Field(default=5, gt=0)
     auth_login_window_seconds: int = Field(default=300, gt=0)
-    auth_invitation_ttl_seconds: int = Field(default=86_400, gt=0)
     photo_storage_root: Path | None = None
     photo_storage_marker: str | None = None
     photo_derivative_root: Path = DEFAULT_PHOTO_DERIVATIVE_ROOT

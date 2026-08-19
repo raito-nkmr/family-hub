@@ -5,8 +5,16 @@ from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
 from app.features.albums.models import Album, AlbumPhoto
+from app.features.groups.public import FamilyGroupMember
 
-__all__ = ["Album", "AlbumPhoto", "photo_is_in_album", "remove_photo_from_group_albums"]
+__all__ = [
+    "Album",
+    "AlbumPhoto",
+    "album_is_visible_to_user",
+    "clear_photo_as_cover",
+    "photo_is_in_album",
+    "remove_photo_from_group_albums",
+]
 
 
 def photo_is_in_album(photo_id, album_id):
@@ -17,6 +25,29 @@ def photo_is_in_album(photo_id, album_id):
             AlbumPhoto.album_id == album_id,
         )
     )
+
+
+def album_is_visible_to_user(album_id, user_id):
+    """Return a SQL predicate for membership in an accessible album group."""
+    return exists(
+        select(Album.id)
+        .join(FamilyGroupMember, FamilyGroupMember.group_id == Album.group_id)
+        .where(
+            Album.id == album_id,
+            FamilyGroupMember.user_id == user_id,
+        )
+    )
+
+
+def clear_photo_as_cover(session: Session, photo_id: UUID) -> None:
+    """Clear a photo from every album that currently uses it as its cover."""
+    albums = list(session.scalars(select(Album).where(Album.cover_photo_id == photo_id).with_for_update()).all())
+    now = datetime.now(UTC)
+    for album in albums:
+        album.cover_photo_id = None
+        album.updated_at = now
+    if albums:
+        session.flush()
 
 
 def remove_photo_from_group_albums(session: Session, photo_id: UUID, group_ids: set[UUID]) -> None:

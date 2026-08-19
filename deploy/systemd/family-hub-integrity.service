@@ -2,7 +2,7 @@
 Description=Check Family Hub photo integrity
 Requires=family-hub-database.service
 After=family-hub-database.service
-RequiresMountsFor=/mnt/family-hub-storage
+RequiresMountsFor=/mnt/family-hub-data
 
 [Service]
 Type=oneshot

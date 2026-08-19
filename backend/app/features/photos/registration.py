@@ -26,8 +26,9 @@ from app.features.photos.storage import (
     StorageStatusCode,
     StorageUnavailableError,
 )
+from app.features.photos.video_validation import VIDEO_CONTENT_TYPES, InvalidVideoError, inspect_video
 
-ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/heif", "image/heic"}
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/heif", "image/heic", *VIDEO_CONTENT_TYPES}
 
 
 class UnsupportedPhotoTypeError(Exception):
@@ -101,9 +102,12 @@ def register_staged_photo(
 
     try:
         try:
-            image = inspect_image(staged.path, declared_content_type, default_timezone)
-        except InvalidImageError as error:
-            raise InvalidPhotoError("Uploaded file is not a valid supported image") from error
+            if declared_content_type.startswith("video/"):
+                image = inspect_video(staged.path, declared_content_type, default_timezone)
+            else:
+                image = inspect_image(staged.path, declared_content_type, default_timezone)
+        except (InvalidImageError, InvalidVideoError) as error:
+            raise InvalidPhotoError("Uploaded file is not a valid supported media file") from error
 
         duplicate = session.scalar(
             select(Photo.id).where(
@@ -117,7 +121,10 @@ def register_staged_photo(
         uploaded_at = datetime.now(UTC)
         storage_key = f"originals/{uploaded_at:%Y/%m}/{staged.photo_id}{image.extension}"
         thumbnail_key = f"thumbnails/{uploaded_at:%Y/%m}/{staged.photo_id}.webp"
-        thumbnail = storage.stage_thumbnail(staged.path, thumbnail_key)
+        if image.content_type.startswith("video/"):
+            thumbnail = storage.stage_thumbnail(staged.path, thumbnail_key, content_type=image.content_type)
+        else:
+            thumbnail = storage.stage_thumbnail(staged.path, thumbnail_key)
         photo = Photo(
             id=staged.photo_id,
             uploaded_by_user_id=uploaded_by_user_id,

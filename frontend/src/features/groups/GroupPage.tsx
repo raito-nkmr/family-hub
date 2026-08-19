@@ -3,16 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { formatDateTime } from '../../shared/lib/format'
-import {
-  BackIcon,
-  CheckIcon,
-  DeleteIcon,
-  GroupAddIcon,
-  GroupIcon,
-  PlusIcon,
-  RefreshIcon,
-  SaveIcon,
-} from '../../shared/ui/icons'
+import { EmptyState } from '../../shared/ui/EmptyState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { BackIcon, CheckIcon, DeleteIcon, GroupAddIcon, GroupIcon, PlusIcon, SaveIcon } from '../../shared/ui/icons'
 import {
   decideGroupMembershipInvitation,
   getGroupAdministration,
@@ -159,51 +153,56 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 </button>
               )}
             </div>
-            {state.pageError && (
-              <div className="page-message page-message--error" role="alert">
-                {state.pageError}
-              </div>
-            )}
+            {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
             <div className="group-member-list">
-              {selectedGroup.members.map((member) => (
-                <article className="group-member-card" key={member.user_id}>
-                  <span className="group-member-card__avatar">{member.username.slice(0, 1).toUpperCase()}</span>
-                  <div className="group-member-card__identity">
-                    <strong>{member.username}</strong>
-                    <span>{t(member.is_active ? 'groups.active' : 'groups.inactive')}</span>
-                  </div>
-                  <time dateTime={member.joined_at}>
-                    {t('groups.joined', { date: formatDateTime(member.joined_at) })}
-                  </time>
-                  {selectedGroup.current_user_role === 'admin' ? (
-                    <div className="group-member-card__actions">
-                      <select
-                        value={member.role}
-                        aria-label={t('groups.roleLabel', { username: member.username })}
-                        disabled={state.memberActionId !== null}
-                        onChange={(event) => void state.changeRole(member, event.target.value as GroupRole)}
-                      >
-                        <option value="member">{t('common.member')}</option>
-                        <option value="admin">{t('common.admin')}</option>
-                      </select>
-                      <button
-                        className="group-member-card__remove"
-                        type="button"
-                        aria-label={t('groups.removeLabel', { username: member.username })}
-                        disabled={state.memberActionId !== null}
-                        onClick={() => void state.removeMember(member)}
-                      >
-                        <DeleteIcon />
-                        {t('groups.remove')}
-                      </button>
+              {selectedGroup.members.map((member) => {
+                const isLastActiveGroupAdministrator =
+                  administrationQuery.data !== undefined &&
+                  member.is_active &&
+                  member.role === 'admin' &&
+                  administrationQuery.data.active_admin_count <= 1
+                return (
+                  <article className="group-member-card" key={member.user_id}>
+                    <span className="group-member-card__avatar">{member.username.slice(0, 1).toUpperCase()}</span>
+                    <div className="group-member-card__identity">
+                      <strong>{member.username}</strong>
+                      <span>{t(member.is_active ? 'groups.active' : 'groups.inactive')}</span>
                     </div>
-                  ) : (
-                    <span className="group-member-card__role">
-                      {t(member.role === 'admin' ? 'common.admin' : 'common.member')}
-                    </span>
-                  )}
-                </article>
-              ))}
+                    <time dateTime={member.joined_at}>
+                      {t('groups.joined', { date: formatDateTime(member.joined_at) })}
+                    </time>
+                    {selectedGroup.current_user_role === 'admin' ? (
+                      <div className="group-member-card__actions">
+                        <select
+                          value={member.role}
+                          aria-label={t('groups.roleLabel', { username: member.username })}
+                          disabled={state.memberActionId !== null || isLastActiveGroupAdministrator}
+                          title={isLastActiveGroupAdministrator ? t('errors.groupLastAdmin') : undefined}
+                          onChange={(event) => void state.changeRole(member, event.target.value as GroupRole)}
+                        >
+                          <option value="member">{t('common.member')}</option>
+                          <option value="admin">{t('common.admin')}</option>
+                        </select>
+                        <button
+                          className="group-member-card__remove"
+                          type="button"
+                          aria-label={t('groups.removeLabel', { username: member.username })}
+                          disabled={state.memberActionId !== null || isLastActiveGroupAdministrator}
+                          title={isLastActiveGroupAdministrator ? t('errors.groupLastAdmin') : undefined}
+                          onClick={() => void state.removeMember(member)}
+                        >
+                          <DeleteIcon />
+                          {t('groups.remove')}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="group-member-card__role">
+                        {t(member.role === 'admin' ? 'common.admin' : 'common.member')}
+                      </span>
+                    )}
+                  </article>
+                )
+              })}
             </div>
           </section>
         </main>
@@ -277,21 +276,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 {state.groups.length > 0 ? t('groups.count', { count: state.groups.length }) : t('groups.emptySummary')}
               </p>
             </div>
-            <button
-              className="refresh-button"
-              type="button"
-              disabled={state.loading}
-              onClick={() => void state.refresh()}
-            >
-              <RefreshIcon />
-              <span>{t('common.refresh')}</span>
-            </button>
+            <RefreshButton onClick={state.refresh} disabled={state.loading} />
           </div>
-          {state.pageError && (
-            <div className="page-message page-message--error" role="alert">
-              {state.pageError}
-            </div>
-          )}
+          {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
           {state.loading ? (
             <div className="group-grid" aria-label={t('groups.loading')}>
               {Array.from({ length: 2 }, (_, index) => (
@@ -314,13 +301,13 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
               ))}
             </div>
           ) : (
-            <div className="empty-state group-empty-state">
-              <span>
-                <GroupIcon />
-              </span>
-              <strong>{t('groups.empty')}</strong>
-              <p>{t('groups.emptyHelp')}</p>
-            </div>
+            <EmptyState
+              className="group-empty-state"
+              icon={<GroupIcon />}
+              title={t('groups.empty')}
+              description={t('groups.emptyHelp')}
+              titleAs="strong"
+            />
           )}
         </section>
       </main>

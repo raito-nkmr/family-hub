@@ -8,6 +8,7 @@ import { useSearchSelection } from '../../shared/routing/useSearchSelection'
 import { useConfirmation } from '../../shared/ui/confirmation'
 import { getGroups } from '../groups/api'
 import type { Photo } from '../photos/public'
+import { getPhotoSearchOptions } from '../photos/api'
 import {
   addPhotosToAlbum,
   createAlbum,
@@ -44,6 +45,10 @@ export function useAlbums({ onUnauthorized }: UseAlbumsOptions) {
 
   const albumsQuery = useQuery({ queryKey: queryKeys.albums, queryFn: ({ signal }) => getAlbums(signal) })
   const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
+  const searchOptionsQuery = useQuery({
+    queryKey: queryKeys.photoSearchOptions,
+    queryFn: ({ signal }) => getPhotoSearchOptions(signal),
+  })
   const detailQuery = useInfiniteQuery({
     queryKey: queryKeys.album(selectedAlbumId ?? ''),
     queryFn: ({ pageParam, signal }) => getAlbum(selectedAlbumId!, signal, pageParam),
@@ -53,6 +58,7 @@ export function useAlbums({ onUnauthorized }: UseAlbumsOptions) {
   })
   useUnauthorizedError(albumsQuery.error, onUnauthorized)
   useUnauthorizedError(groupsQuery.error, onUnauthorized)
+  useUnauthorizedError(searchOptionsQuery.error, onUnauthorized)
   useUnauthorizedError(detailQuery.error, onUnauthorized)
 
   const createMutation = useMutation({
@@ -204,6 +210,8 @@ export function useAlbums({ onUnauthorized }: UseAlbumsOptions) {
   return {
     albums: albumsQuery.data ?? [],
     groups: groupsQuery.data ?? [],
+    searchOptions: searchOptionsQuery.data ?? null,
+    searchOptionsLoading: searchOptionsQuery.isPending,
     selectedAlbum,
     loading: albumsQuery.isPending || groupsQuery.isPending,
     detailLoading: selectedAlbumId !== null && detailQuery.isPending,

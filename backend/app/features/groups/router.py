@@ -3,7 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.auth.dependencies import (
+    AuthenticatedUser,
+    require_authenticated_user,
+    require_csrf_token,
+    require_password_change_complete,
+)
 from app.features.groups.dependencies import get_group_service
 from app.features.groups.schemas import (
     GroupAdministrationOverviewResponse,
@@ -38,7 +43,10 @@ from app.features.groups.service import (
     LastGroupAdminError,
 )
 
-router = APIRouter(tags=["groups"], dependencies=[Depends(require_authenticated_user)])
+router = APIRouter(
+    tags=["groups"],
+    dependencies=[Depends(require_authenticated_user), Depends(require_password_change_complete)],
+)
 
 
 def _detail_response(detail: GroupDetail) -> GroupDetailResponse:

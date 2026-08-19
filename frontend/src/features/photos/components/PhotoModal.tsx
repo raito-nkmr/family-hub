@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent, type TouchEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatBytes, formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
+import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
 import { DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoDownloadUrl, type Photo } from '../api'
+import { formatPhotoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoModalProps {
@@ -21,7 +23,11 @@ interface PhotoModalProps {
   onCaptureDateSave?: (capturedAt: string | null) => void
   onTrash: () => void
   onModerateGroupShare?: (groupId: string, currentPassword: string) => void
+  onPreviousPhoto?: () => void
+  onNextPhoto?: () => void
 }
+
+const SWIPE_THRESHOLD_PX = 50
 
 export function PhotoModal({
   photo,
@@ -36,16 +42,47 @@ export function PhotoModal({
   onCaptureDateSave = () => {},
   onTrash,
   onModerateGroupShare,
+  onPreviousPhoto,
+  onNextPhoto,
 }: PhotoModalProps) {
   const { t } = useTranslation()
   const confirm = useConfirmation()
   const isOwner = photo.uploaded_by_user_id === currentUserId
   const [memo, setMemo] = useState(photo.memo ?? '')
-  const [captureDate, setCaptureDate] = useState(() => toDateTimeLocal(photo.captured_at_override ?? photo.captured_at))
+  const captureDateSource = photo.captured_at_override ?? photo.captured_at
+  const [captureDateState, setCaptureDateState] = useState(() => ({
+    photoId: photo.id,
+    source: captureDateSource,
+    value: toDateTimeLocal(captureDateSource),
+  }))
+  const captureDate =
+    captureDateState.photoId === photo.id && captureDateState.source === captureDateSource
+      ? captureDateState.value
+      : toDateTimeLocal(captureDateSource)
   const [moderationPassword, setModerationPassword] = useState('')
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
   const moderatedGroups = groups.filter(
     (group) => (photo.sharing.group_ids ?? []).includes(group.id) && group.current_user_role === 'admin',
   )
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) {
+      swipeStartRef.current = null
+      return
+    }
+    const touch = event.touches[0]
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current
+    swipeStartRef.current = null
+    if (!start || updatingMetadata || event.changedTouches.length !== 1) return
+    const touch = event.changedTouches[0]
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) return
+    if (deltaX > 0) onPreviousPhoto?.()
+    else onNextPhoto?.()
+  }
   const saveMemo = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalized = memo.trim()
@@ -67,7 +104,14 @@ export function PhotoModal({
       surface="media"
       onClose={onClose}
     >
-      <div className="modal__image-wrap">
+      <div
+        className="modal__image-wrap"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => {
+          swipeStartRef.current = null
+        }}
+      >
         <PhotoPreview photo={photo} className="modal__image" source="original" />
       </div>
       <div className="modal__details">
@@ -121,6 +165,10 @@ export function PhotoModal({
           <div>
             <dt>{t('photoDetails.uploadedBy')}</dt>
             <dd>{photo.uploaded_by_username}</dd>
+          </div>
+          <div>
+            <dt>{t('photoDetails.fileType')}</dt>
+            <dd>{formatPhotoContentType(photo.content_type)}</dd>
           </div>
           <div>
             <dt>{t('photoDetails.visibility')}</dt>
@@ -208,7 +256,9 @@ export function PhotoModal({
                 type="datetime-local"
                 value={captureDate}
                 disabled={updatingMetadata}
-                onChange={(event) => setCaptureDate(event.target.value)}
+                onChange={(event) =>
+                  setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
+                }
               />
               <div>
                 <button
@@ -265,11 +315,7 @@ export function PhotoModal({
             )}
           </form>
         </div>
-        {error && (
-          <div className="page-message page-message--error" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <PageMessage>{error}</PageMessage>}
       </div>
     </Dialog>
   )

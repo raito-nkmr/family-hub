@@ -43,7 +43,7 @@ test.beforeEach(async ({ page }) => {
 test('navigates the authenticated household apps on iPhone WebKit', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Your family at a glance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Recent updates' })).toBeVisible()
   await page.getByRole('link', { name: 'Cleaning', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Cleaning', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Shopping', exact: true }).click()

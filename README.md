@@ -10,7 +10,9 @@ layout.
 
 - **Photo library**
   - Cursor-based infinite scrolling, timeline navigation, and server-side search
+  - Image and video uploads with first-frame thumbnails and in-browser playback
   - Favorites, shared photos, photo activity, shared memos, and group-based visibility
+  - Mobile detail-view swipes between adjacent photos in the library
   - Group albums with selectable cover photos
   - Bulk sharing to multiple family groups
   - Individual downloads and streamed ZIP exports for owned photos
@@ -50,6 +52,7 @@ layout.
 - [uv](https://docs.astral.sh/uv/)
 - Node.js and npm
 - Docker with Docker Compose
+- `ffmpeg` with `ffprobe` on `PATH` for video validation and thumbnails
 
 ## Quick start
 
@@ -101,6 +104,10 @@ npm run dev
 
 The development API listens on `127.0.0.1:18000`. Vite runs on `127.0.0.1:15173` and proxies `/api` requests to it.
 
+For real-device LAN testing, start FastAPI with `--host 0.0.0.0` and add the Vite origin (for example,
+`http://192.168.3.7:15173`) to both `CORS_ORIGINS` and `AUTH_TRUSTED_ORIGINS`. In development, upload chunks are sent
+directly to the FastAPI port to avoid unreliable repeated large requests through the Vite proxy.
+
 VS Code users can also use the `Dev: Start All` task to start the database and both development servers.
 
 ## Verification
@@ -118,6 +125,19 @@ cd frontend
 npm run test:e2e
 npm run test:e2e:pwa
 ```
+
+After a production deployment, run the public-origin smoke checks and the opt-in live authentication/upload check with a
+dedicated test account:
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+FAMILY_HUB_E2E_BASE_URL=https://family.example.com \
+FAMILY_HUB_E2E_USERNAME=<dedicated-test-user> \
+FAMILY_HUB_E2E_PASSWORD=<dedicated-test-password> \
+npm --prefix frontend run test:e2e:live
+```
+
+Keep the live-test credentials outside the repository and shell history.
 
 ## Documentation
 

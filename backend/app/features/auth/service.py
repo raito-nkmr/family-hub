@@ -158,6 +158,7 @@ class AuthService:
         changed_at = datetime.now(UTC)
         user.password_hash = hash_password(new_password)
         user.password_changed_at = changed_at
+        user.must_change_password = False
         statement = (
             update(UserSession)
             .where(UserSession.user_id == context.user.id, UserSession.revoked_at.is_(None))

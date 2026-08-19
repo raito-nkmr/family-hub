@@ -1,17 +1,23 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isAbortError, isUnauthorizedError } from '../../../shared/api/errors'
+import { isUnauthorizedError } from '../../../shared/api/errors'
 import { formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { AddPhotoIcon, CancelIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { LoadingState } from '../../../shared/ui/LoadingState'
+import { AddPhotoIcon } from '../../../shared/ui/icons'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
-import { getPhotos, type PhotoFilters, type PhotoListItem } from '../../photos/api'
+import { useUnauthorizedError } from '../../../shared/api/useUnauthorizedError'
+import type { PhotoFilters, PhotoSearchOptions } from '../../photos/api'
 import { PhotoPreview } from '../../photos/public'
 import { PhotoSearchPanel } from '../../photos/components/PhotoSearchPanel'
+import { usePhotoList } from '../../photos/usePhotoList'
 
 interface PhotoPickerDialogProps {
   albumId: string
   groupId: string
+  searchOptions?: PhotoSearchOptions | null
+  searchOptionsLoading?: boolean
   submitting: boolean
   error: string | null
   onUnauthorized: () => void
@@ -22,102 +28,29 @@ interface PhotoPickerDialogProps {
 export function PhotoPickerDialog({
   albumId,
   groupId,
+  searchOptions = null,
+  searchOptionsLoading = false,
   submitting,
   error,
   onUnauthorized,
   onSubmit,
   onClose,
 }: PhotoPickerDialogProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const headingId = useId()
-  const [photos, setPhotos] = useState<PhotoListItem[]>([])
-  const [filters, setFilters] = useState<PhotoFilters>({
-    excludeAlbumId: albumId,
-    sharingGroupId: groupId,
-  })
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [totalCount, setTotalCount] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [searchFilters, setSearchFilters] = useState<PhotoFilters>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const requestGenerationRef = useRef(0)
-  const loadingMoreRef = useRef(false)
+  const photoList = usePhotoList({ filters: { ...searchFilters, excludeAlbumId: albumId, sharingGroupId: groupId } })
+  useUnauthorizedError(photoList.error, onUnauthorized)
+  const listError =
+    photoList.error && !isUnauthorizedError(photoList.error)
+      ? t(photoList.loadMoreFailed ? 'photos.moreFailed' : 'photos.loadFailed')
+      : null
   const selectedCount = selectedIds.size
   const selectedArray = useMemo(() => [...selectedIds], [selectedIds])
 
-  useEffect(() => {
-    const generation = ++requestGenerationRef.current
-    loadingMoreRef.current = false
-    const controller = new AbortController()
-    const load = async () => {
-      try {
-        const page = await getPhotos({ excludeAlbumId: albumId, sharingGroupId: groupId }, undefined, controller.signal)
-        if (generation !== requestGenerationRef.current) return
-        setPhotos(page.items)
-        setNextCursor(page.next_cursor)
-        setTotalCount(page.total_count)
-      } catch (loadFailure) {
-        if (isAbortError(loadFailure)) return
-        if (isUnauthorizedError(loadFailure)) onUnauthorized()
-        else setLoadError(i18n.t('photos.loadFailed'))
-      } finally {
-        if (generation === requestGenerationRef.current) setLoading(false)
-      }
-    }
-    void load()
-    return () => controller.abort()
-  }, [albumId, groupId, i18n, onUnauthorized])
-
-  const search = async (nextFilters: PhotoFilters) => {
-    const generation = ++requestGenerationRef.current
-    loadingMoreRef.current = false
-    setLoading(true)
-    setLoadingMore(false)
-    setLoadError(null)
-    const albumFilters = {
-      ...nextFilters,
-      excludeAlbumId: albumId,
-      sharingGroupId: groupId,
-    }
-    setFilters(albumFilters)
-    try {
-      const page = await getPhotos(albumFilters)
-      if (generation !== requestGenerationRef.current) return
-      setPhotos(page.items)
-      setNextCursor(page.next_cursor)
-      setTotalCount(page.total_count)
-    } catch (loadFailure) {
-      if (generation !== requestGenerationRef.current) return
-      if (isUnauthorizedError(loadFailure)) onUnauthorized()
-      else setLoadError(t('photos.searchFailed'))
-    } finally {
-      if (generation === requestGenerationRef.current) setLoading(false)
-    }
-  }
-
-  const loadMore = async () => {
-    if (!nextCursor || loadingMoreRef.current) return
-    const generation = requestGenerationRef.current
-    loadingMoreRef.current = true
-    setLoadingMore(true)
-    setLoadError(null)
-    try {
-      const page = await getPhotos(filters, nextCursor)
-      if (generation !== requestGenerationRef.current) return
-      setPhotos((current) => [...current, ...page.items.filter((item) => !current.some(({ id }) => id === item.id))])
-      setNextCursor(page.next_cursor)
-      setTotalCount(page.total_count)
-    } catch (loadFailure) {
-      if (generation !== requestGenerationRef.current) return
-      if (isUnauthorizedError(loadFailure)) onUnauthorized()
-      else setLoadError(t('photos.moreFailed'))
-    } finally {
-      if (generation === requestGenerationRef.current) {
-        loadingMoreRef.current = false
-        setLoadingMore(false)
-      }
-    }
+  const search = (nextFilters: PhotoFilters) => {
+    setSearchFilters(nextFilters)
   }
 
   const togglePhoto = (photoId: string) => {
@@ -134,20 +67,26 @@ export function PhotoPickerDialog({
       <div className="dialog__heading photo-picker-dialog__heading">
         <div>
           <h2 id={headingId}>{t('albums.addPhotos')}</h2>
-          <small>{t('albums.loadedCount', { total: totalCount, shown: photos.length })}</small>
+          <small>{t('albums.loadedCount', { total: photoList.totalCount, shown: photoList.photos.length })}</small>
         </div>
         <span>{t('albums.selectedCount', { count: selectedCount })}</span>
       </div>
 
-      <PhotoSearchPanel filters={filters} timeline={null} disabled={loading} onSearch={(value) => void search(value)} />
+      <PhotoSearchPanel
+        filters={searchFilters}
+        searchOptions={searchOptions}
+        searchOptionsLoading={searchOptionsLoading}
+        showSharingGroupFilter={false}
+        timeline={null}
+        disabled={photoList.loading}
+        onSearch={search}
+      />
 
-      {loading ? (
-        <div className="feature-loading" aria-label={t('photos.loadingList')}>
-          <span className="spinner" />
-        </div>
-      ) : photos.length > 0 ? (
+      {photoList.loading ? (
+        <LoadingState label={t('photos.loadingList')} />
+      ) : photoList.photos.length > 0 ? (
         <div className="photo-picker-grid">
-          {photos.map((photo) => {
+          {photoList.photos.map((photo) => {
             const selected = selectedIds.has(photo.id)
             return (
               <button
@@ -177,26 +116,17 @@ export function PhotoPickerDialog({
       )}
 
       <InfiniteScrollTrigger
-        hasMore={nextCursor !== null}
-        loading={loadingMore}
-        autoLoad={!loadError}
-        onLoadMore={() => void loadMore()}
+        hasMore={photoList.hasMore}
+        loading={photoList.loadingMore}
+        autoLoad={!listError}
+        onLoadMore={() => void photoList.loadMore()}
       />
-      {(error || loadError) && (
+      {(error || listError) && (
         <p className="dialog-error" role="alert">
-          {error || loadError}
+          {error || listError}
         </p>
       )}
-      <div className="dialog-actions">
-        <button
-          className="danger-button danger-button--filled icon-button"
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-        >
-          <CancelIcon />
-          {t('common.cancel')}
-        </button>
+      <DialogActions disabled={submitting} onCancel={onClose}>
         <button
           className="primary-button icon-button"
           type="button"
@@ -206,7 +136,7 @@ export function PhotoPickerDialog({
           <AddPhotoIcon />
           {submitting ? t('albums.adding') : t('albums.addSelected', { count: selectedCount })}
         </button>
-      </div>
+      </DialogActions>
     </Dialog>
   )
 }

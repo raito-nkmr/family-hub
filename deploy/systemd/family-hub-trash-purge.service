@@ -2,7 +2,7 @@
 Description=Permanently delete expired Family Hub trash
 Requires=family-hub-database.service
 After=family-hub-database.service
-RequiresMountsFor=/mnt/family-hub-storage
+RequiresMountsFor=/mnt/family-hub-data
 
 [Service]
 Type=oneshot
@@ -19,4 +19,4 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/family-hub /mnt/family-hub-storage
+ReadWritePaths=/var/lib/family-hub /mnt/family-hub-data

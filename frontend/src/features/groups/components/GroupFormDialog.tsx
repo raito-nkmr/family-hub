@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { CancelIcon, SaveIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { SaveIcon } from '../../../shared/ui/icons'
 
 interface GroupFormDialogProps {
   submitting: boolean
@@ -44,21 +45,12 @@ export function GroupFormDialog({ submitting, error, onSubmit, onClose }: GroupF
             {error}
           </p>
         )}
-        <div className="dialog-actions">
-          <button
-            className="danger-button danger-button--filled icon-button"
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            <CancelIcon />
-            {t('common.cancel')}
-          </button>
+        <DialogActions disabled={submitting} onCancel={onClose}>
           <button className="success-button icon-button" type="submit" disabled={submitting || !name.trim()}>
             <SaveIcon />
             {submitting ? t('groups.creating') : t('groups.create')}
           </button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   )

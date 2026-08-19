@@ -32,6 +32,7 @@ from app.features.photos.storage import (
     StagedDerivative,
     StagedUpload,
 )
+from app.features.photos.video_validation import VideoMetadata
 from tests.features.photos.factories import make_photo
 
 
@@ -236,6 +237,30 @@ def test_update_photo_does_not_repeat_activity_for_an_existing_share() -> None:
         expected_version=1,
     )
 
+
+def test_update_photo_preserves_share_from_group_the_owner_can_no_longer_see() -> None:
+    session = MagicMock(spec=Session)
+    hidden_group_id = uuid4()
+    photo = make_photo(visibility=PhotoVisibility.SHARED, group_id=hidden_group_id)
+    session.scalar.return_value = photo
+    session.scalars.return_value.all.return_value = []
+    service, storage = make_service(session)
+
+    result = service.update_photo(
+        photo.id,
+        photo.uploaded_by_user_id,
+        photo.uploaded_by_username,
+        memo=None,
+        update_memo=False,
+        sharing_group_ids=set(),
+        expected_version=1,
+    )
+
+    assert result.sharing["group_ids"] == [hidden_group_id]
+    assert storage.update_sidecar.call_args.args[0].sharing_audiences == (
+        {"type": "group", "id": str(hidden_group_id)},
+    )
+
     session.add.assert_not_called()
 
 
@@ -246,8 +271,9 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
     group_id = uuid4()
     photo = make_photo(visibility=PhotoVisibility.SHARED, group_id=group_id)
     session.scalar.return_value = photo
+    session.scalars.return_value.all.return_value = [group_id]
     remove_from_albums = MagicMock()
-    monkeypatch.setattr("app.features.photos.service.remove_photo_from_group_albums", remove_from_albums)
+    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_group_albums", remove_from_albums)
     service, _ = make_service(session)
 
     service.update_photo(
@@ -518,6 +544,28 @@ def test_upload_photo_registers_finalized_file(tmp_path: Path, monkeypatch: pyte
     assert sidecar.sharing_audiences == ()
     assert sidecar.derivatives[0]["kind"] == PhotoDerivativeKind.THUMBNAIL
     storage.cleanup_staged.assert_called_once_with(staged)
+
+
+def test_upload_video_registers_video_metadata_and_thumbnail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    session = MagicMock(spec=Session)
+    session.scalar.return_value = None
+    service, storage = make_service(session)
+    staged = configure_staged_upload(storage, tmp_path)
+    monkeypatch.setattr(
+        "app.features.photos.registration.inspect_video",
+        lambda path, content_type, timezone: VideoMetadata("video/quicktime", ".mov", 1920, 1080, None),
+    )
+
+    result = service.upload_photo(BytesIO(b"video"), "original.mov", "video/quicktime", uuid4(), "owner")
+
+    assert result.content_type == "video/quicktime"
+    assert result.storage_key.endswith(".mov")
+    assert (result.width, result.height) == (1920, 1080)
+    storage.stage_thumbnail.assert_called_once_with(
+        staged.path,
+        f"thumbnails/{result.uploaded_at:%Y/%m}/{result.id}.webp",
+        content_type="video/quicktime",
+    )
 
 
 def test_upload_photo_creates_activity_for_shared_groups(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

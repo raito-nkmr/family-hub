@@ -10,12 +10,16 @@ def test_authentication_models_use_expected_tables_and_constraints() -> None:
         "pk_users",
         "uq_users_username",
         "ck_users_username_lowercase",
+        "ck_users_username_trimmed",
+        "ck_users_username_length",
         "ck_users_system_role",
     }
     assert {constraint.name for constraint in UserInvitation.__table__.constraints} >= {
         "pk_user_invitations",
         "uq_user_invitations_token_hash",
         "ck_user_invitations_username_lowercase",
+        "ck_user_invitations_username_trimmed",
+        "ck_user_invitations_username_length",
         "ck_user_invitations_token_hash_lower_hex",
         "fk_user_invitations_created_by_user_id_users",
     }
@@ -24,6 +28,8 @@ def test_authentication_models_use_expected_tables_and_constraints() -> None:
         "uq_user_sessions_token_hash",
         "ck_user_sessions_token_hash_lower_hex",
         "ck_user_sessions_csrf_token",
+        "ck_user_sessions_expires_after_created",
+        "uq_user_sessions_id_user_id",
         "fk_user_sessions_user_id_users",
     }
 

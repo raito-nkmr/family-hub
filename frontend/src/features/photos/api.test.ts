@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UploadItem } from './api'
 import {
   addBulkPhotoSharing,
@@ -19,6 +19,48 @@ const item: UploadItem = {
   status: 'queued',
   error_code: null,
   photo_id: null,
+}
+
+type MockUploadResponse =
+  { status: number; offset: string; requestId?: string; body?: string } | { kind: 'error' } | { kind: 'timeout' }
+
+function stubUploadFetch(responses: MockUploadResponse[]) {
+  const fallback = responses[responses.length - 1]
+  const requests: Array<{
+    method: string
+    body: BodyInit | null | undefined
+    requestHeaders: Record<string, string>
+    signal: AbortSignal | null | undefined
+  }> = []
+
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const response = responses.shift() ?? fallback
+    if (!response) throw new Error('Missing mocked fetch response')
+    requests.push({
+      method: init?.method ?? 'GET',
+      body: init?.body,
+      requestHeaders: Object.fromEntries(new Headers(init?.headers).entries()),
+      signal: init?.signal,
+    })
+    if ('kind' in response && response.kind === 'timeout') {
+      await new Promise<never>((_, reject) => {
+        const abort = () => reject(new DOMException('The operation was aborted', 'AbortError'))
+        init?.signal?.addEventListener('abort', abort, { once: true })
+      })
+    }
+    if ('kind' in response) throw new Error('Upload request failed')
+    const body = init?.method === 'PATCH' && response.status !== 204 ? (response.body ?? 'ok') : null
+    return new Response(body, {
+      status: response.status,
+      headers: {
+        'Upload-Offset': response.offset,
+        'X-Request-ID': response.requestId ?? `request-${requests.length}`,
+      },
+    })
+  })
+
+  vi.stubGlobal('fetch', fetchMock)
+  return requests
 }
 
 describe('getPhotos', () => {
@@ -119,14 +161,21 @@ describe('photo export', () => {
 })
 
 describe('uploadItemContent', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 
   it('uploads a selected file with fetch and reports the completed offset', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 200, headers: { 'Upload-Offset': '0' } }))
-      .mockResolvedValueOnce(new Response(null, { status: 204, headers: { 'Upload-Offset': '5' } }))
-    vi.stubGlobal('fetch', fetchMock)
+    const requests = stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 200, offset: '5' },
+    ])
     const onProgress = vi.fn()
 
     await uploadItemContent(
@@ -136,23 +185,54 @@ describe('uploadItemContent', () => {
       onProgress,
     )
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock.mock.calls[1][1]).toEqual(
+    expect(requests).toHaveLength(2)
+    expect(requests[1]).toEqual(
       expect.objectContaining({
         method: 'PATCH',
         body: expect.any(Blob),
-        headers: expect.objectContaining({ 'Upload-Offset': '0' }),
+        requestHeaders: expect.objectContaining({
+          'upload-offset': '0',
+          'x-upload-attempt-id': expect.stringMatching(/^[0-9a-f-]{36}$/),
+          'x-upload-retry-count': '0',
+          'x-upload-route': 'direct',
+        }),
       }),
     )
     expect(onProgress).toHaveBeenLastCalledWith(5)
+    expect(requests[1].signal?.aborted).toBe(true)
+    expect(console.info).toHaveBeenCalledWith(
+      '[photo-upload] request-completed',
+      expect.objectContaining({
+        method: 'PATCH',
+        status: 200,
+        uploadOffset: '5',
+        requestId: 'request-2',
+      }),
+    )
+  })
+
+  it('uses the returned offset when starting the next chunk', async () => {
+    const chunkSize = 8 * 1024 * 1024
+    const file = new File([new Uint8Array(chunkSize + 1)], 'video.mov', { type: 'video/quicktime' })
+    const requests = stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 200, offset: String(chunkSize) },
+      { status: 200, offset: String(chunkSize + 1) },
+    ])
+    const onProgress = vi.fn()
+
+    await uploadItemContent(item, file, new AbortController().signal, onProgress)
+
+    expect(requests).toHaveLength(3)
+    expect(requests[2].requestHeaders['upload-offset']).toBe(String(chunkSize))
+    expect(onProgress).toHaveBeenLastCalledWith(chunkSize + 1)
   })
 
   it('rejects a chunk response that does not advance the offset', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 200, headers: { 'Upload-Offset': '0' } }))
-      .mockResolvedValueOnce(new Response(null, { status: 204, headers: { 'Upload-Offset': '0' } }))
-    vi.stubGlobal('fetch', fetchMock)
+    stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 200, offset: '0' },
+    ])
 
     await expect(
       uploadItemContent(
@@ -162,5 +242,88 @@ describe('uploadItemContent', () => {
         vi.fn(),
       ),
     ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('retries a transient chunk failure at the same offset', async () => {
+    stubUploadFetch([{ status: 200, offset: '0' }, { kind: 'error' }, { status: 200, offset: '5' }])
+    const onProgress = vi.fn()
+
+    await uploadItemContent(
+      item,
+      new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+      new AbortController().signal,
+      onProgress,
+    )
+
+    expect(onProgress).toHaveBeenLastCalledWith(5)
+  })
+
+  it('retries when a chunk request remains pending until its timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      stubUploadFetch([{ status: 200, offset: '0' }, { kind: 'timeout' }, { status: 200, offset: '5' }])
+
+      const upload = uploadItemContent(
+        item,
+        new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+        new AbortController().signal,
+        vi.fn(),
+      )
+      await vi.advanceTimersByTimeAsync(5_250)
+      await upload
+      expect(console.warn).toHaveBeenCalledWith(
+        '[photo-upload] request-failed',
+        expect.objectContaining({
+          method: 'PATCH',
+          retryCount: 0,
+          timedOut: true,
+          errorName: 'UploadRequestTimeoutError',
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('correlates a lost response retry and resumes from the server conflict offset', async () => {
+    vi.useFakeTimers()
+    try {
+      const requests = stubUploadFetch([
+        { status: 200, offset: '0' },
+        { kind: 'timeout' },
+        { status: 409, offset: '5', requestId: 'conflict-request' },
+      ])
+      const onProgress = vi.fn()
+
+      const upload = uploadItemContent(
+        item,
+        new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+        new AbortController().signal,
+        onProgress,
+      )
+      await vi.advanceTimersByTimeAsync(5_250)
+      await upload
+
+      expect(requests).toHaveLength(3)
+      expect(requests[1].requestHeaders['upload-offset']).toBe('0')
+      expect(requests[1].requestHeaders['x-upload-retry-count']).toBe('0')
+      expect(requests[2].requestHeaders['upload-offset']).toBe('0')
+      expect(requests[2].requestHeaders['x-upload-retry-count']).toBe('1')
+      expect(requests[2].requestHeaders['x-upload-attempt-id']).not.toBe(
+        requests[1].requestHeaders['x-upload-attempt-id'],
+      )
+      expect(onProgress).toHaveBeenLastCalledWith(5)
+      expect(console.info).toHaveBeenCalledWith(
+        '[photo-upload] request-completed',
+        expect.objectContaining({
+          method: 'PATCH',
+          status: 409,
+          uploadOffset: '5',
+          requestId: 'conflict-request',
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

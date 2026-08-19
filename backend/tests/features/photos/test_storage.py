@@ -13,6 +13,7 @@ from PIL import Image
 from app.core.config import Settings
 from app.features.photos import storage as storage_module
 from app.features.photos.storage import (
+    FinalizedUpload,
     InvalidStorageKeyError,
     OriginalNotFoundError,
     PhotoStorage,
@@ -395,6 +396,61 @@ def test_resumable_upload_reports_actual_offset_after_interruption(
     assert storage.get_resumable_offset(item_id) == 3
 
 
+def test_resumable_read_does_not_use_a_missing_hdd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    item_id = uuid4()
+    part = tmp_path / "incoming" / f"{item_id}.part"
+    part.parent.mkdir()
+    part.write_bytes(b"photo")
+
+    with pytest.raises(StorageUnavailableError) as error:
+        storage.resumable_as_staged(item_id, 5)
+
+    assert error.value.status is StorageStatusCode.NOT_MOUNT_POINT
+
+
+def test_resumable_cleanup_keeps_partial_file_when_hdd_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    item_id = uuid4()
+    part = tmp_path / "incoming" / f"{item_id}.part"
+    part.parent.mkdir()
+    part.write_bytes(b"photo")
+
+    storage.cleanup_resumable(item_id)
+
+    assert part.read_bytes() == b"photo"
+
+
+def test_finalized_cleanup_never_deletes_hdd_files_when_hdd_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = PhotoStorage(make_settings(tmp_path))
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: False)
+    original = tmp_path / "originals" / "photo.jpg"
+    sidecar = tmp_path / "originals" / "photo.json"
+    derivative = tmp_path / "derivatives" / "thumbnails" / "photo.webp"
+    original.parent.mkdir(parents=True)
+    derivative.parent.mkdir(parents=True)
+    original.write_bytes(b"photo")
+    sidecar.write_bytes(b"metadata")
+    derivative.write_bytes(b"thumbnail")
+
+    storage.cleanup_finalized(FinalizedUpload(original, sidecar, derivative))
+
+    assert original.exists()
+    assert sidecar.exists()
+    assert not derivative.exists()
+
+
 def test_cleanup_resumable_removes_partial_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     storage = make_available_storage(tmp_path, monkeypatch)
     item_id = uuid4()
@@ -593,6 +649,40 @@ def test_update_sidecar_replaces_metadata_atomically(tmp_path: Path, monkeypatch
     assert payload["metadata"]["memo"] == "北海道旅行"
     assert payload["sharing"]["audiences"] == [{"type": "group", "id": str(group_id)}]
     assert not finalized.sidecar_path.with_name(f"{photo_id}.json.part").exists()
+
+
+def test_existing_photo_operations_do_not_require_upload_configuration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_marker(tmp_path)
+    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: True)
+    monkeypatch.setattr(storage_module, "_is_read_only", lambda path: False)
+    monkeypatch.setattr(storage_module, "_is_writable", lambda path: True)
+    monkeypatch.setattr(storage_module, "_get_free_bytes", lambda path: 4_096)
+    settings = Settings(
+        photo_storage_root=tmp_path,
+        photo_derivative_root=tmp_path / "derivatives",
+        photo_storage_marker=EXPECTED_MARKER,
+    )
+    storage = PhotoStorage(settings)
+    photo_id = uuid4()
+    storage_key = f"originals/2026/07/{photo_id}.jpg"
+    original = tmp_path / storage_key
+    original.parent.mkdir(parents=True)
+    original.write_bytes(b"photo")
+    derivative = make_staged_derivative(tmp_path, photo_id)
+    stored_derivative = settings.photo_derivative_root / derivative.storage_key
+    stored_derivative.parent.mkdir(parents=True, exist_ok=True)
+    stored_derivative.write_bytes(b"thumbnail")
+    metadata = make_sidecar(photo_id, storage_key, 5, hashlib.sha256(b"photo").hexdigest(), derivative)
+
+    storage.update_sidecar(metadata)
+    storage.delete_photo_files(storage_key, (derivative.storage_key,))
+
+    assert not original.exists()
+    assert not original.with_suffix(".json").exists()
+    assert not stored_derivative.exists()
 
 
 def test_finalize_upload_removes_original_when_sidecar_rename_fails(

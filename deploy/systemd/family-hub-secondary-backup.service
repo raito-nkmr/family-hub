@@ -1,7 +1,9 @@
 [Unit]
-Description=Create a Family Hub snapshot on the second HDD
+Description=Create a Family Hub snapshot on the disconnected external HDD
 Requires=family-hub-database.service
 After=family-hub-database.service family-hub-db-backup.service
+ConditionPathIsMountPoint=/mnt/family-hub-backup
+RequiresMountsFor=/mnt/family-hub-backup
 
 [Service]
 Type=oneshot
@@ -12,5 +14,7 @@ EnvironmentFile=/etc/family-hub/backend.env
 ExecStartPre=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job secondary-backup --event start
 ExecStart=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.backup_secondary_storage
 ExecStopPost=/opt/family-hub/current/backend/.venv/bin/python -m app.commands.report_monitoring --job secondary-backup --result=${SERVICE_RESULT}
+ReadWritePaths=/mnt/family-hub-backup
+UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true

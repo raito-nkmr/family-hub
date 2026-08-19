@@ -15,6 +15,7 @@ vi.mock('./api', () => ({
   updateAlbum: vi.fn(),
 }))
 vi.mock('../groups/api', () => ({ getGroups: vi.fn().mockResolvedValue([]) }))
+vi.mock('../photos/api', () => ({ getPhotoSearchOptions: vi.fn().mockResolvedValue({ uploaders: [], groups: [] }) }))
 
 describe('AlbumPage', () => {
   it('returns control to the app when the session expires', async () => {

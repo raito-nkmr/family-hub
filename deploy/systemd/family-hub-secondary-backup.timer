@@ -1,5 +1,5 @@
 [Unit]
-Description=Create a weekly Family Hub snapshot on the second HDD
+Description=Create a weekly Family Hub snapshot on the disconnected external HDD
 
 [Timer]
 OnCalendar=Sun *-*-* 05:00:00 Asia/Tokyo

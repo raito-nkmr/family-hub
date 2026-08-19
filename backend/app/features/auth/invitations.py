@@ -211,6 +211,7 @@ class InvitationService:
             system_role=SystemRole.USER,
             created_at=now,
             password_changed_at=now,
+            must_change_password=False,
         )
         invitation.used_at = now
         self._session.add(user)

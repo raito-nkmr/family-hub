@@ -9,9 +9,11 @@ from app.database.session import create_database_engine
 from app.features.audit.public import record_administrative_event
 from app.features.auth.models import SystemRole, User, UserSession
 from app.features.auth.schemas import normalize_username
+from app.features.groups.public import lock_administrator_mutations
 
 
 def set_user_role(session: Session, username: str, role: SystemRole) -> None:
+    lock_administrator_mutations(session)
     user = session.scalar(select(User).where(User.username == username).with_for_update())
     if user is None:
         raise SystemExit(f"User '{username}' does not exist")

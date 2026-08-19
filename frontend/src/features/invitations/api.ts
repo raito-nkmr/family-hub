@@ -10,13 +10,17 @@ import { acceptInvitation } from '../auth/api'
 
 export type Invitation = InvitationResponse
 export type CreatedInvitation = InvitationCreatedResponse
+export type InvitationExpiryHours = 24 | 72 | 168
 
 export async function getInvitations(signal?: AbortSignal): Promise<Invitation[]> {
   const response: InvitationListResponse = await sdkData(listInvitationsApiV1AdminInvitationsGet({ signal }))
   return response.items
 }
 
-export function createInvitation(username: string, expiresInHours = 24): Promise<CreatedInvitation> {
+export function createInvitation(
+  username: string,
+  expiresInHours: InvitationExpiryHours = 24,
+): Promise<CreatedInvitation> {
   return sdkData(createInvitationApiV1AdminInvitationsPost({ body: { username, expires_in_hours: expiresInHours } }))
 }
 

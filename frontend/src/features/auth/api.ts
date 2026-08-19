@@ -19,12 +19,12 @@ import {
 } from '../../shared/api/generated'
 import { sdkData } from '../../shared/api/sdkClient'
 
-export type AuthUser = UserResponse
+export type AuthUser = UserResponse & Pick<AuthSessionResponse, 'must_change_password'>
 export type AuthUserSession = UserSessionResponse
 
 function rememberSession(response: AuthSessionResponse): AuthUser {
   rememberCsrfToken(response.csrf_token)
-  return response.user
+  return { ...response.user, must_change_password: response.must_change_password }
 }
 
 export async function getCurrentSession(signal?: AbortSignal): Promise<AuthUser> {

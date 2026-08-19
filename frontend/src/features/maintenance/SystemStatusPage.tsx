@@ -5,14 +5,10 @@ import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatBytes, formatDateTime } from '../../shared/lib/format'
-import {
-  AddModeratorIcon,
-  BlockIcon,
-  CheckIcon,
-  RefreshIcon,
-  RemoveModeratorIcon,
-  SaveIcon,
-} from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { AddModeratorIcon, BlockIcon, CheckIcon, RemoveModeratorIcon, SaveIcon } from '../../shared/ui/icons'
 import {
   assignAdministrativeGroupAdministrator,
   getAdministrationSnapshot,
@@ -63,6 +59,11 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
     onError: () => setActionError(t('systemStatus.adminActionFailed')),
   })
   const status = statusQuery.data
+  const activeSystemAdministratorCount =
+    administrationQuery.data?.users.filter((user) => user.is_active && user.system_role === 'admin').length ?? 0
+  const activeGroupAdministratorCounts = new Map(
+    administrationQuery.data?.groups.map((group) => [group.name, group.active_admin_count] as const) ?? [],
+  )
 
   return (
     <main className="maintenance-page">
@@ -71,35 +72,24 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
           <h1>{t('systemStatus.title')}</h1>
           <p>{t('systemStatus.description')}</p>
         </div>
-        <button
-          className="refresh-button"
-          type="button"
+        <RefreshButton
           disabled={statusQuery.isFetching}
-          onClick={() => void Promise.all([statusQuery.refetch(), administrationQuery.refetch()])}
-        >
-          <RefreshIcon />
-          {t('common.refresh')}
-        </button>
+          onClick={() => Promise.all([statusQuery.refetch(), administrationQuery.refetch()])}
+        />
       </header>
       {statusQuery.error && !isUnauthorizedError(statusQuery.error) && (
-        <div className="page-message page-message--error" role="alert">
-          {t('systemStatus.loadFailed')}
-        </div>
+        <PageMessage>{t('systemStatus.loadFailed')}</PageMessage>
       )}
       {status?.alerts.map((alert) => (
-        <div className="page-message page-message--error" role="alert" key={alert}>
-          {t(`systemStatus.alerts.${alert}`)}
-        </div>
+        <PageMessage key={alert}>{t(`systemStatus.alerts.${alert}`)}</PageMessage>
       ))}
       {statusQuery.isPending ? (
-        <div className="feature-loading" aria-label={t('systemStatus.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('systemStatus.loading')} />
       ) : status ? (
         <div className="maintenance-grid">
           <section className="maintenance-card maintenance-card--wide">
             <h2>{t('systemStatus.primaryStorage')}</h2>
-            <dl className="metadata-list">
+            <dl className="maintenance-metadata-list">
               <div>
                 <dt>{t('systemStatus.state')}</dt>
                 <dd>{t(`storage.${status.storage.status}`)}</dd>
@@ -166,12 +156,12 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
             </label>
-            {actionError && <p className="page-message page-message--error">{actionError}</p>}
+            {actionError && <PageMessage>{actionError}</PageMessage>}
             <div className="maintenance-table-wrap">
               <table className="maintenance-table">
                 <thead>
                   <tr>
-                    <th>{t('invitations.username')}</th>
+                    <th>{t('auth.username')}</th>
                     <th>{t('systemStatus.state')}</th>
                     <th>{t('systemStatus.role')}</th>
                     <th>{t('systemStatus.groups')}</th>
@@ -179,42 +169,70 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {administrationQuery.data?.users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.username}</td>
-                      <td>{t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}</td>
-                      <td>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
-                      <td>{user.group_names.join(', ') || '—'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className={user.is_active ? 'danger-button icon-button' : 'success-button icon-button'}
-                          disabled={userMutation.isPending || !currentPassword}
-                          onClick={() =>
-                            userMutation.mutate({ type: 'status', userId: user.id, isActive: !user.is_active })
-                          }
-                        >
-                          {user.is_active ? <BlockIcon /> : <CheckIcon />}
-                          {user.is_active ? t('systemStatus.deactivate') : t('systemStatus.activate')}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary-button icon-button"
-                          disabled={userMutation.isPending || !currentPassword}
-                          onClick={() =>
-                            userMutation.mutate({
-                              type: 'role',
-                              userId: user.id,
-                              role: user.system_role === 'admin' ? 'user' : 'admin',
-                            })
-                          }
-                        >
-                          {user.system_role === 'admin' ? <RemoveModeratorIcon /> : <AddModeratorIcon />}
-                          {user.system_role === 'admin' ? t('systemStatus.demote') : t('systemStatus.promote')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {administrationQuery.data?.users.map((user) => {
+                    const isLastActiveSystemAdministrator =
+                      user.is_active && user.system_role === 'admin' && activeSystemAdministratorCount <= 1
+                    const isLastActiveGroupAdministrator =
+                      user.is_active &&
+                      user.group_admin_group_names.some(
+                        (groupName) => (activeGroupAdministratorCounts.get(groupName) ?? 0) <= 1,
+                      )
+                    return (
+                      <tr key={user.id}>
+                        <td data-label={t('auth.username')}>{user.username}</td>
+                        <td data-label={t('systemStatus.state')}>
+                          {t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}
+                        </td>
+                        <td data-label={t('systemStatus.role')}>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
+                        <td data-label={t('systemStatus.groups')}>{user.group_names.join(', ') || '—'}</td>
+                        <td data-label={t('systemStatus.actions')}>
+                          <button
+                            type="button"
+                            className={user.is_active ? 'danger-button icon-button' : 'success-button icon-button'}
+                            disabled={
+                              userMutation.isPending ||
+                              !currentPassword ||
+                              isLastActiveSystemAdministrator ||
+                              isLastActiveGroupAdministrator
+                            }
+                            title={
+                              isLastActiveSystemAdministrator
+                                ? t('systemStatus.lastSystemAdministratorProtected')
+                                : isLastActiveGroupAdministrator
+                                  ? t('systemStatus.lastGroupAdministratorProtected')
+                                  : undefined
+                            }
+                            onClick={() =>
+                              userMutation.mutate({ type: 'status', userId: user.id, isActive: !user.is_active })
+                            }
+                          >
+                            {user.is_active ? <BlockIcon /> : <CheckIcon />}
+                            {user.is_active ? t('systemStatus.deactivate') : t('systemStatus.activate')}
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary-button icon-button"
+                            disabled={userMutation.isPending || !currentPassword || isLastActiveSystemAdministrator}
+                            title={
+                              isLastActiveSystemAdministrator
+                                ? t('systemStatus.lastSystemAdministratorProtected')
+                                : undefined
+                            }
+                            onClick={() =>
+                              userMutation.mutate({
+                                type: 'role',
+                                userId: user.id,
+                                role: user.system_role === 'admin' ? 'user' : 'admin',
+                              })
+                            }
+                          >
+                            {user.system_role === 'admin' ? <RemoveModeratorIcon /> : <AddModeratorIcon />}
+                            {user.system_role === 'admin' ? t('systemStatus.demote') : t('systemStatus.promote')}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

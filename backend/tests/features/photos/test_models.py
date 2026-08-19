@@ -42,6 +42,7 @@ def test_photo_table_has_sort_index() -> None:
         "ix_photos_lifecycle_purge_after",
         "ix_photos_sort_date_id",
         "ix_photos_uploaded_by_user_id",
+        "ix_photos_trashed_by_user_id",
     }
     assert len(indexes["ix_photos_sort_date_id"].expressions) == 2
 

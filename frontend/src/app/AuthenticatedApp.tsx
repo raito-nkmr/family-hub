@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { logout, type AuthUser } from '../features/auth/api'
+import { RequiredPasswordChangeScreen } from '../features/auth/RequiredPasswordChangeScreen'
 import { PhotoModal } from '../features/photos/components/PhotoModal'
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
 import { usePhotoActivity } from '../features/photos/usePhotoActivity'
@@ -54,6 +55,28 @@ interface AuthenticatedAppProps {
 }
 
 export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
+  if (currentUser.must_change_password) {
+    return (
+      <RequiredPasswordChangeScreen
+        username={currentUser.username}
+        theme={theme}
+        onSessionEnded={onSessionEnded}
+        onToggleTheme={onToggleTheme}
+      />
+    )
+  }
+
+  return (
+    <AuthenticatedAppShell
+      currentUser={currentUser}
+      theme={theme}
+      onSessionEnded={onSessionEnded}
+      onToggleTheme={onToggleTheme}
+    />
+  )
+}
+
+function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
@@ -211,6 +234,7 @@ export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleT
 
       {photoDashboard.selectedPhoto && (
         <PhotoModal
+          key={photoDashboard.selectedPhoto.id}
           photo={photoDashboard.selectedPhoto}
           currentUserId={currentUser.id}
           updatingMetadata={photoDashboard.updatingMetadata}
@@ -225,6 +249,14 @@ export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleT
           }
           onTrash={() => void photoDashboard.moveSelectedPhotoToTrash()}
           onModerateGroupShare={(groupId, password) => void photoDashboard.moderateGroupShare(groupId, password)}
+          onPreviousPhoto={
+            photoDashboard.previousPhoto
+              ? () => void photoDashboard.selectPhoto(photoDashboard.previousPhoto!)
+              : undefined
+          }
+          onNextPhoto={
+            photoDashboard.nextPhoto ? () => void photoDashboard.selectPhoto(photoDashboard.nextPhoto!) : undefined
+          }
         />
       )}
       {pwaInstall.guideOpen && <PwaInstallGuide onClose={pwaInstall.closeGuide} />}

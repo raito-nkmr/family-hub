@@ -6,8 +6,8 @@ from app.core.config import get_management_settings
 from app.database.session import create_database_engine
 from app.features.maintenance.models import MaintenanceJobType, MaintenanceRunStatus
 from app.features.maintenance.service import MaintenanceService
-from app.features.photos.service import PhotoService
 from app.features.photos.storage import PhotoStorage
+from app.features.photos.trash_service import PhotoTrashService
 
 
 def _parse_args() -> argparse.Namespace:
@@ -25,10 +25,9 @@ def main() -> None:
             storage = PhotoStorage(settings)
             maintenance = MaintenanceService(session, storage)
             run = maintenance.start_run(MaintenanceJobType.TRASH_PURGE)
-            service = PhotoService(
+            service = PhotoTrashService(
                 session,
                 storage,
-                settings.photo_default_timezone,
                 settings.photo_trash_retention_days,
             )
             try:

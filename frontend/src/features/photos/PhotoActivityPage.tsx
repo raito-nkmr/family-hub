@@ -1,8 +1,12 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../shared/lib/format'
+import { EmptyState } from '../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../shared/ui/InfiniteScrollTrigger'
-import { PhotoActivityIcon, RefreshIcon } from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { PhotoActivityIcon } from '../../shared/ui/icons'
 import type { PhotoActivityItem, PhotoListItem } from './api'
 import { PhotoCard } from './components/PhotoCard'
 
@@ -12,8 +16,10 @@ interface PhotoActivityPageProps {
   loadingMore: boolean
   hasMore: boolean
   error: string | null
+  markSeenError?: string | null
   onRefresh: () => void
   onLoadMore: () => void
+  onRetryMarkSeen?: () => void
   onSelectPhoto: (photo: PhotoListItem) => void
 }
 
@@ -50,8 +56,10 @@ export function PhotoActivityPage({
   loadingMore,
   hasMore,
   error,
+  markSeenError = null,
   onRefresh,
   onLoadMore,
+  onRetryMarkSeen,
   onSelectPhoto,
 }: PhotoActivityPageProps) {
   const { t } = useTranslation()
@@ -64,29 +72,30 @@ export function PhotoActivityPage({
           <h1>{t('photoActivity.title')}</h1>
           <p>{t('photoActivity.description')}</p>
         </div>
-        <button className="refresh-button" type="button" onClick={onRefresh} disabled={loading}>
-          <RefreshIcon />
-          <span>{t('common.refresh')}</span>
-        </button>
+        <RefreshButton onClick={onRefresh} disabled={loading} />
       </header>
 
-      {error && (
-        <div className="page-message page-message--error" role="alert">
-          {error}
-        </div>
+      {error && <PageMessage>{error}</PageMessage>}
+      {markSeenError && (
+        <PageMessage>
+          <span>{markSeenError}</span>
+          {onRetryMarkSeen && (
+            <button className="secondary-button" type="button" onClick={onRetryMarkSeen}>
+              {t('photoActivity.retryMarkSeen')}
+            </button>
+          )}
+        </PageMessage>
       )}
       {loading ? (
-        <div className="photo-activity-loading" aria-label={t('photoActivity.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState className="photo-activity-loading" label={t('photoActivity.loading')} />
       ) : groups.length === 0 ? (
-        <div className="empty-state photo-activity-empty">
-          <span>
-            <PhotoActivityIcon />
-          </span>
-          <strong>{t('photoActivity.empty')}</strong>
-          <p>{t('photoActivity.emptyHelp')}</p>
-        </div>
+        <EmptyState
+          className="photo-activity-empty"
+          icon={<PhotoActivityIcon />}
+          title={t('photoActivity.empty')}
+          description={t('photoActivity.emptyHelp')}
+          titleAs="strong"
+        />
       ) : (
         <div className="photo-activity-list">
           {groups.map((group) => (

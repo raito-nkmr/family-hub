@@ -32,6 +32,7 @@ def test_reset_user_password_updates_hash_and_revokes_active_sessions(monkeypatc
     user_update = connection.execute.call_args_list[1].args[0]
     assert user_update.compile().params["password_hash"] == "new-password-hash"
     assert user_update.compile().params["password_changed_at"] == reset_at
+    assert user_update.compile().params["must_change_password"] is True
     session_update = connection.execute.call_args_list[2].args[0]
     assert session_update.compile().params["revoked_at"] == reset_at
 

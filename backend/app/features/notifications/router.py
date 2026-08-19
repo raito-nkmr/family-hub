@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.features.auth.dependencies import get_auth_context, require_csrf_token
+from app.features.auth.dependencies import get_auth_context, require_csrf_token, require_password_change_complete
 from app.features.auth.public import AuthContext
 from app.features.notifications.dependencies import get_notification_service
 from app.features.notifications.schemas import (
@@ -20,7 +20,7 @@ from app.features.notifications.service import (
     NotificationSubscriptionLimitError,
 )
 
-router = APIRouter(tags=["notifications"])
+router = APIRouter(tags=["notifications"], dependencies=[Depends(require_password_change_complete)])
 
 
 @router.get("/config", response_model=NotificationConfigResponse)

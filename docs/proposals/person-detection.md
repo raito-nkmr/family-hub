@@ -99,7 +99,7 @@ an abnormal worker exit. Retry intervals and the maximum number of attempts are 
 - If Ultralytics YOLO is selected, document the approach for complying with AGPL-3.0.
 - Store weights on the internal SSD and never commit them to Git.
 - Record the source, version, and, when possible, checksum of downloaded models.
-- Treat resized inference images as temporary data and never modify originals on the external HDD.
+- Treat resized inference images as temporary data and never modify originals on the internal photo-storage HDD.
 - Never add real personal photos to the repository for tests or accuracy evaluation.
 
 ## Testing proposal

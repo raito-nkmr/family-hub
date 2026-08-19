@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import i18n from '../../i18n'
 import { isUnauthorizedError } from '../../shared/api/errors'
@@ -31,6 +31,7 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
       )
     },
   })
+  const lastSeenAttemptedId = useRef<string | null>(null)
   useUnauthorizedError(activityQuery.error, onUnauthorized)
   useUnauthorizedError(markSeenMutation.error, onUnauthorized)
 
@@ -38,11 +39,31 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
   const items = pages.flatMap((page) => page.items)
   const unseenCount = pages[0]?.unseen_count ?? 0
   const latest = items[0]
+  const latestId = latest?.id
+  const markSeen = markSeenMutation.mutate
 
   useEffect(() => {
-    if (!enabled || !active || !latest || unseenCount === 0 || markSeenMutation.isPending) return
-    markSeenMutation.mutate(latest.id)
-  }, [active, enabled, latest, markSeenMutation, unseenCount])
+    if (
+      !enabled ||
+      !active ||
+      !latestId ||
+      unseenCount === 0 ||
+      markSeenMutation.isPending ||
+      markSeenMutation.isError ||
+      lastSeenAttemptedId.current === latestId
+    ) {
+      return
+    }
+    lastSeenAttemptedId.current = latestId
+    markSeen(latestId)
+  }, [active, enabled, latestId, markSeen, markSeenMutation.isError, markSeenMutation.isPending, unseenCount])
+
+  const retryMarkSeen = () => {
+    if (!latestId) return
+    lastSeenAttemptedId.current = latestId
+    markSeenMutation.reset()
+    markSeen(latestId)
+  }
 
   return {
     items,
@@ -54,11 +75,16 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
       activityQuery.error && !isUnauthorizedError(activityQuery.error)
         ? i18n.t(activityQuery.isFetchNextPageError ? 'photoActivity.moreFailed' : 'photoActivity.loadFailed')
         : null,
+    markSeenError:
+      markSeenMutation.error && !isUnauthorizedError(markSeenMutation.error)
+        ? i18n.t('photoActivity.markSeenFailed')
+        : null,
     refresh: async () => {
       await activityQuery.refetch()
     },
     loadMore: async () => {
       if (activityQuery.hasNextPage && !activityQuery.isFetchingNextPage) await activityQuery.fetchNextPage()
     },
+    retryMarkSeen,
   }
 }

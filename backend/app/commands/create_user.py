@@ -2,13 +2,34 @@ import argparse
 from getpass import getpass
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import Connection, select
 
 from app.core.config import get_management_settings
 from app.database.session import create_database_engine
 from app.features.auth.models import SystemRole, User
 from app.features.auth.passwords import MAXIMUM_PASSWORD_LENGTH, MINIMUM_PASSWORD_LENGTH, hash_password
 from app.features.auth.schemas import normalize_username
+
+
+def create_user(connection: Connection, username: str, password_hash: str, system_role: SystemRole) -> None:
+    if connection.execute(select(User.id).where(User.username == username)).scalar_one_or_none() is not None:
+        raise SystemExit(f"User '{username}' already exists")
+    if system_role is SystemRole.USER:
+        active_admin_exists = connection.execute(
+            select(User.id).where(User.system_role == SystemRole.ADMIN, User.is_active.is_(True)).limit(1)
+        ).scalar_one_or_none()
+        if active_admin_exists is None:
+            raise SystemExit("Cannot create a regular user before an active system administrator exists")
+    connection.execute(
+        User.__table__.insert().values(
+            id=uuid4(),
+            username=username,
+            password_hash=password_hash,
+            is_active=True,
+            system_role=system_role,
+            must_change_password=False,
+        )
+    )
 
 
 def main() -> None:
@@ -30,17 +51,7 @@ def main() -> None:
     engine = create_database_engine(get_management_settings())
     try:
         with engine.begin() as connection:
-            if connection.execute(select(User.id).where(User.username == username)).scalar_one_or_none() is not None:
-                raise SystemExit(f"User '{username}' already exists")
-            connection.execute(
-                User.__table__.insert().values(
-                    id=uuid4(),
-                    username=username,
-                    password_hash=hash_password(password),
-                    is_active=True,
-                    system_role=arguments.system_role,
-                )
-            )
+            create_user(connection, username, hash_password(password), SystemRole(arguments.system_role))
     finally:
         engine.dispose()
     print(f"Created user '{username}'")

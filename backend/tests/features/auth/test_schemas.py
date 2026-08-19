@@ -31,6 +31,19 @@ def test_invitation_create_normalizes_username() -> None:
     assert request.username == "family-member"
 
 
+@pytest.mark.parametrize("expires_in_hours", [24, 72, 168])
+def test_invitation_create_accepts_supported_expiry_values(expires_in_hours: int) -> None:
+    request = InvitationCreate(username="family-member", expires_in_hours=expires_in_hours)
+
+    assert request.expires_in_hours == expires_in_hours
+
+
+@pytest.mark.parametrize("expires_in_hours", [1, 23, 25, 169])
+def test_invitation_create_rejects_unsupported_expiry_values(expires_in_hours: int) -> None:
+    with pytest.raises(ValidationError):
+        InvitationCreate(username="family-member", expires_in_hours=expires_in_hours)
+
+
 def test_invitation_accept_requires_long_password() -> None:
     with pytest.raises(ValidationError):
         InvitationAccept(token="t" * 43, password="short-7")

@@ -39,37 +39,6 @@
   border-top: 1px solid var(--color-border-default);
 }
 
-.cleaning-board__toolbar {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 3rem;
-}
-
-.cleaning-board__toolbar > div {
-  display: grid;
-  gap: 0.4rem;
-  width: min(360px, 100%);
-}
-
-.cleaning-board__toolbar label {
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.cleaning-board__toolbar select {
-  min-height: 48px;
-  padding: 0.65rem 0.8rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 1rem;
-}
-
 .cleaning-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -342,11 +311,11 @@
     height: var(--control-height-large);
   }
 
-  .cleaning-board__toolbar {
+  .group-scoped-toolbar {
     align-items: stretch;
   }
 
-  .cleaning-board__toolbar > div {
+  .group-scoped-toolbar > div {
     flex: 1;
   }
 

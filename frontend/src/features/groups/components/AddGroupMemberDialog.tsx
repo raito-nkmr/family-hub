@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { CancelIcon, GroupAddIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { GroupAddIcon } from '../../../shared/ui/icons'
 import type { GroupMemberCandidate, GroupRole } from '../api'
 
 interface AddGroupMemberDialogProps {
@@ -70,21 +71,12 @@ export function AddGroupMemberDialog({
             {error}
           </p>
         )}
-        <div className="dialog-actions">
-          <button
-            className="danger-button danger-button--filled icon-button"
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            <CancelIcon />
-            {t('common.cancel')}
-          </button>
+        <DialogActions disabled={submitting} onCancel={onClose}>
           <button className="primary-button icon-button" type="submit" disabled={submitting || !selectedUserId}>
             <GroupAddIcon />
             {submitting ? t('groups.adding') : t('groups.add')}
           </button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   )

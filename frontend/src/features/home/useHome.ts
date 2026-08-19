@@ -24,8 +24,6 @@ interface UseHomeOptions {
   onUnauthorized: () => void
 }
 
-const recentPhotosKey = ['photos', 'recent', 4] as const
-
 export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
   const queryClient = useQueryClient()
   const enabled = Boolean(userId && active)
@@ -35,7 +33,7 @@ export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
     enabled,
   })
   const photosQuery = useQuery({
-    queryKey: recentPhotosKey,
+    queryKey: queryKeys.recentPhotos,
     queryFn: ({ signal }) => getPhotos({}, undefined, signal, 4),
     enabled,
   })
@@ -80,7 +78,7 @@ export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
     refresh: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.groups }),
-        queryClient.invalidateQueries({ queryKey: recentPhotosKey }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.recentPhotos }),
         ...groups.flatMap((group) => [
           queryClient.invalidateQueries({ queryKey: queryKeys.cleaningTasks(group.id) }),
           queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(group.id) }),
