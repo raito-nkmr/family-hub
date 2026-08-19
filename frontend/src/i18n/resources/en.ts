@@ -286,7 +286,7 @@ export const en = {
   },
   account: {
     title: 'Account security',
-    description: 'Manage the password and signed-in sessions for {{username}}.',
+    description: 'Manage your password and signed-in sessions.',
     passwordTitle: 'Change password',
     passwordHelp: 'Changing your password signs you out on every device.',
     currentPassword: 'Current password',
@@ -437,7 +437,7 @@ export const en = {
   },
   systemStatus: {
     title: 'Storage and backups',
-    description: 'Review photo storage capacity and the latest maintenance results.',
+    description: 'This page is for administrators.',
     loading: 'Loading system status',
     loadFailed: 'Could not load system status.',
     primaryStorage: 'Primary photo storage',
@@ -670,7 +670,7 @@ export const en = {
   },
   invitations: {
     title: 'Invitations',
-    description: 'Create a one-time link for a family member. You can cancel it at any time before they join.',
+    description: 'Create temporary invitation links.',
     create: 'Invite a family member',
     username: 'Username for your family member',
     usernamePlaceholder: 'e.g. alex',
@@ -694,8 +694,8 @@ export const en = {
     expiryOneDay: '1 day',
     expiryThreeDays: '3 days',
     expirySevenDays: '7 days',
-    pendingTitle: 'Waiting for family',
-    pendingHelp: 'These links can still be used to join Family Hub.',
+    pendingTitle: 'Invited members',
+    pendingHelp: 'These are the links for currently invited members.',
     waitingForFamily: 'Waiting to join',
     expires: 'Link expires {{expires}}',
     cancelAndRemove: 'Cancel invitation',

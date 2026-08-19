@@ -283,7 +283,7 @@ export const ja: TranslationShape = {
   },
   account: {
     title: 'アカウントの安全設定',
-    description: '{{username}}のパスワードとログイン中のセッションを管理する。',
+    description: 'パスワードやログイン中のセッション管理。',
     passwordTitle: 'パスワードを変更',
     passwordHelp: 'パスワードを変更すると、すべての端末からログアウトします。',
     currentPassword: '現在のパスワード',
@@ -431,7 +431,7 @@ export const ja: TranslationShape = {
   },
   systemStatus: {
     title: 'ストレージとバックアップ',
-    description: '写真ストレージの容量と、最新の保守処理結果を確認する。',
+    description: '管理者向けのページです。',
     loading: 'システム状態を読み込み中',
     loadFailed: 'システム状態を読み込めませんでした。',
     primaryStorage: '写真の保存先',
@@ -660,7 +660,7 @@ export const ja: TranslationShape = {
   },
   invitations: {
     title: '招待管理',
-    description: '家族がFamily Hubへ参加するための一度だけ使えるリンクを作成する。参加前のリンクはいつでも取り消せる。',
+    description: '一時的な招待リンクを作成できます。',
     create: '家族を招待する',
     username: '家族が使うユーザー名',
     usernamePlaceholder: '例：たろう',
@@ -684,8 +684,8 @@ export const ja: TranslationShape = {
     expiryOneDay: '1日',
     expiryThreeDays: '3日',
     expirySevenDays: '7日',
-    pendingTitle: '参加を待っている家族',
-    pendingHelp: '次のリンクは、まだFamily Hubへの参加に利用できます。',
+    pendingTitle: '招待中のメンバー',
+    pendingHelp: '現在招待中のリンクです。',
     waitingForFamily: '参加待ち',
     expires: 'リンクの有効期限: {{expires}}',
     cancelAndRemove: '招待を取り消す',
