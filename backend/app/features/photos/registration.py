@@ -189,8 +189,10 @@ def register_staged_photo(
         )
         return RegisteredPhoto(photo=photo, finalized_upload=finalized, activity_event=activity_event)
     except StorageUnavailableError as error:
+        storage.cleanup_staged(staged, preserve_resumable=True)
         raise PhotoUploadStorageError(error.status) from error
     except PhotoStorageError as error:
+        storage.cleanup_staged(staged, preserve_resumable=True)
         raise PhotoUploadStorageError(StorageStatusCode.IO_ERROR) from error
 
 

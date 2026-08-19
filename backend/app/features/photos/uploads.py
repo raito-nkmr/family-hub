@@ -170,6 +170,21 @@ class UploadBatchService:
             items_statement = items_statement.with_for_update()
         items = list(self._session.scalars(items_statement).all())
         if batch.status == UploadBatchStatus.ACTIVE and batch.expires_at <= datetime.now(UTC):
+            batch = self._session.scalar(
+                select(UploadBatch)
+                .where(UploadBatch.id == batch.id, UploadBatch.owner_user_id == owner_user_id)
+                .with_for_update()
+            )
+            if batch is None:
+                raise UploadBatchNotFoundError
+            items = list(
+                self._session.scalars(
+                    select(UploadItem)
+                    .where(UploadItem.batch_id == batch.id)
+                    .order_by(UploadItem.created_at, UploadItem.id)
+                    .with_for_update()
+                ).all()
+            )
             self._expire_batch(batch, items)
         return batch, items
 
@@ -317,7 +332,9 @@ class UploadBatchService:
 
     def _require_active(self, batch: UploadBatch, item: UploadItem) -> None:
         if batch.status == UploadBatchStatus.ACTIVE and batch.expires_at <= datetime.now(UTC):
-            items = list(self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id)).all())
+            items = list(
+                self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
+            )
             self._expire_batch(batch, items)
         if batch.status != UploadBatchStatus.ACTIVE:
             raise UploadBatchInvalidError("Upload batch is no longer active")
@@ -371,14 +388,18 @@ class UploadBatchService:
     def _expire_stale_batches(self, *, commit: bool = True) -> None:
         batches = list(
             self._session.scalars(
-                select(UploadBatch).where(
+                select(UploadBatch)
+                .where(
                     UploadBatch.status == UploadBatchStatus.ACTIVE,
                     UploadBatch.expires_at <= datetime.now(UTC),
                 )
+                .with_for_update()
             ).all()
         )
         for batch in batches:
-            items = list(self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id)).all())
+            items = list(
+                self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
+            )
             self._expire_batch(batch, items, commit=False)
         if batches and commit:
             self._commit()

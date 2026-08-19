@@ -541,9 +541,10 @@ class PhotoStorage:
             )
             raise PhotoStorageError("Could not update photo sidecar") from error
 
-    def cleanup_staged(self, staged: StagedUpload) -> None:
+    def cleanup_staged(self, staged: StagedUpload, *, preserve_resumable: bool = False) -> None:
         photo_storage_available = self._photo_storage_is_available()
-        self._unlink_photo_path_if_available(staged.path, photo_storage_available, photo_id=staged.photo_id)
+        if not preserve_resumable:
+            self._unlink_photo_path_if_available(staged.path, photo_storage_available, photo_id=staged.photo_id)
         self._unlink_photo_path_if_available(
             staged.path.with_name(f"{staged.photo_id}.json.part"), photo_storage_available, photo_id=staged.photo_id
         )

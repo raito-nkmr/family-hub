@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.commands.set_user_role import set_user_role
+from app.core.config import Settings
 from app.features.audit.models import AdministrativeAuditEvent
 from app.features.auth.admin_service import (
     AdministrativeService,
@@ -105,6 +106,7 @@ def test_admin_mutations_serialize_without_removing_the_last_active_group_admin(
     group_id = uuid4()
     start = Event()
     now = datetime.now(UTC)
+    settings = Settings(app_env="test", database_url=TEST_DATABASE_URL)
 
     with Session(engine) as session:
         session.add_all(
@@ -147,7 +149,7 @@ def test_admin_mutations_serialize_without_removing_the_last_active_group_admin(
     def deactivate_first_user() -> None:
         assert start.wait(timeout=5)
         with Session(engine) as session:
-            AdministrativeService(session).update_user_status(
+            AdministrativeService(session, settings).update_user_status(
                 first_user_id,
                 False,
                 second_user_id,

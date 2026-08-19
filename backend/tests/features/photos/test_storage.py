@@ -482,6 +482,22 @@ def test_cleanup_resumable_removes_partial_file(tmp_path: Path, monkeypatch: pyt
     assert storage.get_resumable_offset(item_id) == 0
 
 
+def test_cleanup_staged_can_remove_derivatives_while_preserving_resumable_upload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+    photo_id = uuid4()
+    storage.append_resumable_chunk(photo_id, 0, b"photo", 5)
+    staged = storage.resumable_as_staged(photo_id, 5)
+    derivative = make_staged_derivative(tmp_path, photo_id)
+
+    storage.cleanup_staged(staged, preserve_resumable=True)
+
+    assert staged.path.exists()
+    assert not derivative.path.exists()
+
+
 def make_staged_derivative(root: Path, photo_id) -> StagedDerivative:
     path = root / "derivatives" / "incoming" / f"{photo_id}.thumbnail.part"
     path.parent.mkdir(parents=True, exist_ok=True)

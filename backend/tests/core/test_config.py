@@ -48,12 +48,12 @@ def test_management_settings_load_database_url_from_explicit_env_file(
     assert settings.database_url == "postgresql+psycopg://user:password@localhost/database"
 
 
-def test_application_settings_require_environment_to_be_loaded_by_process(
+def test_application_settings_load_backend_env_file_as_fallback(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text("DATABASE_URL=postgresql+psycopg://ignored/database\n", encoding="utf-8")
+    env_file.write_text("DATABASE_URL=postgresql+psycopg://user:password@localhost/database\n", encoding="utf-8")
     monkeypatch.setattr(config_module, "BACKEND_ENV_FILE", env_file)
     monkeypatch.delenv("DATABASE_URL", raising=False)
     get_settings.cache_clear()
@@ -62,4 +62,18 @@ def test_application_settings_require_environment_to_be_loaded_by_process(
     finally:
         get_settings.cache_clear()
 
-    assert settings.database_url is None
+    assert settings.database_url == "postgresql+psycopg://user:password@localhost/database"
+
+
+def test_application_environment_overrides_backend_env_file(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("DATABASE_URL=postgresql+psycopg://file/database\n", encoding="utf-8")
+    monkeypatch.setattr(config_module, "BACKEND_ENV_FILE", env_file)
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://environment/database")
+    get_settings.cache_clear()
+    try:
+        settings = get_settings()
+    finally:
+        get_settings.cache_clear()
+
+    assert settings.database_url == "postgresql+psycopg://environment/database"

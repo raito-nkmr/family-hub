@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, aliased
 
+from app.core.config import Settings
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.models import SystemRole, User, UserSession
 from app.features.auth.passwords import verify_password
@@ -59,8 +60,9 @@ class AdministrativeGroupHealth:
 
 
 class AdministrativeService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, settings: Settings) -> None:
         self._session = session
+        self._settings = settings
 
     def list_users(self) -> list[AdministrativeUserSummary]:
         now = datetime.now(UTC)
@@ -79,7 +81,14 @@ class AdministrativeService:
         session_counts = dict(
             self._session.execute(
                 select(UserSession.user_id, func.count())
-                .where(UserSession.revoked_at.is_(None), UserSession.expires_at > now)
+                .join(User, User.id == UserSession.user_id)
+                .where(
+                    User.is_active.is_(True),
+                    UserSession.revoked_at.is_(None),
+                    UserSession.expires_at > now,
+                    UserSession.last_seen_at > now - timedelta(seconds=self._settings.auth_session_idle_seconds),
+                    UserSession.created_at >= User.password_changed_at,
+                )
                 .group_by(UserSession.user_id)
             ).all()
         )

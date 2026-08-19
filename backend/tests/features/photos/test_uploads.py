@@ -340,6 +340,38 @@ def test_cancel_batch_locks_batch_and_items_before_changing_status() -> None:
     session.commit.assert_called_once_with()
 
 
+def test_expire_stale_batches_locks_batches_and_items_before_cleanup() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    item.status = UploadItemStatus.UPLOADING
+    session.scalars.return_value.all.side_effect = [[batch], [item]]
+
+    service._expire_stale_batches(commit=False)
+
+    batch_statement = session.scalars.call_args_list[0].args[0]
+    items_statement = session.scalars.call_args_list[1].args[0]
+    assert "FOR UPDATE" in str(batch_statement)
+    assert "FOR UPDATE" in str(items_statement)
+    storage.cleanup_resumable.assert_called_once_with(item.id)
+    assert batch.status is UploadBatchStatus.CANCELED
+    assert item.status is UploadItemStatus.FAILED
+
+
+def test_expired_item_path_locks_all_items_before_cleanup() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    item.status = UploadItemStatus.UPLOADING
+    session.execute.return_value.one_or_none.return_value = (batch, item)
+    session.scalars.return_value.all.return_value = [item]
+
+    with pytest.raises(UploadBatchInvalidError, match="no longer active"):
+        service.append_chunk(item.id, batch.owner_user_id, 0, b"pho")
+
+    item_statement = session.scalars.call_args.args[0]
+    assert "FOR UPDATE" in str(item_statement)
+    storage.cleanup_resumable.assert_called_once_with(item.id)
+
+
 def test_get_batch_expires_and_cleans_up_partial_items() -> None:
     service, session, storage = make_service()
     batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
@@ -354,3 +386,4 @@ def test_get_batch_expires_and_cleans_up_partial_items() -> None:
     assert result_items[0].error_code == "expired"
     storage.cleanup_resumable.assert_called_once_with(item.id)
     session.commit.assert_called_once_with()
+    assert any("FOR UPDATE" in str(call.args[0]) for call in session.scalar.call_args_list)

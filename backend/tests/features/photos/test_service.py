@@ -19,7 +19,7 @@ from app.features.photos.models import (
     PhotoLifecycleState,
     PhotoVisibility,
 )
-from app.features.photos.registration import register_staged_photo
+from app.features.photos.registration import PhotoUploadStorageError, register_staged_photo
 from app.features.photos.service import (
     InvalidTrashCursorError,
     PhotoBulkSelectionError,
@@ -623,3 +623,32 @@ def test_register_staged_photo_does_not_change_database_transaction(
     session.add.assert_not_called()
     session.flush.assert_not_called()
     session.commit.assert_not_called()
+
+
+def test_register_staged_photo_cleans_staged_derivative_on_storage_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = MagicMock(spec=Session)
+    session.scalar.return_value = None
+    storage = MagicMock(spec=PhotoStorage)
+    staged = configure_staged_upload(tmp_path)
+    storage.finalize_upload.side_effect = PhotoStorageError("storage unavailable")
+    monkeypatch.setattr(
+        "app.features.photos.registration.inspect_image",
+        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, None),
+    )
+
+    with pytest.raises(PhotoUploadStorageError):
+        register_staged_photo(
+            session,
+            storage,
+            "Asia/Tokyo",
+            staged,
+            "original.jpg",
+            "image/jpeg",
+            uuid4(),
+            "owner",
+        )
+
+    storage.cleanup_staged.assert_called_once_with(staged, preserve_resumable=True)

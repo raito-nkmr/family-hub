@@ -77,8 +77,12 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return _create_settings()
 
 
 def get_management_settings() -> Settings:
+    return _create_settings()
+
+
+def _create_settings() -> Settings:
     return Settings(_env_file=BACKEND_ENV_FILE)
