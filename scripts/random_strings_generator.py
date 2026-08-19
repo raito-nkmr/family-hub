@@ -6,8 +6,8 @@ import string
 
 
 def generate_random_string(length: int) -> str:
-    if length < 32:
-        raise ValueError("The length must be at least 32 characters.")
+    if length < 8:
+        raise ValueError("The length must be at least 8 characters.")
 
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
