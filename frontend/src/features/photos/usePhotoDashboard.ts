@@ -31,7 +31,6 @@ export function usePhotoDashboard({
   return {
     ...library,
     ...upload,
-    prepareForSession: reset,
     reset,
   }
 }

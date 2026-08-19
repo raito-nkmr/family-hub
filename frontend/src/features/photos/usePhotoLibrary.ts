@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import i18n from '../../i18n'
@@ -49,6 +49,7 @@ export function usePhotoLibrary({
   const [metadataError, setMetadataError] = useState<string | null>(null)
   const [photoDetailError, setPhotoDetailError] = useState<string | null>(null)
   const [updatingMetadata, setUpdatingMetadata] = useState(false)
+  const photoDetailRequestIdRef = useRef(0)
   const photoFilters = readPhotoSearchParams(searchParams)
   const timelineYear = readTimelineYear(searchParams, currentTimelineYear)
 
@@ -119,14 +120,16 @@ export function usePhotoLibrary({
     )
   }
   const loadPhotoDetail = useCallback(
-    async (photoId: string, showPageError: boolean) => {
+    async (photoId: string, showPageError: boolean, requestId: number) => {
       try {
         await queryClient.fetchQuery({
           queryKey: queryKeys.photo(photoId),
           queryFn: ({ signal }) => getPhoto(photoId, signal),
         })
+        if (requestId !== photoDetailRequestIdRef.current) return
         setPhotoDetailError(null)
       } catch (error) {
+        if (requestId !== photoDetailRequestIdRef.current) return
         if (isUnauthorizedError(error)) {
           setPhotoDetailError(null)
           onUnauthorized()
@@ -139,16 +142,18 @@ export function usePhotoLibrary({
     [onUnauthorized, queryClient],
   )
   const selectPhoto = async (photo: Photo | PhotoListItem) => {
+    const requestId = ++photoDetailRequestIdRef.current
     const hadSelectedPhoto = selectedPhotoId !== null
     setSelectedPhotoId(photo.id)
     setPageMutationError(null)
     setMetadataError(null)
     setPhotoDetailError(null)
-    await loadPhotoDetail(photo.id, !hadSelectedPhoto)
+    await loadPhotoDetail(photo.id, !hadSelectedPhoto, requestId)
   }
   const retryPhotoDetail = async () => {
     if (selectedPhotoId === null) return
-    await loadPhotoDetail(selectedPhotoId, false)
+    const requestId = ++photoDetailRequestIdRef.current
+    await loadPhotoDetail(selectedPhotoId, false, requestId)
   }
   const savePhotoMetadata = async (changes: {
     memo?: string | null

@@ -340,6 +340,35 @@ describe('usePhotoDashboard', () => {
     expect(result.current.selectedPhoto).toEqual(secondPhoto)
   })
 
+  it('ignores a stale photo detail failure after a newer selection', async () => {
+    const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
+    let rejectFirst: ((reason?: unknown) => void) | undefined
+    vi.mocked(getPhoto).mockImplementation((photoId) => {
+      if (photoId === photo.id) {
+        return new Promise((_resolve, reject) => {
+          rejectFirst = reject
+        })
+      }
+      return Promise.resolve(secondPhoto)
+    })
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let firstRequest: Promise<void>
+    act(() => {
+      firstRequest = result.current.selectPhoto(photo)
+    })
+    await act(() => result.current.selectPhoto(secondPhoto))
+    rejectFirst?.(new Error('stale detail failed'))
+    await act(() => firstRequest!)
+
+    expect(result.current.selectedPhoto).toEqual(secondPhoto)
+    expect(result.current.photoDetailError).toBeNull()
+  })
+
   it('uploads multiple selected files and refreshes the dashboard', async () => {
     vi.mocked(createUploadBatch).mockImplementation(async (files) => ({
       ...uploadBatch,
