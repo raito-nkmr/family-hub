@@ -74,7 +74,7 @@ already shared with a selected group are unchanged. After a successful upload, t
 the same bulk-sharing flow.
 
 The implemented scope also includes an owner trash, restore, retryable permanent deletion after retention, administrator
-storage and maintenance status, database backup, generation snapshots to a second HDD, a PWA app shell, iPhone Home Screen
+storage and maintenance status, database backup, versioned snapshots to a disconnected external HDD, a PWA app shell, iPhone Home Screen
 instructions, and the Web Push backend foundation. The install prompt appears only in a normal browser tab, persists its
 dismissed state in the browser, can be shown again from Account, and is hidden in standalone mode. Trash uses the same 2/3/4
 thumbnail density choices as the library. Album details and trash also use 50-item cursor pagination and infinite scrolling.
@@ -105,7 +105,7 @@ This is not a committed implementation plan. Revisit it after each feature based
 - Next candidate: verify maintenance-timer automation, reboot recovery, and authenticated core features.
 - After infrastructure cleanup: accept the PWA, notifications, and core features on a real iPhone.
 - Only when clearly needed: tags and person detection.
-- Important non-software task: scheduled backup to a second HDD.
+- Important non-software task: connect the external backup HDD, run the snapshot, verify the result, and disconnect it.
 
 Original downloads and exports, password and session management, and safe trash state transitions are implemented. PWA
 operation and Web Push depend on the HTTPS production path. Decide on tags and person detection only when photo
@@ -114,9 +114,11 @@ volume and usage requirements justify them.
 ## Current hardware and operations
 
 - Internal SSD: 500 GB
-- External HDD: one 2 TB drive
+- Current external HDD: one 2 TB drive, currently used as the photo-storage device until the hardware cutover
+- Planned internal HDD: primary photo and video storage
+- Planned external HDD: disconnected backup storage, mounted only while snapshots are running
 - Manually back up irreplaceable files to cloud storage.
-- Treat files that exist only on the HDD as unbacked-up.
+- Treat files that exist only on the primary HDD as unbacked-up.
 
 ## Technology
 
@@ -128,10 +130,14 @@ volume and usage requirements justify them.
 
 ## Storage policy
 
-### External HDD
+The target layout below applies after the internal-HDD cutover. Until that cutover, the current external HDD may remain
+configured as `PHOTO_STORAGE_ROOT`; it must not also be treated as a backup of itself.
 
-The external HDD stores photo and video originals, recovery JSON metadata, in-progress upload files, and optional database
-backups. Originals are stored in directories based on upload date and use server-generated UUIDs as filenames. Capture time
+### Internal HDD
+
+The internal HDD is the primary photo storage device. It stores photo and video originals, recovery JSON metadata, in-progress
+upload files, and database backups staged for the external snapshot. Originals are stored in directories based on upload date
+and use server-generated UUIDs as filenames. Capture time
 is used for organization, list ordering, search, and date timelines, but not for choosing the HDD directory because EXIF may
 be absent or not yet parsed.
 
@@ -141,7 +147,7 @@ memo and its last editor and timestamp, and share targets. If PostgreSQL is lost
 re-register photo metadata and regenerate missing thumbnails.
 
 ```text
-photo-storage/                       # External HDD
+photo-storage/                       # Internal HDD
 ├── originals/
 │   └── 2026/07/
 │       ├── <UUID>.jpg
@@ -152,6 +158,12 @@ photo-storage/                       # External HDD
 backend/var/photo-derivatives/       # Internal SSD; configurable with PHOTO_DERIVATIVE_ROOT
 └── thumbnails/YYYY/MM/<UUID>.webp
 ```
+
+### Disconnected external HDD
+
+The external HDD is not used by normal application requests. When mounted, the secondary-storage backup command creates a
+versioned snapshot containing `originals/` and `database-backups/` from the internal HDD. The backup root is protected by a
+separate marker so an incorrectly mounted disk cannot be used as a backup target.
 
 ### Internal SSD
 
@@ -167,7 +179,8 @@ manual for the time being.
 
 In production, Cloudflare is the public Internet entry point, Caddy is the only HTTP entry point on the origin, and
 Cloudflare Tunnel serves the React frontend and API on one origin. Family Hub authentication remains primary; Cloudflare
-Access is not added initially. Caddy, FastAPI, PostgreSQL, and the external HDD are not exposed directly to the Internet or LAN.
+Access is not added initially. Caddy, FastAPI, PostgreSQL, the internal photo-storage HDD, and the disconnected external
+backup HDD are not exposed directly to the Internet or LAN.
 
 Listening ports, trusted proxies, cache, upload limits, ZIP-export acceptance, and LAN access are defined in
 [`deployment.md`](./deployment.md). A fixed HTTPS public test is running, but production operation has not begun. The
@@ -177,14 +190,14 @@ the fiber connection is available. Local development continues to start Vite and
 
 ## First completion goal
 
-From an iPhone connected to the home Wi-Fi, log in, upload one photo, save it safely to the external HDD, and display it in React.
+From an iPhone connected to the home Wi-Fi, log in, upload one photo, save it safely to the internal HDD, and display it in React.
 
 ## MVP
 
 1. Access from iPhone Safari 17 or later on the home Wi-Fi and log in.
 2. Select JPEG (including the primary image from iPhone-generated MPO), PNG, HEIF/HEIC, MP4, QuickTime MOV, or M4V media.
 3. Upload the media to FastAPI.
-4. Store the original on the external HDD.
+4. Store the original on the internal HDD.
 5. Read capture time when it exists in EXIF.
 6. Store file metadata in PostgreSQL.
 7. List uploaded media in React, newest capture time first.
@@ -375,7 +388,7 @@ configured on the browser or server operating system.
 - Tags
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
-- Scheduled backup to a second HDD
+- Scheduled or operator-triggered snapshots to a disconnected external HDD
 - Calendar cleaning schedules, assignees, notifications, and completion undo
 - Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
 

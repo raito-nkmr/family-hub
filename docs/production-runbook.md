@@ -5,8 +5,9 @@
 This runbook explains how to reproduce Family Hub production from reviewed repository configuration. The target design is in
 [`deployment.md`](./deployment.md). Host-specific production state is intentionally kept outside the public repository.
 
-The production layout uses Caddy and FastAPI on the host, a dedicated PostgreSQL container managed by Docker Compose, and an
-external HDD. Do not include the development `compose.yaml` or its database volume in production.
+The production layout uses Caddy and FastAPI on the host, a dedicated PostgreSQL container managed by Docker Compose, an
+internal HDD for primary photo storage, and a disconnected external HDD for versioned backups. Do not include the development
+`compose.yaml` or its database volume in production.
 
 ## Secret boundary
 
@@ -20,6 +21,19 @@ The following remain on the host and must never be copied, displayed, diffed, or
 See `deploy/database.env.example` for database variable names. Do not share the database password with development; configure
 the production `DATABASE_URL` and `database.env` deliberately. Production PostgreSQL listens on `127.0.0.1:5433`.
 Agents do not operate `.env` or these secret files; operators create and change them directly.
+
+## Storage mounts
+
+The production host uses fixed mount points so the systemd sandbox and application settings refer to the same devices:
+
+| Mount point | Role | Availability |
+| --- | --- | --- |
+| `/mnt/family-hub-data` | Internal HDD; primary photo storage and staged database backups | Required for photo operations |
+| `/mnt/family-hub-backup` | External HDD; versioned snapshots only | Mounted only while a backup runs |
+
+`PHOTO_STORAGE_ROOT` must point at `/mnt/family-hub-data` itself and use a matching `.photo-storage-marker`. Configure
+`BACKUP_STORAGE_ROOT` as `/mnt/family-hub-backup` with a separate `.family-hub-backup-marker`. Never use the backup mount as
+`PHOTO_STORAGE_ROOT` and never create a fallback path on the SSD when the internal HDD is unavailable.
 
 ## Database boundary
 
@@ -233,7 +247,8 @@ command -v pg_restore && pg_restore --version
 command -v rsync
 ```
 
-`rsync` is needed only for a second-HDD snapshot. Do not enable `family-hub-secondary-backup.timer` without a second HDD.
+`rsync` is needed only for an external-HDD snapshot. Do not enable `family-hub-secondary-backup.timer` until the backup HDD is
+mounted and its marker has been verified.
 
 ### Install units
 

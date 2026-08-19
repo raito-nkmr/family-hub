@@ -3,8 +3,9 @@
 ## Purpose
 
 This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, cleaning,
-and shopping. Image files are stored on the external HDD; PostgreSQL stores metadata required for search and integrity
-checks. JSON sidecars with the same UUID as each original are also stored on the external HDD for recovery.
+and shopping. Image files are stored on the internal photo-storage HDD; PostgreSQL stores metadata required for search and
+integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
+disconnected external HDD stores versioned snapshots of the originals and database backups.
 
 The current application schema is consolidated into one baseline because the development database is reset when the
 baseline changes. Future approved schema changes should be added as new migrations. Tables for future features such as

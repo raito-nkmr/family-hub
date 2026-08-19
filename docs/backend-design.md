@@ -202,8 +202,9 @@ Reject upload and original retrieval with `503` when storage is unavailable and 
 
 ## Production boundary
 
-Cloudflare is the public entry point, Caddy is the only origin HTTP entry point, FastAPI listens on loopback, and PostgreSQL
-and the external HDD are not exposed to clients. Serve originals only through authenticated and authorized API endpoints.
+Cloudflare is the public entry point, Caddy is the only origin HTTP entry point, FastAPI listens on loopback, and PostgreSQL,
+the internal photo-storage HDD, and the disconnected external backup HDD are not exposed to clients. Serve originals only
+through authenticated and authorized API endpoints.
 See [`deployment.md`](./deployment.md) for Tunnel, Caddy, forwarded headers, cache, upload, ZIP, and acceptance details.
 
 ## API contract
@@ -231,7 +232,7 @@ invariant checks remain authoritative for stale or concurrent client data.
 ## File storage and thumbnails
 
 ```text
-photo-storage/                       # External HDD
+photo-storage/                       # Internal HDD; PHOTO_STORAGE_ROOT
 ├── originals/YYYY/MM/<UUID>.<ext>
 │   └── <UUID>.json
 └── incoming/<UUID>.part
@@ -239,12 +240,17 @@ photo-storage/                       # External HDD
 backend/var/photo-derivatives/       # Regenerable internal-SSD data
 ├── thumbnails/YYYY/MM/<UUID>.webp
 └── incoming/<UUID>.thumbnail.part
+
+snapshots/<timestamp>/                # Disconnected external HDD; BACKUP_STORAGE_ROOT
+├── originals/
+└── database-backups/
 ```
 
 Keep `originals` and `incoming` on one filesystem so finalization can use an atomic rename. `PHOTO_STORAGE_ROOT` must point
 to the HDD mount point itself. A root `.photo-storage-marker` must match `PHOTO_STORAGE_MARKER`; the root and marker must not
 be symlinks. Linux mount information is checked when available, with a standard mount-point fallback. A bind mount is valid
-for internal-SSD development tests, but production must point at the external HDD mount.
+for internal-SSD development tests, but production must point at the internal photo-storage HDD mount. `BACKUP_STORAGE_ROOT`
+must point at a separate mounted external HDD and is used only by maintenance commands.
 
 Never use client filenames or extensions to construct paths. The server chooses extensions after content validation. Accept
 JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Also accept MP4, QuickTime MOV, and M4V video files;
@@ -345,8 +351,8 @@ async database access.
 
 Use typed settings and never hard-code environment paths or credentials. Key settings include `DATABASE_URL`, trusted origins,
 session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
-`PHOTO_STORAGE_ROOT`,
-`PHOTO_DERIVATIVE_ROOT`, storage marker, upload and free-space limits, default timezone, Push provider allowlist and
+`PHOTO_STORAGE_ROOT`, `PHOTO_DERIVATIVE_ROOT`, `BACKUP_STORAGE_ROOT`, storage markers, upload and free-space limits,
+default timezone, Push provider allowlist and
 subscription limit, and optional `MONITORING_PING_URL_*` values. Development defaults include 100 MiB maximum file size,
 1 MiB chunks, and 10 GiB minimum free space. Never place real `.env` values in code or documentation.
 
@@ -355,7 +361,8 @@ subscription limit, and optional `MONITORING_PING_URL_*` values. Development def
 ### Storage
 
 Use pytest temporary directories, never the real HDD. Test chunk writes, hashing, original/JSON renames, size limits,
-cleanup, sidecar schema and correspondence, orphan detection, and unavailable-storage conditions.
+cleanup, sidecar schema and correspondence, orphan detection, unavailable-storage conditions, and backup-root rejection
+when the external HDD is absent, unmounted, or has the wrong marker.
 
 ### Authentication
 

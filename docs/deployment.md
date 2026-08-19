@@ -268,7 +268,8 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 - `/api/*` bypasses Cloudflare cache and authenticated binaries return `private, no-store`.
 - Near-limit photos and supported videos can be saved through React chunked upload.
 - ZIP export measurements are complete or operational limits have been decided.
-- PostgreSQL and the external HDD cannot be reached directly from Cloudflare, the LAN, or clients.
+- PostgreSQL, the internal photo-storage HDD, and the disconnected external backup HDD cannot be reached directly from
+  Cloudflare, the LAN, or clients.
 - Backup and restore procedures have been verified using separate media.
 - Dead-man monitoring detects start, success, and intentional failure for every enabled maintenance timer.
 
