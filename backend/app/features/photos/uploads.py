@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.features.groups.public import get_user_group_ids, lock_user_group_ids
+from app.features.groups.public import lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
 from app.features.photos.models import (
     Photo,
@@ -92,7 +92,7 @@ class UploadBatchService:
         if len({file.client_id for file in files}) != len(files):
             raise UploadBatchInvalidError("Client file identifiers must be unique")
         resolved_group_ids = group_ids or set()
-        if get_user_group_ids(self._session, owner_user_id, resolved_group_ids) != resolved_group_ids:
+        if lock_user_group_ids(self._session, owner_user_id, resolved_group_ids) != resolved_group_ids:
             raise UploadBatchInvalidError("One or more sharing groups are unavailable")
         maximum = self._storage.maximum_upload_bytes
         if maximum is None or any(
