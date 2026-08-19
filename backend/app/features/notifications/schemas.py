@@ -26,6 +26,10 @@ class PushSubscriptionCreate(BaseModel):
         return value
 
 
+class PushSubscriptionLocaleUpdate(BaseModel):
+    locale: Literal["en", "ja"]
+
+
 class PushSubscriptionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

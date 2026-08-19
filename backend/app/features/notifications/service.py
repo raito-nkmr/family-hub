@@ -2,7 +2,7 @@ import hashlib
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.features.auth.public import AuthContext, User
 from app.features.notifications.models import NotificationPreference, NotificationType, PushSubscription
-from app.features.notifications.schemas import NotificationPreferenceItem, PushSubscriptionCreate
+from app.features.notifications.schemas import (
+    NotificationPreferenceItem,
+    PushSubscriptionCreate,
+    PushSubscriptionLocaleUpdate,
+)
 
 DEFAULT_PREFERENCES = {
     NotificationType.PHOTO_SHARED: True,
@@ -111,6 +115,17 @@ class NotificationService:
                 PushSubscription.user_id == context.user.id,
                 PushSubscription.user_session_id == context.user_session.id,
             )
+        )
+        self._commit()
+
+    def update_subscription_locale(self, context: AuthContext, body: PushSubscriptionLocaleUpdate) -> None:
+        self._session.execute(
+            update(PushSubscription)
+            .where(
+                PushSubscription.user_id == context.user.id,
+                PushSubscription.user_session_id == context.user_session.id,
+            )
+            .values(locale=body.locale)
         )
         self._commit()
 

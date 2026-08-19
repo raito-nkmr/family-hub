@@ -8,8 +8,17 @@ from app.core.config import Settings
 from app.features.auth.dependencies import require_csrf_token
 from app.features.auth.public import AuthContext
 from app.features.notifications.models import NotificationType
-from app.features.notifications.router import delete_push_subscription, router, update_notification_preferences
-from app.features.notifications.schemas import NotificationPreferenceItem, NotificationPreferenceUpdate
+from app.features.notifications.router import (
+    delete_push_subscription,
+    router,
+    update_notification_preferences,
+    update_push_subscription_locale,
+)
+from app.features.notifications.schemas import (
+    NotificationPreferenceItem,
+    NotificationPreferenceUpdate,
+    PushSubscriptionLocaleUpdate,
+)
 from app.features.notifications.service import NotificationPersistenceError, NotificationService
 from app.main import create_app
 from tests.features.auth.factories import make_user_session
@@ -49,12 +58,23 @@ def test_preference_persistence_failure_returns_service_unavailable() -> None:
     assert error.value.status_code == 503
 
 
+def test_locale_persistence_failure_returns_service_unavailable() -> None:
+    service = MagicMock(spec=NotificationService)
+    service.update_subscription_locale.side_effect = NotificationPersistenceError
+
+    with pytest.raises(HTTPException) as error:
+        update_push_subscription_locale(PushSubscriptionLocaleUpdate(locale="ja"), make_context(), service)
+
+    assert error.value.status_code == 503
+
+
 def test_notification_routes_are_registered_and_mutations_require_csrf() -> None:
     paths = create_app(Settings(app_env="test")).openapi()["paths"]
 
     assert "get" in paths["/api/v1/notifications/config"]
     assert {"post"} <= set(paths["/api/v1/notifications/subscriptions"])
     assert {"delete"} <= set(paths["/api/v1/notifications/subscriptions/{subscription_id}"])
+    assert {"put"} <= set(paths["/api/v1/notifications/subscriptions/locale"])
     assert {"put"} <= set(paths["/api/v1/notifications/preferences"])
     mutation_routes = [route for route in router.routes if route.methods & {"POST", "PUT", "DELETE"}]
     assert mutation_routes
