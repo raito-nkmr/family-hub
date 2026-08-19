@@ -232,6 +232,7 @@ export const en = {
     moreFailed: 'Could not load more photos.',
     timelineFailed: 'Could not load the monthly timeline.',
     detailFailed: 'Could not load photo details.',
+    retryDetail: 'Retry loading details',
     updateConflict: 'This photo was updated elsewhere. Refresh and try again.',
     updateFailed: 'Could not update the photo information.',
     uploadCanceled: 'Upload canceled.',
@@ -660,6 +661,8 @@ export const en = {
     administration: 'Group administration',
     rename: 'Rename group',
     auditLog: 'Recent administrative actions',
+    administrationLoadFailed: 'Could not load the group administration information.',
+    auditLoadFailed: 'Could not load the group audit log.',
     pendingInvitations: 'Group invitations',
     removalImpact: {
       summary: 'Affected records: {{items}}',

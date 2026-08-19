@@ -236,6 +236,7 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
         <PhotoModal
           photo={photoDashboard.selectedPhoto}
           photoDetailLoading={photoDashboard.photoDetailLoading}
+          photoDetailError={photoDashboard.photoDetailError}
           currentUserId={currentUser.id}
           updatingMetadata={photoDashboard.updatingMetadata}
           error={photoDashboard.metadataError}
@@ -248,6 +249,7 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
             void photoDashboard.savePhotoMetadata({ captured_at_override: capturedAt })
           }
           onTrash={() => void photoDashboard.moveSelectedPhotoToTrash()}
+          onRetryPhotoDetail={() => void photoDashboard.retryPhotoDetail()}
           onModerateGroupShare={(groupId, password) => void photoDashboard.moderateGroupShare(groupId, password)}
           onPreviousPhoto={
             photoDashboard.previousPhoto

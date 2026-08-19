@@ -58,6 +58,32 @@ describe('PhotoModal', () => {
     expect(onNextPhoto).toHaveBeenCalledOnce()
   })
 
+  it('hides the previous photo when detail loading fails and offers retry', () => {
+    const onRetryPhotoDetail = vi.fn()
+    render(
+      <PhotoModal
+        photo={photo}
+        photoDetailError="Could not load photo details."
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onRetryPhotoDetail={onRetryPhotoDetail}
+      />,
+    )
+
+    expect(screen.queryByText('photo.jpg')).not.toBeInTheDocument()
+    expect(screen.getByText('Could not load photo details.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '詳細の読み込みを再試行' }))
+
+    expect(onRetryPhotoDetail).toHaveBeenCalledOnce()
+  })
+
   it('moves to adjacent photos for horizontal touch gestures', () => {
     const onPreviousPhoto = vi.fn()
     const onNextPhoto = vi.fn()

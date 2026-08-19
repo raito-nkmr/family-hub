@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import i18n from '../../i18n'
 import { isAbortError, isUnauthorizedError } from '../../shared/api/errors'
 import { createClientId } from '../../shared/lib/uuid'
@@ -188,7 +188,7 @@ export function usePhotoUpload({ storage, onUploaded, onUnauthorized }: PhotoUpl
     setUploading(false)
   }
 
-  const reset = () => {
+  const reset = useCallback(() => {
     uploadControllerRef.current?.abort()
     uploadControllerRef.current = null
     abandonedBatchRef.current = null
@@ -197,7 +197,7 @@ export function usePhotoUpload({ storage, onUploaded, onUnauthorized }: PhotoUpl
     setActiveBatchId(null)
     setUploading(false)
     setUploadMessage(null)
-  }
+  }, [])
 
   return {
     fileInputRef,

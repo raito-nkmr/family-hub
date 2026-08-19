@@ -230,6 +230,7 @@ export const ja: TranslationShape = {
     moreFailed: '続きを読み込めませんでした。',
     timelineFailed: '月別一覧を取得できませんでした。',
     detailFailed: '写真の詳細を取得できませんでした。',
+    retryDetail: '詳細の読み込みを再試行',
     updateConflict: '別の画面で写真が更新されました。画面を更新してからやり直してください。',
     updateFailed: '写真の情報を更新できませんでした。',
     uploadCanceled: 'アップロードを中止しました。',
@@ -654,6 +655,8 @@ export const ja: TranslationShape = {
     administration: 'グループ管理',
     rename: 'グループ名を変更',
     auditLog: '最近の管理操作',
+    administrationLoadFailed: 'グループ管理情報を読み込めませんでした。',
+    auditLoadFailed: 'グループの監査ログを読み込めませんでした。',
     pendingInvitations: '参加依頼',
     removalImpact: {
       summary: '影響するデータ: {{items}}',

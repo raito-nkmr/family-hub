@@ -19,10 +19,12 @@ export function usePhotoDashboard({
   const invalidateLibrary = library.invalidateLibrary
   const handleUploaded = useCallback(() => invalidateLibrary(), [invalidateLibrary])
   const upload = usePhotoUpload({ storage: library.storage, onUploaded: handleUploaded, onUnauthorized })
+  const resetLibrary = library.reset
+  const resetUpload = upload.reset
   const reset = useCallback(() => {
-    library.reset()
-    upload.reset()
-  }, [library, upload])
+    resetLibrary()
+    resetUpload()
+  }, [resetLibrary, resetUpload])
 
   return {
     ...library,

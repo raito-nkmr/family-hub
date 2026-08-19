@@ -4,7 +4,7 @@ import { formatBytes, formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
 import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
-import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
+import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, RetryIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoDownloadUrl, type Photo } from '../api'
 import { formatPhotoContentType } from '../contentType'
@@ -13,6 +13,7 @@ import { PhotoPreview } from './PhotoPreview'
 interface PhotoModalProps {
   photo: Photo
   photoDetailLoading?: boolean
+  photoDetailError?: string | null
   currentUserId: string
   updatingMetadata: boolean
   error: string | null
@@ -23,6 +24,7 @@ interface PhotoModalProps {
   onMemoSave: (memo: string | null) => void
   onCaptureDateSave?: (capturedAt: string | null) => void
   onTrash: () => void
+  onRetryPhotoDetail?: () => void
   onModerateGroupShare?: (groupId: string, currentPassword: string) => void
   onPreviousPhoto?: () => void
   onNextPhoto?: () => void
@@ -33,6 +35,7 @@ const SWIPE_THRESHOLD_PX = 50
 export function PhotoModal({
   photo,
   photoDetailLoading = false,
+  photoDetailError = null,
   currentUserId,
   updatingMetadata,
   error,
@@ -43,6 +46,7 @@ export function PhotoModal({
   onMemoSave,
   onCaptureDateSave = () => {},
   onTrash,
+  onRetryPhotoDetail,
   onModerateGroupShare,
   onPreviousPhoto,
   onNextPhoto,
@@ -131,217 +135,241 @@ export function PhotoModal({
         </nav>
       }
     >
-      <div
-        className="modal__image-wrap"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={() => {
-          swipeStartRef.current = null
-        }}
-      >
-        <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
-      </div>
-      <div className="modal__details">
-        <div>
+      {photoDetailError ? (
+        <div className="modal__details photo-detail-error">
           <p className="eyebrow">{t('photoDetails.eyebrow')}</p>
-          <h2 id="photo-title">{photo.original_filename}</h2>
-          <div className="photo-detail-actions">
-            <button
-              className={`secondary-button icon-button favorite-button ${photo.is_favorite ? 'favorite-button--active' : ''}`}
-              type="button"
-              disabled={metadataBusy}
-              aria-pressed={photo.is_favorite ?? false}
-              onClick={onToggleFavorite}
-            >
-              {photo.is_favorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-              {t(photo.is_favorite ? 'photoDetails.removeFavorite' : 'photoDetails.addFavorite')}
+          <h2 id="photo-title">{t('photos.detailFailed')}</h2>
+          <PageMessage>{photoDetailError}</PageMessage>
+          {onRetryPhotoDetail && (
+            <button className="secondary-button icon-button" type="button" onClick={onRetryPhotoDetail}>
+              <RetryIcon />
+              {t('photos.retryDetail')}
             </button>
-            <a className="secondary-button icon-button photo-download" href={getPhotoDownloadUrl(photo.id)} download>
-              <SaveIcon />
-              {t('photoDetails.downloadOriginal')}
-            </a>
-            {isOwner && (
-              <button
-                className="danger-button icon-button"
-                type="button"
-                disabled={metadataBusy}
-                onClick={() => {
-                  void confirm(t('photoTrash.trashConfirm', { filename: photo.original_filename })).then(
-                    (confirmed) => confirmed && onTrash(),
-                  )
-                }}
-              >
-                <DeleteIcon />
-                {t('photoTrash.moveToTrash')}
-              </button>
-            )}
-          </div>
+          )}
         </div>
-        <dl className="metadata-list">
-          <div>
-            <dt>{t('photoDetails.capturedAt')}</dt>
-            <dd>
-              {photo.captured_at ? formatDateTime(photo.captured_at) : t('common.unknown')}
-              {photo.captured_at_override && <small> ({t('photoDetails.captureDateOverridden')})</small>}
-            </dd>
+      ) : (
+        <>
+          <div
+            className="modal__image-wrap"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={() => {
+              swipeStartRef.current = null
+            }}
+          >
+            <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
           </div>
-          <div>
-            <dt>{t('photoDetails.uploadedAt')}</dt>
-            <dd>{formatDateTime(photo.uploaded_at)}</dd>
-          </div>
-          <div>
-            <dt>{t('photoDetails.uploadedBy')}</dt>
-            <dd>{photo.uploaded_by_username}</dd>
-          </div>
-          <div>
-            <dt>{t('photoDetails.fileType')}</dt>
-            <dd>{formatPhotoContentType(photo.content_type)}</dd>
-          </div>
-          <div>
-            <dt>{t('photoDetails.visibility')}</dt>
-            <dd>
-              {isOwner ? (
-                <fieldset className="photo-sharing" disabled={metadataBusy}>
-                  <legend className="sr-only">{t('photoDetails.visibilityLabel')}</legend>
-                  <small>
-                    {(photo.sharing.group_ids ?? []).length === 0
-                      ? t('photoUpload.private')
-                      : t('photoUpload.sharedGroups')}
-                  </small>
-                  {groups.map((group) => {
-                    const selected = (photo.sharing.group_ids ?? []).includes(group.id)
-                    return (
-                      <label key={group.id}>
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={() =>
-                            onSharingChange(
-                              selected
-                                ? (photo.sharing.group_ids ?? []).filter((id) => id !== group.id)
-                                : [...(photo.sharing.group_ids ?? []), group.id],
-                            )
-                          }
-                        />
-                        <span>{group.name}</span>
-                      </label>
-                    )
-                  })}
-                </fieldset>
-              ) : (
-                <div>
-                  {moderatedGroups.length > 0 && onModerateGroupShare && (
-                    <label>
-                      {t('photoDetails.currentPassword')}
-                      <input
-                        type="password"
-                        value={moderationPassword}
-                        autoComplete="current-password"
-                        disabled={metadataBusy}
-                        onChange={(event) =>
-                          setModerationPasswordState({ photoId: photo.id, value: event.target.value })
-                        }
-                      />
-                    </label>
-                  )}
-                  {groups
-                    .filter((group) => (photo.sharing.group_ids ?? []).includes(group.id))
-                    .map((group) => (
-                      <span key={group.id}>
-                        {group.name}
-                        {group.current_user_role === 'admin' && onModerateGroupShare && (
-                          <button
-                            className="danger-button"
-                            type="button"
-                            disabled={metadataBusy || !moderationPassword}
-                            onClick={() => {
-                              onModerateGroupShare(group.id, moderationPassword)
-                              setModerationPasswordState({ photoId: photo.id, value: '' })
-                            }}
-                          >
-                            {t('photoDetails.removeFromGroup')}
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                </div>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>{t('photoDetails.imageSize')}</dt>
-            <dd>{photo.width && photo.height ? `${photo.width} × ${photo.height}` : t('common.unknown')}</dd>
-          </div>
-          <div>
-            <dt>{t('photoDetails.fileSize')}</dt>
-            <dd>{formatBytes(photo.size_bytes)}</dd>
-          </div>
-        </dl>
-        {isOwner && (
-          <div className="photo-memo">
-            <h3>{t('photoDetails.captureDateEdit')}</h3>
-            <form onSubmit={saveCaptureDate}>
-              <input
-                type="datetime-local"
-                value={captureDate}
-                disabled={metadataBusy}
-                onChange={(event) =>
-                  setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
-                }
-              />
-              <div>
-                <button className="success-button icon-button" type="submit" disabled={metadataBusy || !captureDate}>
-                  <SaveIcon />
-                  {updatingMetadata ? t('common.saving') : t('photoDetails.saveCaptureDate')}
+          <div className="modal__details">
+            <div>
+              <p className="eyebrow">{t('photoDetails.eyebrow')}</p>
+              <h2 id="photo-title">{photo.original_filename}</h2>
+              <div className="photo-detail-actions">
+                <button
+                  className={`secondary-button icon-button favorite-button ${photo.is_favorite ? 'favorite-button--active' : ''}`}
+                  type="button"
+                  disabled={metadataBusy}
+                  aria-pressed={photo.is_favorite ?? false}
+                  onClick={onToggleFavorite}
+                >
+                  {photo.is_favorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                  {t(photo.is_favorite ? 'photoDetails.removeFavorite' : 'photoDetails.addFavorite')}
                 </button>
-                {photo.captured_at_override && (
+                <a
+                  className="secondary-button icon-button photo-download"
+                  href={getPhotoDownloadUrl(photo.id)}
+                  download
+                >
+                  <SaveIcon />
+                  {t('photoDetails.downloadOriginal')}
+                </a>
+                {isOwner && (
                   <button
-                    className="secondary-button"
+                    className="danger-button icon-button"
                     type="button"
                     disabled={metadataBusy}
-                    onClick={() => onCaptureDateSave(null)}
+                    onClick={() => {
+                      void confirm(t('photoTrash.trashConfirm', { filename: photo.original_filename })).then(
+                        (confirmed) => confirmed && onTrash(),
+                      )
+                    }}
                   >
-                    {t('photoDetails.resetCaptureDate')}
+                    <DeleteIcon />
+                    {t('photoTrash.moveToTrash')}
                   </button>
                 )}
               </div>
-            </form>
-          </div>
-        )}
-        <div className="photo-memo">
-          <h3>{t('photoDetails.memo')}</h3>
-          <form onSubmit={saveMemo}>
-            <textarea
-              value={memo}
-              maxLength={2000}
-              rows={5}
-              disabled={metadataBusy}
-              placeholder={t('photoDetails.memoPlaceholder')}
-              onChange={(event) => setMemoState({ photoId: photo.id, value: event.target.value })}
-            />
-            <div>
-              <small>{memo.length} / 2000</small>
-              <button
-                className="success-button icon-button"
-                type="submit"
-                disabled={metadataBusy || memo.trim() === (photo.memo ?? '')}
-              >
-                <SaveIcon />
-                {updatingMetadata ? t('common.saving') : t('photoDetails.saveMemo')}
-              </button>
             </div>
-            {photo.memo && (
-              <small className="photo-memo__updated">
-                {t('photoDetails.memoUpdatedBy', {
-                  username: photo.memo_updated_by_username,
-                  date: formatDateTime(photo.memo_updated_at),
-                })}
-              </small>
+            <dl className="metadata-list">
+              <div>
+                <dt>{t('photoDetails.capturedAt')}</dt>
+                <dd>
+                  {photo.captured_at ? formatDateTime(photo.captured_at) : t('common.unknown')}
+                  {photo.captured_at_override && <small> ({t('photoDetails.captureDateOverridden')})</small>}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.uploadedAt')}</dt>
+                <dd>{formatDateTime(photo.uploaded_at)}</dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.uploadedBy')}</dt>
+                <dd>{photo.uploaded_by_username}</dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.fileType')}</dt>
+                <dd>{formatPhotoContentType(photo.content_type)}</dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.visibility')}</dt>
+                <dd>
+                  {isOwner ? (
+                    <fieldset className="photo-sharing" disabled={metadataBusy}>
+                      <legend className="sr-only">{t('photoDetails.visibilityLabel')}</legend>
+                      <small>
+                        {(photo.sharing.group_ids ?? []).length === 0
+                          ? t('photoUpload.private')
+                          : t('photoUpload.sharedGroups')}
+                      </small>
+                      {groups.map((group) => {
+                        const selected = (photo.sharing.group_ids ?? []).includes(group.id)
+                        return (
+                          <label key={group.id}>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() =>
+                                onSharingChange(
+                                  selected
+                                    ? (photo.sharing.group_ids ?? []).filter((id) => id !== group.id)
+                                    : [...(photo.sharing.group_ids ?? []), group.id],
+                                )
+                              }
+                            />
+                            <span>{group.name}</span>
+                          </label>
+                        )
+                      })}
+                    </fieldset>
+                  ) : (
+                    <div>
+                      {moderatedGroups.length > 0 && onModerateGroupShare && (
+                        <label>
+                          {t('photoDetails.currentPassword')}
+                          <input
+                            type="password"
+                            value={moderationPassword}
+                            autoComplete="current-password"
+                            disabled={metadataBusy}
+                            onChange={(event) =>
+                              setModerationPasswordState({ photoId: photo.id, value: event.target.value })
+                            }
+                          />
+                        </label>
+                      )}
+                      {groups
+                        .filter((group) => (photo.sharing.group_ids ?? []).includes(group.id))
+                        .map((group) => (
+                          <span key={group.id}>
+                            {group.name}
+                            {group.current_user_role === 'admin' && onModerateGroupShare && (
+                              <button
+                                className="danger-button"
+                                type="button"
+                                disabled={metadataBusy || !moderationPassword}
+                                onClick={() => {
+                                  onModerateGroupShare(group.id, moderationPassword)
+                                  setModerationPasswordState({ photoId: photo.id, value: '' })
+                                }}
+                              >
+                                {t('photoDetails.removeFromGroup')}
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.imageSize')}</dt>
+                <dd>{photo.width && photo.height ? `${photo.width} × ${photo.height}` : t('common.unknown')}</dd>
+              </div>
+              <div>
+                <dt>{t('photoDetails.fileSize')}</dt>
+                <dd>{formatBytes(photo.size_bytes)}</dd>
+              </div>
+            </dl>
+            {isOwner && (
+              <div className="photo-memo">
+                <h3>{t('photoDetails.captureDateEdit')}</h3>
+                <form onSubmit={saveCaptureDate}>
+                  <input
+                    type="datetime-local"
+                    value={captureDate}
+                    disabled={metadataBusy}
+                    onChange={(event) =>
+                      setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
+                    }
+                  />
+                  <div>
+                    <button
+                      className="success-button icon-button"
+                      type="submit"
+                      disabled={metadataBusy || !captureDate}
+                    >
+                      <SaveIcon />
+                      {updatingMetadata ? t('common.saving') : t('photoDetails.saveCaptureDate')}
+                    </button>
+                    {photo.captured_at_override && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        disabled={metadataBusy}
+                        onClick={() => onCaptureDateSave(null)}
+                      >
+                        {t('photoDetails.resetCaptureDate')}
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
             )}
-          </form>
-        </div>
-        {error && <PageMessage>{error}</PageMessage>}
-      </div>
+            <div className="photo-memo">
+              <h3>{t('photoDetails.memo')}</h3>
+              <form onSubmit={saveMemo}>
+                <textarea
+                  value={memo}
+                  maxLength={2000}
+                  rows={5}
+                  disabled={metadataBusy}
+                  placeholder={t('photoDetails.memoPlaceholder')}
+                  onChange={(event) => setMemoState({ photoId: photo.id, value: event.target.value })}
+                />
+                <div>
+                  <small>{memo.length} / 2000</small>
+                  <button
+                    className="success-button icon-button"
+                    type="submit"
+                    disabled={metadataBusy || memo.trim() === (photo.memo ?? '')}
+                  >
+                    <SaveIcon />
+                    {updatingMetadata ? t('common.saving') : t('photoDetails.saveMemo')}
+                  </button>
+                </div>
+                {photo.memo && (
+                  <small className="photo-memo__updated">
+                    {t('photoDetails.memoUpdatedBy', {
+                      username: photo.memo_updated_by_username,
+                      date: formatDateTime(photo.memo_updated_at),
+                    })}
+                  </small>
+                )}
+              </form>
+            </div>
+            {error && <PageMessage>{error}</PageMessage>}
+          </div>
+        </>
+      )}
     </Dialog>
   )
 }

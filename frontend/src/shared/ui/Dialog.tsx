@@ -19,6 +19,8 @@ interface DialogProps {
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+let openDialogCount = 0
+
 export function Dialog({
   titleId,
   children,
@@ -82,6 +84,7 @@ export function Dialog({
       }
     }
     document.addEventListener('keydown', handleKeyDown)
+    openDialogCount += 1
     document.body.classList.add('modal-open')
     const initialFocus =
       focusScope?.querySelector<HTMLElement>('[data-dialog-autofocus="true"]') ??
@@ -91,7 +94,8 @@ export function Dialog({
     if (!initialFocus) panel?.focus()
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.classList.remove('modal-open')
+      openDialogCount = Math.max(0, openDialogCount - 1)
+      if (openDialogCount === 0) document.body.classList.remove('modal-open')
       for (const { element, wasInert } of backgroundElements) element.inert = wasInert
       previouslyFocused?.focus()
     }

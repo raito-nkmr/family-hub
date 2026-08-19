@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
+import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatDateTime } from '../../shared/lib/format'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -52,6 +54,8 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
     queryFn: ({ signal }) => getGroupAuditEvents(selectedGroup!.id, signal),
     enabled: selectedGroup?.current_user_role === 'admin',
   })
+  useUnauthorizedError(administrationQuery.error, onUnauthorized)
+  useUnauthorizedError(auditQuery.error, onUnauthorized)
 
   const submitRename = async (event: FormEvent) => {
     event.preventDefault()
@@ -106,6 +110,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                   {t('common.save')}
                 </button>
               </form>
+              {administrationQuery.error && !isUnauthorizedError(administrationQuery.error) && (
+                <PageMessage>{t('groups.administrationLoadFailed')}</PageMessage>
+              )}
               {administrationQuery.data && (
                 <dl className="metadata-list">
                   <div>
@@ -127,6 +134,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 </dl>
               )}
               <h3>{t('groups.auditLog')}</h3>
+              {auditQuery.error && !isUnauthorizedError(auditQuery.error) && (
+                <PageMessage>{t('groups.auditLoadFailed')}</PageMessage>
+              )}
               <ul className="maintenance-runs">
                 {auditQuery.data?.slice(0, 20).map((event) => (
                   <li key={event.id}>

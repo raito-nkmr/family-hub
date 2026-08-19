@@ -21,6 +21,7 @@ import {
 } from './api'
 import { usePhotoDashboard } from './usePhotoDashboard'
 import { getGroups } from '../groups/api'
+import { useHome } from '../home/useHome'
 
 vi.mock('./api', () => ({
   addBulkPhotoSharing: vi.fn(),
@@ -194,6 +195,32 @@ describe('usePhotoDashboard', () => {
     await act(() => secondRequest)
 
     await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(secondPhoto.id))
+  })
+
+  it('shows a detail error without exposing stale content and retries the selected photo', async () => {
+    const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
+    let shouldFail = true
+    vi.mocked(getPhoto).mockImplementation(async (photoId) => {
+      if (photoId === secondPhoto.id && shouldFail) throw new Error('unavailable')
+      return photoId === secondPhoto.id ? secondPhoto : photo
+    })
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.selectPhoto(photo))
+    await act(() => result.current.selectPhoto(secondPhoto))
+
+    expect(result.current.selectedPhoto?.id).toBe(photo.id)
+    expect(result.current.photoDetailError).toBe('写真の詳細を取得できませんでした。')
+
+    shouldFail = false
+    await act(() => result.current.retryPhotoDetail())
+
+    await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(secondPhoto.id))
+    expect(result.current.photoDetailError).toBeNull()
   })
 
   it('ignores an old cursor page that completes after a new search', async () => {
@@ -388,6 +415,33 @@ describe('usePhotoDashboard', () => {
 
     expect(addBulkPhotoSharing).toHaveBeenCalledWith(['photo-1', 'photo-2'], ['group-1'])
     expect(getPhotos).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates the home recent photos after a photo change', async () => {
+    vi.mocked(addBulkPhotoSharing).mockResolvedValue({
+      operation_id: 'operation-1',
+      updated_count: 1,
+      unchanged_count: 0,
+    })
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(
+      () => ({
+        dashboard: usePhotoDashboard({ enabled: true, onUnauthorized }),
+        home: useHome({ userId: 'user-1', active: true, onUnauthorized }),
+      }),
+      { wrapper: createAppWrapper() },
+    )
+    await waitFor(() => expect(result.current.dashboard.loading).toBe(false))
+    await waitFor(() => expect(result.current.home.loading).toBe(false))
+    const homeCallsBeforeChange = vi.mocked(getPhotos).mock.calls.filter(([, , , limit]) => limit === 4).length
+
+    await act(() => result.current.dashboard.bulkAddSharing(['photo-1'], ['group-1']))
+
+    await waitFor(() =>
+      expect(vi.mocked(getPhotos).mock.calls.filter(([, , , limit]) => limit === 4).length).toBeGreaterThan(
+        homeCallsBeforeChange,
+      ),
+    )
   })
 
   it('saves a photo memo with optimistic metadata versioning', async () => {
