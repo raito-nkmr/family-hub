@@ -156,7 +156,7 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
               <table className="maintenance-table">
                 <thead>
                   <tr>
-                    <th>{t('invitations.username')}</th>
+                    <th>{t('auth.username')}</th>
                     <th>{t('systemStatus.state')}</th>
                     <th>{t('systemStatus.role')}</th>
                     <th>{t('systemStatus.groups')}</th>
@@ -166,11 +166,13 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
                 <tbody>
                   {administrationQuery.data?.users.map((user) => (
                     <tr key={user.id}>
-                      <td>{user.username}</td>
-                      <td>{t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}</td>
-                      <td>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
-                      <td>{user.group_names.join(', ') || '—'}</td>
-                      <td>
+                      <td data-label={t('auth.username')}>{user.username}</td>
+                      <td data-label={t('systemStatus.state')}>
+                        {t(user.is_active ? 'systemStatus.active' : 'systemStatus.inactive')}
+                      </td>
+                      <td data-label={t('systemStatus.role')}>{t(`systemStatus.systemRoles.${user.system_role}`)}</td>
+                      <td data-label={t('systemStatus.groups')}>{user.group_names.join(', ') || '—'}</td>
+                      <td data-label={t('systemStatus.actions')}>
                         <button
                           type="button"
                           className={user.is_active ? 'danger-button icon-button' : 'success-button icon-button'}

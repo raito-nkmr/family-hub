@@ -2,9 +2,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .maintenance-card {
+  min-width: 0;
   padding: 1.25rem;
   border: 1px solid var(--color-border-default);
   border-radius: 1rem;
@@ -15,9 +17,14 @@
   grid-column: span 2;
 }
 
+.maintenance-card h2 {
+  overflow-wrap: anywhere;
+}
+
 .maintenance-metadata-list {
   display: grid;
   gap: 0.75rem;
+  min-width: 0;
   margin: 0;
 }
 
@@ -94,6 +101,10 @@
   vertical-align: top;
 }
 
+.maintenance-table th {
+  white-space: nowrap;
+}
+
 .maintenance-table td:last-child {
   display: flex;
   gap: 0.5rem;
@@ -115,5 +126,74 @@
 
   .maintenance-metadata-list dd {
     text-align: left;
+  }
+
+  .maintenance-table-wrap {
+    overflow: visible;
+  }
+
+  .maintenance-table,
+  .maintenance-table tbody,
+  .maintenance-table tr,
+  .maintenance-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .maintenance-table {
+    border-collapse: separate;
+    border-spacing: 0 0.75rem;
+  }
+
+  .maintenance-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .maintenance-table tr {
+    padding: 0.75rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--color-bg-subtle);
+  }
+
+  .maintenance-table td,
+  .maintenance-table td:last-child {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 0.75fr) minmax(0, 1.25fr);
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .maintenance-table td::before {
+    color: var(--color-text-secondary);
+    content: attr(data-label);
+    font-weight: 650;
+  }
+
+  .maintenance-table td:last-child {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding-bottom: 0;
+  }
+
+  .maintenance-table td:last-child::before {
+    grid-column: 1;
+  }
+
+  .maintenance-table .icon-button {
+    width: 100%;
+    height: auto;
+    min-height: var(--control-height-default);
+    padding: 0.65rem 0.75rem;
+    white-space: normal;
   }
 }
