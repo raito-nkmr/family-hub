@@ -174,10 +174,11 @@ sudo systemd-run --wait --pty --collect \
 
 Replace the username with the operator's value. Never put the password in an argument, environment variable, or log.
 
-## Cutover from the public test environment
+## Initial cutover from the public test environment
 
-The current `fastapi-react-playground-db-1` is resettable public-test data. The first production-like rehearsal creates an
-empty schema in the new production volume instead of migrating this database.
+During the initial cutover, `fastapi-react-playground-db-1` was resettable public-test data. The first production-like
+rehearsal created an empty schema in the new production volume instead of migrating this database. This is a one-time
+bootstrap procedure; use the release-update procedure for normal operation.
 
 Use this order:
 
@@ -359,7 +360,7 @@ For a release without a database schema change:
 9. Check loopback and custom-domain health, login, and core screens.
 10. If needed, roll back the application release; do not automatically downgrade the database.
 
-## Production start conditions
+## Ongoing production conditions
 
 - Production database is separated from development.
 - Database health, Backend, Caddy, and cloudflared recover automatically after reboot.

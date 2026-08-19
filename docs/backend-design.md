@@ -387,8 +387,8 @@ and unit tests remain separately runnable.
 
 Candidates include a home aggregation API if existing calls become a problem, repair commands for integrity findings,
 background derivative regeneration, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
-marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, production hostname
-and Cloudflare plan, and independent LAN HTTPS when Cloudflare is unavailable.
+marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, and independent
+LAN HTTPS when Cloudflare is unavailable.
 
 Person detection is excluded from the current backend contract; see [`proposals/person-detection.md`](./proposals/person-detection.md).
 

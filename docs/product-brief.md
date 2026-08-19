@@ -80,12 +80,12 @@ instructions, and the Web Push backend foundation. The install prompt appears on
 dismissed state in the browser, can be shown again from Account, and is hidden in standalone mode. Trash uses the same 2/3/4
 thumbnail density choices as the library. Album details and trash also use 50-item cursor pagination and infinite scrolling.
 
-Cloudflare Tunnel and Caddy provide a fixed HTTPS public-test path, and custom-domain application use has been verified.
-Production operation has not started. Production database separation, database-backup, photo-integrity, and trash-purge
-timers, the first manual runs, and a temporary-database restore test are complete. Device-specific Web Push subscriptions,
-unsubscriptions, and preference UI are implemented. The next automatic timer runs, real-device acceptance after the fiber
-connection is available, real-device Web Push delivery validation, person detection, automatic repair and full recovery from
-analysis results, and tags remain incomplete. Video upload and playback are implemented for the supported formats above. See [`web-push.md`](./web-push.md) and
+Cloudflare Tunnel and Caddy provide the fixed HTTPS production path. Family Hub is currently operated through a custom
+domain on the Cloudflare Free plan using one Named Tunnel. Cloudflare Access is not used. Production database separation,
+database-backup, photo-integrity, and trash-purge timers, the first manual runs, and a temporary-database restore test are
+complete. Device-specific Web Push subscriptions, unsubscriptions, and preference UI are implemented. Some operational
+validation may remain. Person detection, automatic repair and full recovery from analysis results, and tags are not part
+of the completed scope. Video upload and playback are implemented for the supported formats above. See [`web-push.md`](./web-push.md) and
 [`deployment.md`](./deployment.md) for the current documented operational prerequisites. Update this section when
 implementation status changes.
 
@@ -180,14 +180,13 @@ manual for the time being.
 
 In production, Cloudflare is the public Internet entry point, Caddy is the only HTTP entry point on the origin, and
 Cloudflare Tunnel serves the React frontend and API on one origin. Family Hub authentication remains primary; Cloudflare
-Access is not added initially. Caddy, FastAPI, PostgreSQL, the internal photo-storage HDD, and the disconnected external
+Access is not used. Caddy, FastAPI, PostgreSQL, the internal photo-storage HDD, and the disconnected external
 backup HDD are not exposed directly to the Internet or LAN.
 
 Listening ports, trusted proxies, cache, upload limits, ZIP-export acceptance, and LAN access are defined in
-[`deployment.md`](./deployment.md). A fixed HTTPS public test is running, but production operation has not begun. The
-production-like environment is separated from the development Compose database, and database-backup, photo-integrity, and
-trash-purge timers are enabled. Before production starts, verify the first automatic runs, host reboot, and acceptance after
-the fiber connection is available. Local development continues to start Vite and Uvicorn separately.
+[`deployment.md`](./deployment.md). The fixed HTTPS production path is active. The production environment is separated
+from the development Compose database, and database-backup, photo-integrity, and trash-purge timers are configured. Local
+development continues to start Vite and Uvicorn separately.
 
 ## First completion goal
 
@@ -398,7 +397,6 @@ configured on the browser or server operating system.
 - Maximum file size
 - Derivative-cache storage limit and deletion/regeneration policy
 - Trash retention period
-- Production hostname and Cloudflare plan
 - Whether to provide independent LAN access when Cloudflare is unavailable
 
 日本語版: [product-brief.ja.md](./product-brief.ja.md)

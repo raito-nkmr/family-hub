@@ -154,6 +154,6 @@ procedures, storage rules, and production assumptions are documented separately:
 
 ## Project status
 
-Family Hub is an actively developed personal project. Production deployment infrastructure exists, but production
-operation and some real-device validation remain ongoing. See the detailed documentation for current limitations and
-operational prerequisites.
+Family Hub is an actively developed personal project. It is currently operated through a custom domain on the Cloudflare
+Free plan using one Named Tunnel; Cloudflare Access is not used. Some real-device validation and operational checks may
+remain ongoing. See the detailed documentation for current limitations and operational prerequisites.

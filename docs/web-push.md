@@ -93,10 +93,10 @@ browser subscription registration and removal, the settings UI, recipient genera
 count normalization, and worker claiming and per-device retries. Worker PostgreSQL integration tests run in environments
 with `TEST_DATABASE_URL` configured.
 
-On July 20, 2026, VAPID was configured in the public test environment and a subscription was registered from the iPhone
-Home Screen PWA. A shopping-item addition by another user was verified end to end through the outbox, Web Push provider,
-and Service Worker, including a background Japanese notification and app-icon badge. Both the outbox and per-device
-delivery were `sent`, and the delivery and cleaning-due timers were `enabled` and `active`.
+The July 20, 2026 verification configured VAPID and registered a subscription from the iPhone Home Screen PWA. A
+shopping-item addition by another user was verified end to end through the outbox, Web Push provider, and Service Worker,
+including a background Japanese notification and app-icon badge. Both the outbox and per-device delivery were `sent` at
+that time, and the delivery and cleaning-due timers were `enabled` and `active`.
 
 The following acceptance checks remain:
 
