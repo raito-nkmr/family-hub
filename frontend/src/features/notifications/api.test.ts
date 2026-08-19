@@ -4,6 +4,7 @@ import {
   createPushSubscription,
   deletePushSubscription,
   getNotificationConfig,
+  updateNotificationLocale,
   updateNotificationPreferences,
 } from './api'
 
@@ -58,5 +59,17 @@ describe('notification API', () => {
     ])
     requests.forEach((request) => expect(request.headers.get('X-CSRF-Token')).toBe('csrf-token'))
     await expect(requests[2].clone().json()).resolves.toEqual({ items: preferences })
+  })
+
+  it('updates the current session notification language', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    await updateNotificationLocale('ja')
+
+    const request = vi.mocked(fetch).mock.calls[0][0] as Request
+    expect(new URL(request.url).pathname).toBe('/api/v1/notifications/subscriptions/locale')
+    expect(request.method).toBe('PUT')
+    expect(request.headers.get('X-CSRF-Token')).toBe('csrf-token')
+    await expect(request.clone().json()).resolves.toEqual({ locale: 'ja' })
   })
 })

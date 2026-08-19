@@ -668,17 +668,6 @@ export type GroupListResponse = {
 }
 
 /**
- * GroupMemberAdd
- */
-export type GroupMemberAdd = {
-  role?: GroupRole
-  /**
-   * User Id
-   */
-  user_id: string
-}
-
-/**
  * GroupMemberCandidateListResponse
  */
 export type GroupMemberCandidateListResponse = {
@@ -1498,6 +1487,16 @@ export type PushSubscriptionKeys = {
    * P256Dh
    */
   p256dh: string
+}
+
+/**
+ * PushSubscriptionLocaleUpdate
+ */
+export type PushSubscriptionLocaleUpdate = {
+  /**
+   * Locale
+   */
+  locale: 'en' | 'ja'
 }
 
 /**
@@ -3141,44 +3140,6 @@ export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetRespon
 export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponse =
   ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses[keyof ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses]
 
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostData = {
-  body: GroupMemberAdd
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path: {
-    /**
-     * Group Id
-     */
-    group_id: string
-  }
-  query?: never
-  url: '/api/v1/groups/{group_id}/members'
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostError =
-  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostErrors]
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponses = {
-  /**
-   * Successful Response
-   */
-  200: GroupDetailResponse
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponse =
-  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostResponses]
-
 export type RemoveGroupMemberApiV1GroupsGroupIdMembersUserIdDeleteData = {
   body?: never
   headers?: {
@@ -3437,6 +3398,39 @@ export type CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses =
 
 export type CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponse =
   CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses[keyof CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses]
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutData = {
+  body: PushSubscriptionLocaleUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path?: never
+  query?: never
+  url: '/api/v1/notifications/subscriptions/locale'
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutError =
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors[keyof UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors]
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponse =
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses[keyof UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses]
 
 export type DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData = {
   body?: never

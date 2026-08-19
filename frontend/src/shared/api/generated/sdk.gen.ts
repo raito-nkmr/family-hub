@@ -9,9 +9,6 @@ import type {
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostData,
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostErrors,
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostResponses,
-  AddGroupMemberApiV1GroupsGroupIdMembersPostData,
-  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
-  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutData,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutErrors,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutResponses,
@@ -231,6 +228,9 @@ import type {
   UpdatePhotoMetadataApiV1PhotosPhotoIdPatchData,
   UpdatePhotoMetadataApiV1PhotosPhotoIdPatchErrors,
   UpdatePhotoMetadataApiV1PhotosPhotoIdPatchResponses,
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutData,
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors,
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchData,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchErrors,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchResponses,
@@ -936,29 +936,6 @@ export const listGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGet = <T
   >({ url: '/api/v1/groups/{group_id}/member-candidates', ...options })
 
 /**
- * Add Group Member
- */
-export const addGroupMemberApiV1GroupsGroupIdMembersPost = <ThrowOnError extends boolean = false>(
-  options: Options<AddGroupMemberApiV1GroupsGroupIdMembersPostData, ThrowOnError>,
-): RequestResult<
-  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
-  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).post<
-    AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
-    AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
-    ThrowOnError
-  >({
-    url: '/api/v1/groups/{group_id}/members',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-
-/**
  * Remove Group Member
  */
 export const removeGroupMemberApiV1GroupsGroupIdMembersUserIdDelete = <ThrowOnError extends boolean = false>(
@@ -1099,6 +1076,31 @@ export const createPushSubscriptionApiV1NotificationsSubscriptionsPost = <ThrowO
     ThrowOnError
   >({
     url: '/api/v1/notifications/subscriptions',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Update Push Subscription Locale
+ */
+export const updatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutData, ThrowOnError>,
+): RequestResult<
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses,
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses,
+    UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/notifications/subscriptions/locale',
     ...options,
     headers: {
       'Content-Type': 'application/json',
