@@ -103,16 +103,16 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
           {t('navigation.invitations')}
         </NavLink>
       )}
+      <NavLink className={itemClass('account', 'app-navigation__desktop-only')} to={appPaths.account}>
+        <EditIcon />
+        {t('navigation.account')}
+      </NavLink>
       {showInvitations && (
         <NavLink className={itemClass('system', 'app-navigation__desktop-only')} to={appPaths.system}>
           <SaveIcon />
           {t('navigation.system')}
         </NavLink>
       )}
-      <NavLink className={itemClass('account', 'app-navigation__desktop-only')} to={appPaths.account}>
-        <EditIcon />
-        {t('navigation.account')}
-      </NavLink>
     </nav>
   )
 }

@@ -52,4 +52,20 @@ describe('AppNavigation', () => {
     await user.click(screen.getByRole('link', { name: 'アカウント' }))
     expect(screen.getByLabelText('current path')).toHaveTextContent('/account')
   })
+
+  it('keeps desktop management links in the same order as mobile management tabs', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/groups']}>
+        <AppNavigation showInvitations photoUnseenCount={0} />
+      </MemoryRouter>,
+    )
+
+    const desktopLinks = [...container.querySelectorAll<HTMLAnchorElement>('a.app-navigation__desktop-only')]
+    expect(desktopLinks.slice(-4).map((link) => link.textContent?.trim())).toEqual([
+      'グループ',
+      '招待',
+      'アカウント',
+      'システム状態',
+    ])
+  })
 })
