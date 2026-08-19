@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:live": "playwright test --config playwright.live.config.ts",
     "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts",
     "api:generate": "bash ../scripts/generate-api-types.sh",
     "api:check": "bash ../scripts/check-api-types.sh",

@@ -44,6 +44,7 @@ import {
   updatePhotoMetadataApiV1PhotosPhotoIdPatch,
 } from '../../shared/api/generated'
 import { sdkData } from '../../shared/api/sdkClient'
+import { getUploadRequestTimeoutMs } from './uploadConfig'
 
 export type StorageStatusCode = ApiStorageStatusCode
 export type StorageStatus = StorageStatusResponse
@@ -195,7 +196,7 @@ export function cancelUploadBatch(batchId: string): Promise<void> {
 }
 
 const NETWORK_CHUNK_BYTES = 8 * 1024 * 1024
-const UPLOAD_REQUEST_TIMEOUT_MS = 5_000
+const UPLOAD_REQUEST_TIMEOUT_MS = getUploadRequestTimeoutMs(import.meta.env)
 const MAX_UPLOAD_RETRIES = 3
 const UPLOAD_RETRY_DELAY_MS = 250
 

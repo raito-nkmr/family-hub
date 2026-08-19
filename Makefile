@@ -1,4 +1,4 @@
-.PHONY: backend-lock backend-sync check
+.PHONY: backend-lock backend-sync check production-smoke
 
 backend-lock:
 	cd backend && uv lock
@@ -8,3 +8,6 @@ backend-sync:
 
 check:
 	bash scripts/check.sh
+
+production-smoke:
+	bash scripts/production-smoke.sh

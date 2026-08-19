@@ -125,6 +125,19 @@ npm run test:e2e
 npm run test:e2e:pwa
 ```
 
+After a production deployment, run the public-origin smoke checks and the opt-in live authentication/upload check with a
+dedicated test account:
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+FAMILY_HUB_E2E_BASE_URL=https://family.example.com \
+FAMILY_HUB_E2E_USERNAME=<dedicated-test-user> \
+FAMILY_HUB_E2E_PASSWORD=<dedicated-test-password> \
+npm --prefix frontend run test:e2e:live
+```
+
+Keep the live-test credentials outside the repository and shell history.
+
 ## Documentation
 
 The README intentionally stays focused on orientation and setup. Detailed behavior, design decisions, operational

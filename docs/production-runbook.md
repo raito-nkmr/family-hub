@@ -55,7 +55,8 @@ production reset must stop services and explicitly remove this named volume afte
 ```
 
 Do not include `.env`, test data, Python cache, `frontend/node_modules`, or development Compose volumes. Before creating a
-release, run `npm ci`, frontend checks, and `npm run build`; deploy only `dist/`. Create the backend environment from the
+release, run `npm ci`, frontend checks, and `npm run build`; set `VITE_UPLOAD_REQUEST_TIMEOUT_MS` to the measured
+production value during the build and deploy only `dist/`. Create the backend environment from the
 committed `pyproject.toml` and `uv.lock` with `uv sync --locked --no-dev`. Update the lock file with `make backend-lock`
 when backend dependencies change.
 
@@ -89,6 +90,24 @@ systemd-analyze verify deploy/systemd/*.service deploy/systemd/*.timer
 
 Complete the normal backend and frontend checks as well. Repeat Caddy and systemd validation with the versions installed on
 the target host.
+
+After the public hostname is serving the release, run the repository-level public checks from a trusted operator machine:
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+```
+
+Run the live authentication, CSRF, and chunk-upload check separately with a dedicated test account. The account must have
+completed any required password change and the test cancels its temporary upload batch:
+
+```bash
+FAMILY_HUB_E2E_BASE_URL=https://family.example.com \
+FAMILY_HUB_E2E_USERNAME=<dedicated-test-user> \
+FAMILY_HUB_E2E_PASSWORD=<dedicated-test-password> \
+npm --prefix frontend run test:e2e:live
+```
+
+Do not store the credentials in the repository, shell history, CI logs, or screenshots.
 
 ## First construction
 

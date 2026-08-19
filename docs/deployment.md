@@ -95,11 +95,20 @@ persisted, while the seventh request never reached the backend. Waiting for the 
 stall the first request. Capturing the response headers and then aborting only that request's response stream allowed the
 seventh chunk, item completion, and thumbnail retrieval to succeed without a retry.
 
-The five-second frontend upload timeout is a temporary diagnostic value chosen to make these stalls and retries appear
-quickly. It is not a production target. A longer timeout would only have delayed this particular retained-response failure.
-Before production acceptance, configure the timeout separately for production using real iPhone Wi-Fi and mobile-network
-measurements. The response-stream abort was added for the development cross-origin direct route and must either be limited
-to that route or verified not to produce client-closed responses through Cloudflare.
+The development frontend uses a five-second upload timeout as a temporary diagnostic value. Production builds support the
+`VITE_UPLOAD_REQUEST_TIMEOUT_MS` build-time variable and use a 30-second fallback when it is absent or invalid. Before
+production acceptance, set the variable from real iPhone Wi-Fi and mobile-network measurements rather than relying on the
+fallback. The response-stream abort was added for the development cross-origin direct route and must either be limited to
+that route or verified not to produce client-closed responses through Cloudflare.
+
+For example, pass the measured value while building the release:
+
+```bash
+VITE_UPLOAD_REQUEST_TIMEOUT_MS=30000 npm run build
+```
+
+The value must be an integer from 1,000 through 300,000 milliseconds. Keep the production value in the host-side release
+build environment; do not put host-specific values or secrets in the repository.
 
 ```bash
 uv run --locked python -m uvicorn app.main:app \
@@ -262,6 +271,16 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 - PostgreSQL and the external HDD cannot be reached directly from Cloudflare, the LAN, or clients.
 - Backup and restore procedures have been verified using separate media.
 - Dead-man monitoring detects start, success, and intentional failure for every enabled maintenance timer.
+
+The repository smoke checks can be run against the public origin after deployment:
+
+```bash
+PUBLIC_BASE_URL=https://family.example.com make production-smoke
+```
+
+This checks public health, the externally blocked readiness route, unauthenticated API responses, SPA and Service Worker
+availability, and the expected cache-control headers. It does not replace the authenticated live E2E test or real-device
+upload and ZIP measurements.
 
 ## References
 
