@@ -401,20 +401,6 @@ export type AuthSessionResponse = {
 }
 
 /**
- * Body_upload_photo_api_v1_photos_post
- */
-export type BodyUploadPhotoApiV1PhotosPost = {
-  /**
-   * File
-   */
-  file: Blob | File
-  /**
-   * Group Ids
-   */
-  group_ids?: Array<string> | null
-}
-
-/**
  * BulkPhotoSharingAdd
  */
 export type BulkPhotoSharingAdd = {
@@ -3569,38 +3555,6 @@ export type ListPhotoMetadataApiV1PhotosGetResponses = {
 
 export type ListPhotoMetadataApiV1PhotosGetResponse =
   ListPhotoMetadataApiV1PhotosGetResponses[keyof ListPhotoMetadataApiV1PhotosGetResponses]
-
-export type UploadPhotoApiV1PhotosPostData = {
-  body: BodyUploadPhotoApiV1PhotosPost
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path?: never
-  query?: never
-  url: '/api/v1/photos'
-}
-
-export type UploadPhotoApiV1PhotosPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type UploadPhotoApiV1PhotosPostError = UploadPhotoApiV1PhotosPostErrors[keyof UploadPhotoApiV1PhotosPostErrors]
-
-export type UploadPhotoApiV1PhotosPostResponses = {
-  /**
-   * Successful Response
-   */
-  201: PhotoResponse
-}
-
-export type UploadPhotoApiV1PhotosPostResponse =
-  UploadPhotoApiV1PhotosPostResponses[keyof UploadPhotoApiV1PhotosPostResponses]
 
 export type ListPhotoActivityApiV1PhotosActivityGetData = {
   body?: never

@@ -84,7 +84,6 @@ export {
   updatePhotoMetadataApiV1PhotosPhotoIdPatch,
   updateUserRoleApiV1AdminUsersUserIdRolePatch,
   updateUserStatusApiV1AdminUsersUserIdStatusPatch,
-  uploadPhotoApiV1PhotosPost,
 } from './sdk.gen'
 export type {
   AcceptInvitationApiV1AuthInvitationsAcceptPostData,
@@ -134,7 +133,6 @@ export type {
   AssignGroupAdministratorApiV1AdminGroupsGroupIdAdministratorPatchResponse,
   AssignGroupAdministratorApiV1AdminGroupsGroupIdAdministratorPatchResponses,
   AuthSessionResponse,
-  BodyUploadPhotoApiV1PhotosPost,
   BulkAddPhotoSharingApiV1PhotosBulkSharingPostData,
   BulkAddPhotoSharingApiV1PhotosBulkSharingPostError,
   BulkAddPhotoSharingApiV1PhotosBulkSharingPostErrors,
@@ -563,11 +561,6 @@ export type {
   UploadFileCreate,
   UploadItemResponse,
   UploadItemStatus,
-  UploadPhotoApiV1PhotosPostData,
-  UploadPhotoApiV1PhotosPostError,
-  UploadPhotoApiV1PhotosPostErrors,
-  UploadPhotoApiV1PhotosPostResponse,
-  UploadPhotoApiV1PhotosPostResponses,
   UserResponse,
   UserSessionListResponse,
   UserSessionResponse,

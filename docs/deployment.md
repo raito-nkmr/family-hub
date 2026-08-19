@@ -194,7 +194,7 @@ Cloudflare-proxied requests have plan-specific body-size limits; Free and Pro pl
 
 - The production React client always uses the batch chunk-upload API.
 - Keep each chunk comfortably below Cloudflare's request limit.
-- Keep `POST /api/v1/photos` for compatibility, but do not guarantee near-limit files through Cloudflare.
+- The batch chunk-upload API is the only supported photo upload route; do not rely on a single-request upload endpoint.
 - Recheck the current official limit and the actual `413` boundary after changing the production plan or Cloudflare settings.
 
 Treat `PHOTO_MAX_UPLOAD_BYTES` as the whole-file application limit and `PHOTO_UPLOAD_CHUNK_BYTES` as the per-request
