@@ -103,6 +103,7 @@ function App() {
         currentUser={currentUser}
         theme={theme}
         onSessionEnded={handleSessionEnded}
+        onCurrentUserChanged={setCurrentUser}
         onToggleTheme={toggleTheme}
       />
     )

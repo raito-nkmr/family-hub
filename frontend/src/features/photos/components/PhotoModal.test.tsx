@@ -203,6 +203,26 @@ describe('PhotoModal', () => {
     expect(onToggleFavorite).toHaveBeenCalledOnce()
   })
 
+  it('associates metadata editors with accessible labels', () => {
+    render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByLabelText('撮影日時を補正')).toHaveAttribute('type', 'datetime-local')
+    expect(screen.getByLabelText('共有メモ')).toHaveValue('旅行のメモ')
+  })
+
   it('syncs the capture date input after resetting an override', () => {
     const onCaptureDateSave = vi.fn()
     const overriddenPhoto = {

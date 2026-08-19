@@ -124,6 +124,24 @@ describe('usePhotoDashboard', () => {
     expect(result.current.totalCount).toBe(1)
   })
 
+  it('does not load photo groups when the dashboard is outside photo and home screens', async () => {
+    const { result } = renderHook(
+      () =>
+        usePhotoDashboard({
+          enabled: true,
+          libraryEnabled: false,
+          storageEnabled: true,
+          groupsEnabled: false,
+          onUnauthorized: vi.fn(),
+        }),
+      { wrapper: createAppWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(getGroups).not.toHaveBeenCalled()
+  })
+
   it('loads the next cursor page without replacing existing photos', async () => {
     const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
     vi.mocked(getPhotos)

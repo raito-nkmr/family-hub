@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type TouchEvent } from 'react'
+import { useId, useRef, useState, type FormEvent, type TouchEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatBytes, formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
@@ -53,6 +53,8 @@ export function PhotoModal({
 }: PhotoModalProps) {
   const { t } = useTranslation()
   const confirm = useConfirmation()
+  const captureDateId = useId()
+  const memoId = useId()
   const isOwner = photo.uploaded_by_user_id === currentUserId
   const metadataBusy = updatingMetadata || photoDetailLoading
   const [memoState, setMemoState] = useState(() => ({ photoId: photo.id, value: photo.memo ?? '' }))
@@ -303,7 +305,11 @@ export function PhotoModal({
               <div className="photo-memo">
                 <h3>{t('photoDetails.captureDateEdit')}</h3>
                 <form onSubmit={saveCaptureDate}>
+                  <label className="sr-only" htmlFor={captureDateId}>
+                    {t('photoDetails.captureDateEdit')}
+                  </label>
                   <input
+                    id={captureDateId}
                     type="datetime-local"
                     value={captureDate}
                     disabled={metadataBusy}
@@ -337,7 +343,11 @@ export function PhotoModal({
             <div className="photo-memo">
               <h3>{t('photoDetails.memo')}</h3>
               <form onSubmit={saveMemo}>
+                <label className="sr-only" htmlFor={memoId}>
+                  {t('photoDetails.memo')}
+                </label>
                 <textarea
+                  id={memoId}
                   value={memo}
                   maxLength={2000}
                   rows={5}

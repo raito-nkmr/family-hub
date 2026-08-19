@@ -32,10 +32,16 @@ const currentTimelineYear = Number(
 interface PhotoLibraryOptions {
   libraryEnabled: boolean
   storageEnabled: boolean
+  groupsEnabled: boolean
   onUnauthorized: () => void
 }
 
-export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized }: PhotoLibraryOptions) {
+export function usePhotoLibrary({
+  libraryEnabled,
+  storageEnabled,
+  groupsEnabled,
+  onUnauthorized,
+}: PhotoLibraryOptions) {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null)
@@ -51,7 +57,11 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     queryFn: ({ signal }) => getStorageStatus(signal),
     enabled: storageEnabled,
   })
-  const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
+  const groupsQuery = useQuery({
+    queryKey: queryKeys.groups,
+    queryFn: ({ signal }) => getGroups(signal),
+    enabled: groupsEnabled,
+  })
   const searchOptionsQuery = useQuery({
     queryKey: queryKeys.photoSearchOptions,
     queryFn: ({ signal }) => getPhotoSearchOptions(signal),
@@ -89,6 +99,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoStorage }),
       queryClient.invalidateQueries({ queryKey: queryKeys.recentPhotos }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoSearchOptions }),
     ])
   }, [queryClient])
   const search = async (filters: PhotoFilters) => {
@@ -223,7 +234,13 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       setUpdatingMetadata(false)
     }
   }
-  const queryError = [storageQuery.error, groupsQuery.error, timelineQuery.error, photoList.error].some(Boolean)
+  const queryError = [
+    storageQuery.error,
+    groupsQuery.error,
+    timelineQuery.error,
+    photoList.error,
+    searchOptionsQuery.error,
+  ].some(Boolean)
     ? i18n.t('photos.loadFailed')
     : null
 
@@ -243,7 +260,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     previousPhoto,
     nextPhoto,
     loading:
-      groupsQuery.isPending ||
+      (groupsEnabled && groupsQuery.isPending) ||
       (storageEnabled && storageQuery.isPending) ||
       (libraryEnabled && (timelineQuery.isPending || photoList.loading)),
     loadingMore: photoList.loadingMore,

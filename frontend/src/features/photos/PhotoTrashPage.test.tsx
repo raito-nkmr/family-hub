@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getTrashedPhotos, restorePhoto, type Photo } from './api'
+import { getTrashedPhotos, permanentlyDeletePhoto, restorePhoto, type Photo } from './api'
 import { PhotoTrashPage } from './PhotoTrashPage'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 
@@ -11,6 +11,7 @@ vi.mock('./api', () => ({
   permanentlyDeletePhoto: vi.fn(),
   restorePhoto: vi.fn(),
 }))
+vi.mock('../../shared/ui/confirmation', () => ({ useConfirmation: vi.fn(() => async () => true) }))
 
 const photo: Photo = {
   id: 'photo-1',
@@ -45,6 +46,7 @@ describe('PhotoTrashPage', () => {
     localStorage.removeItem('family-hub-photo-grid-columns')
     vi.mocked(getTrashedPhotos).mockResolvedValue({ items: [photo], next_cursor: null, total_count: 1 })
     vi.mocked(restorePhoto).mockResolvedValue({ ...photo, lifecycle_state: 'active' })
+    vi.mocked(permanentlyDeletePhoto).mockResolvedValue(undefined)
   })
 
   it('uses the library grid density and opens actions in a dialog', async () => {
@@ -101,6 +103,20 @@ describe('PhotoTrashPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('写真を復元できませんでした。')
     expect(screen.getByRole('button', { name: '復元する' })).not.toBeDisabled()
+  })
+
+  it('refreshes the library after permanently deleting a photo', async () => {
+    const user = userEvent.setup()
+    const onLibraryChanged = vi.fn()
+    render(<PhotoTrashPage onUnauthorized={vi.fn()} onLibraryChanged={onLibraryChanged} />, {
+      wrapper: createAppWrapper(),
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'ゴミ箱のtrashed.jpgを開く' }))
+    await user.click(screen.getByRole('button', { name: '完全に削除' }))
+
+    await waitFor(() => expect(permanentlyDeletePhoto).toHaveBeenCalledWith('photo-1', expect.anything()))
+    expect(onLibraryChanged).toHaveBeenCalledOnce()
   })
 
   it('announces an asynchronous load error', async () => {

@@ -10,6 +10,7 @@ import { usePhotoDashboard } from '../features/photos/usePhotoDashboard'
 import { PrivacyPage } from '../features/privacy/PrivacyPage'
 import { PwaInstallGuide } from '../features/pwa/PwaInstallGuide'
 import { usePwaInstallGuide } from '../features/pwa/usePwaInstallGuide'
+import { useNotificationLocaleSync } from '../features/notifications/useNotificationLocaleSync'
 import { isUnauthorizedError } from '../shared/api/errors'
 import { queryClient } from '../shared/api/queryClient'
 import type { Theme } from '../shared/types/theme'
@@ -51,10 +52,17 @@ interface AuthenticatedAppProps {
   currentUser: AuthUser
   theme: Theme
   onSessionEnded: () => void
+  onCurrentUserChanged: (user: AuthUser) => void
   onToggleTheme: () => void
 }
 
-export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
+export function AuthenticatedApp({
+  currentUser,
+  theme,
+  onSessionEnded,
+  onCurrentUserChanged,
+  onToggleTheme,
+}: AuthenticatedAppProps) {
   if (currentUser.must_change_password) {
     return (
       <RequiredPasswordChangeScreen
@@ -71,13 +79,20 @@ export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleT
       currentUser={currentUser}
       theme={theme}
       onSessionEnded={onSessionEnded}
+      onCurrentUserChanged={onCurrentUserChanged}
       onToggleTheme={onToggleTheme}
     />
   )
 }
 
-function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
-  const { t } = useTranslation()
+function AuthenticatedAppShell({
+  currentUser,
+  theme,
+  onSessionEnded,
+  onCurrentUserChanged,
+  onToggleTheme,
+}: AuthenticatedAppProps) {
+  const { t, i18n } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const activeView = getAppView(location.pathname)
@@ -91,11 +106,16 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
     onSessionEnded()
     navigate(appPaths.home, { replace: true })
   }, [navigate, onSessionEnded])
+  useNotificationLocaleSync({
+    locale: i18n.resolvedLanguage === 'ja' ? 'ja' : 'en',
+    onUnauthorized: handleUnauthorized,
+  })
 
   const photoDashboard = usePhotoDashboard({
     enabled: true,
     libraryEnabled: activeView === 'photos',
     storageEnabled: activeView !== null && ['home', ...photoViews].includes(activeView),
+    groupsEnabled: activeView === 'home' || activeView === 'photos',
     onUnauthorized: handleUnauthorized,
   })
   const photoActivity = usePhotoActivity({
@@ -222,7 +242,11 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
               path={appPaths.system}
               element={
                 <RequireAdmin role={currentUser.system_role}>
-                  <SystemStatusPage onUnauthorized={handleUnauthorized} />
+                  <SystemStatusPage
+                    currentUserId={currentUser.id}
+                    onUnauthorized={handleUnauthorized}
+                    onCurrentUserChanged={onCurrentUserChanged}
+                  />
                 </RequireAdmin>
               }
             />

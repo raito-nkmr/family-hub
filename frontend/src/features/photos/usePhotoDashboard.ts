@@ -6,6 +6,7 @@ interface PhotoDashboardOptions {
   enabled: boolean
   libraryEnabled?: boolean
   storageEnabled?: boolean
+  groupsEnabled?: boolean
   onUnauthorized: () => void
 }
 
@@ -13,9 +14,10 @@ export function usePhotoDashboard({
   enabled,
   libraryEnabled = enabled,
   storageEnabled = enabled,
+  groupsEnabled = libraryEnabled || storageEnabled,
   onUnauthorized,
 }: PhotoDashboardOptions) {
-  const library = usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized })
+  const library = usePhotoLibrary({ libraryEnabled, storageEnabled, groupsEnabled, onUnauthorized })
   const invalidateLibrary = library.invalidateLibrary
   const handleUploaded = useCallback(() => invalidateLibrary(), [invalidateLibrary])
   const upload = usePhotoUpload({ storage: library.storage, onUploaded: handleUploaded, onUnauthorized })

@@ -74,6 +74,7 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
       await deleteMutation.mutateAsync(photo.id)
       removePhotoFromTrashCache(queryClient, photo.id)
       setSelectedPhoto(null)
+      onLibraryChanged()
     } catch (caught) {
       if (isUnauthorizedError(caught)) onUnauthorized()
       else setError(t('photoTrash.deleteFailed'))

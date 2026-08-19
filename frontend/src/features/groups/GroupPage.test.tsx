@@ -1,12 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api/client'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import {
+  decideGroupMembershipInvitation,
   getGroup,
   getGroupAdministration,
   getGroupAuditEvents,
   getGroups,
+  getMyGroupMembershipInvitations,
   type GroupDetail,
   type FamilyGroup,
 } from './api'
@@ -15,16 +18,23 @@ import { GroupPage } from './GroupPage'
 vi.mock('./api', () => ({
   addGroupMember: vi.fn(),
   createGroup: vi.fn(),
+  decideGroupMembershipInvitation: vi.fn(),
   getGroup: vi.fn(),
   getGroupAdministration: vi.fn(),
   getGroupAuditEvents: vi.fn(),
   getGroupMemberCandidates: vi.fn(),
   getGroups: vi.fn(),
+  getMyGroupMembershipInvitations: vi.fn(),
   removeGroupMember: vi.fn(),
   updateGroupMemberRole: vi.fn(),
 }))
 
 describe('GroupPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([])
+  })
+
   it('returns control to the app when the session expires', async () => {
     vi.mocked(getGroups).mockRejectedValue(new ApiError(401, 'expired'))
     const onUnauthorized = vi.fn()
@@ -82,5 +92,41 @@ describe('GroupPage', () => {
 
     await waitFor(() => expect(screen.getByText('グループ管理情報を読み込めませんでした。')).toBeInTheDocument())
     expect(screen.getByText('グループの監査ログを読み込めませんでした。')).toBeInTheDocument()
+  })
+
+  it('returns control to the app when membership invitations expire', async () => {
+    vi.mocked(getMyGroupMembershipInvitations).mockRejectedValue(new ApiError(401, 'expired'))
+    const onUnauthorized = vi.fn()
+
+    render(<GroupPage currentUserId="current-user" onUnauthorized={onUnauthorized} />, {
+      wrapper: createAppWrapper(),
+    })
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
+  })
+
+  it('returns control to the app when accepting an invitation expires', async () => {
+    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([
+      {
+        id: 'invitation-1',
+        group_id: 'group-1',
+        group_name: '同居家族',
+        user_id: 'current-user',
+        username: 'current-user',
+        role: 'member',
+        status: 'pending',
+        created_at: '2026-07-15T00:00:00Z',
+      },
+    ])
+    vi.mocked(decideGroupMembershipInvitation).mockRejectedValue(new ApiError(401, 'expired'))
+    const onUnauthorized = vi.fn()
+    const user = userEvent.setup()
+
+    render(<GroupPage currentUserId="current-user" onUnauthorized={onUnauthorized} />, {
+      wrapper: createAppWrapper(),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '承認' }))
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
   })
 })

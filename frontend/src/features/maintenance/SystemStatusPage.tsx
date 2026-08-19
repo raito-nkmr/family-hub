@@ -9,6 +9,7 @@ import { LoadingState } from '../../shared/ui/LoadingState'
 import { PageMessage } from '../../shared/ui/PageMessage'
 import { RefreshButton } from '../../shared/ui/RefreshButton'
 import { AddModeratorIcon, BlockIcon, CheckIcon, RemoveModeratorIcon, SaveIcon } from '../../shared/ui/icons'
+import { getCurrentSession, type AuthUser } from '../auth/api'
 import {
   assignAdministrativeGroupAdministrator,
   getAdministrationSnapshot,
@@ -18,10 +19,12 @@ import {
 } from './api'
 
 interface SystemStatusPageProps {
+  currentUserId: string
   onUnauthorized: () => void
+  onCurrentUserChanged: (user: AuthUser) => void
 }
 
-export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
+export function SystemStatusPage({ currentUserId, onUnauthorized, onCurrentUserChanged }: SystemStatusPageProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [currentPassword, setCurrentPassword] = useState('')
@@ -51,12 +54,23 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
         return assignAdministrativeGroupAdministrator(action.groupId, action.userId, currentPassword)
       return updateAdministrativeUserRole(action.userId, action.role, currentPassword)
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, action) => {
       setActionError(null)
       setCurrentPassword('')
       await queryClient.invalidateQueries({ queryKey: queryKeys.administration })
+      if (action.type !== 'group-admin' && action.userId === currentUserId) {
+        try {
+          onCurrentUserChanged(await getCurrentSession())
+        } catch (error) {
+          if (isUnauthorizedError(error)) onUnauthorized()
+          else setActionError(t('systemStatus.adminActionFailed'))
+        }
+      }
     },
-    onError: () => setActionError(t('systemStatus.adminActionFailed')),
+    onError: (error) => {
+      if (isUnauthorizedError(error)) onUnauthorized()
+      else setActionError(t('systemStatus.adminActionFailed'))
+    },
   })
   const status = statusQuery.data
   const activeSystemAdministratorCount =
@@ -78,6 +92,9 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
         />
       </header>
       {statusQuery.error && !isUnauthorizedError(statusQuery.error) && (
+        <PageMessage>{t('systemStatus.loadFailed')}</PageMessage>
+      )}
+      {administrationQuery.error && !isUnauthorizedError(administrationQuery.error) && (
         <PageMessage>{t('systemStatus.loadFailed')}</PageMessage>
       )}
       {status?.alerts.map((alert) => (

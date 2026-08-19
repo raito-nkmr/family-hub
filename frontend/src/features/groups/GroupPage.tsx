@@ -56,6 +56,7 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
   })
   useUnauthorizedError(administrationQuery.error, onUnauthorized)
   useUnauthorizedError(auditQuery.error, onUnauthorized)
+  useUnauthorizedError([invitationsQuery.error, invitationMutation.error].find(isUnauthorizedError), onUnauthorized)
 
   const submitRename = async (event: FormEvent) => {
     event.preventDefault()
