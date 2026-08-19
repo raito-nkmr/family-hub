@@ -167,3 +167,29 @@ def test_retry_sends_only_to_subscriptions_that_have_not_succeeded(monkeypatch: 
         session.execute(delete(User).where(User.id == user.id))
         session.commit()
     engine.dispose()
+
+
+def test_communication_exception_requeues_notification(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert TEST_DATABASE_URL is not None
+    engine = create_database_engine(worker_settings())
+
+    def send_push(**kwargs: object) -> None:
+        raise TimeoutError("push service timed out")
+
+    monkeypatch.setattr("app.features.notifications.worker.webpush", send_push)
+
+    with Session(engine, expire_on_commit=False) as session:
+        user, item = add_notification_records(session, subscription_count=1)
+        worker = NotificationWorker(session, worker_settings())
+
+        assert worker.process(limit=1) == 1
+        session.refresh(item)
+        delivery = session.scalar(select(NotificationDelivery).where(NotificationDelivery.outbox_id == item.id))
+        assert delivery is not None
+        assert item.status == NotificationOutboxStatus.PENDING
+        assert delivery.status == NotificationDeliveryStatus.PENDING
+        assert delivery.last_error == "push_delivery_failed"
+
+        session.execute(delete(User).where(User.id == user.id))
+        session.commit()
+    engine.dispose()

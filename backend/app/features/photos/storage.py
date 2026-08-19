@@ -241,15 +241,15 @@ class PhotoStorage:
             raise PhotoStorageError("Could not inspect resumable upload") from error
 
     def append_resumable_chunk(self, item_id: UUID, expected_offset: int, data: bytes, total_size: int) -> int:
+        actual_offset = self.get_resumable_offset(item_id)
+        if actual_offset != expected_offset:
+            raise UploadOffsetMismatchError(actual_offset)
         if not data:
-            return self.get_resumable_offset(item_id)
+            return actual_offset
         self._require_upload_ready(len(data))
         if self._maximum_upload_bytes is None or total_size > self._maximum_upload_bytes:
             raise UploadTooLargeError("Uploaded file exceeds the configured size limit")
         path = self._resumable_path(item_id, create_directory=True)
-        actual_offset = self.get_resumable_offset(item_id)
-        if actual_offset != expected_offset:
-            raise UploadOffsetMismatchError(actual_offset)
         if actual_offset + len(data) > total_size:
             raise UploadTooLargeError("Chunk exceeds the declared file size")
         persist_started = time.perf_counter()

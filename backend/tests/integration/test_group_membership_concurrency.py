@@ -5,14 +5,15 @@ from threading import Event
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, delete, select
+from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.features.auth.models import SystemRole, User
 from app.features.auth.public import UserDirectory
 from app.features.cleaning.models import CleaningTask
 from app.features.cleaning.service import CleaningNotFoundError, CleaningService
-from app.features.groups.models import FamilyGroup, FamilyGroupMember, GroupRole
+from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
+from app.features.groups.service import GroupMemberAlreadyExistsError, GroupMembershipInvitationError, GroupService
 from app.features.shopping.models import ShoppingItem
 from app.features.shopping.service import ShoppingNotFoundError, ShoppingService
 
@@ -22,6 +23,115 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(TEST_DATABASE_URL is None, reason="TEST_DATABASE_URL is not configured"),
 ]
+
+
+def test_invitation_acceptance_and_direct_member_add_do_not_insert_duplicate_membership() -> None:
+    assert TEST_DATABASE_URL is not None
+    engine = create_engine(TEST_DATABASE_URL, connect_args={"options": "-c timezone=UTC"})
+    actor_id = uuid4()
+    target_id = uuid4()
+    group_id = uuid4()
+    invitation_id = uuid4()
+    now = datetime.now(UTC)
+
+    with Session(engine) as session:
+        session.add_all(
+            [
+                User(
+                    id=actor_id,
+                    username=f"membership-admin-{actor_id.hex}",
+                    password_hash="unused",
+                    is_active=True,
+                    system_role=SystemRole.USER,
+                    created_at=now,
+                    password_changed_at=now,
+                ),
+                User(
+                    id=target_id,
+                    username=f"membership-target-{target_id.hex}",
+                    password_hash="unused",
+                    is_active=True,
+                    system_role=SystemRole.USER,
+                    created_at=now,
+                    password_changed_at=now,
+                ),
+                FamilyGroup(
+                    id=group_id,
+                    name=f"Membership race {group_id.hex}",
+                    created_by_user_id=actor_id,
+                    created_at=now,
+                    updated_at=now,
+                ),
+                FamilyGroupMember(group_id=group_id, user_id=actor_id, role=GroupRole.ADMIN, joined_at=now),
+                FamilyGroupMembershipInvitation(
+                    id=invitation_id,
+                    group_id=group_id,
+                    user_id=target_id,
+                    requested_by_user_id=actor_id,
+                    role=GroupRole.MEMBER,
+                    status="pending",
+                    created_at=now,
+                    responded_at=None,
+                ),
+            ]
+        )
+        session.commit()
+
+    start = Event()
+
+    def accept_invitation() -> str:
+        assert start.wait(timeout=5)
+        with Session(engine) as session:
+            try:
+                GroupService(session, UserDirectory(session)).decide_membership_invitation(
+                    invitation_id,
+                    target_id,
+                    f"membership-target-{target_id.hex}",
+                    True,
+                )
+            except GroupMembershipInvitationError:
+                return "invitation-not-pending"
+        return "accepted"
+
+    def add_member_directly() -> str:
+        assert start.wait(timeout=5)
+        with Session(engine) as session:
+            try:
+                GroupService(session, UserDirectory(session)).add_member(
+                    group_id,
+                    actor_id,
+                    target_id,
+                    GroupRole.MEMBER,
+                )
+            except GroupMemberAlreadyExistsError:
+                return "already-member"
+        return "added"
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(accept_invitation), executor.submit(add_member_directly)]
+            start.set()
+            outcomes = [future.result(timeout=10) for future in futures]
+
+        assert sorted(outcomes) in (
+            ["accepted", "already-member"],
+            ["added", "invitation-not-pending"],
+        )
+        with Session(engine) as session:
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(FamilyGroupMember)
+                    .where(FamilyGroupMember.group_id == group_id, FamilyGroupMember.user_id == target_id)
+                )
+                == 1
+            )
+    finally:
+        with Session(engine) as session:
+            session.execute(delete(FamilyGroup).where(FamilyGroup.id == group_id))
+            session.execute(delete(User).where(User.id.in_((actor_id, target_id))))
+            session.commit()
+        engine.dispose()
 
 
 @pytest.mark.parametrize("resource_kind", ["shopping", "cleaning"])

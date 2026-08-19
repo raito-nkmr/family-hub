@@ -19,12 +19,23 @@ from app.features.photos.registration import DuplicatePhotoError, RegisteredPhot
 from app.features.photos.schemas import UploadFileCreate
 from app.features.photos.storage import FinalizedUpload, PhotoStorage, StorageStatusCode, StorageUnavailableError
 from app.features.photos.uploads import (
+    DUPLICATE_PHOTO_CONSTRAINT,
     UPLOAD_CAPACITY_LOCK_ID,
     UploadBatchInvalidError,
     UploadBatchPersistenceError,
     UploadBatchService,
     UploadBatchStorageError,
 )
+
+
+class IntegrityDiagnostic:
+    def __init__(self, constraint_name: str) -> None:
+        self.constraint_name = constraint_name
+
+
+class IntegrityOrigin:
+    def __init__(self, constraint_name: str) -> None:
+        self.diag = IntegrityDiagnostic(constraint_name)
 
 
 def make_service() -> tuple[UploadBatchService, MagicMock, MagicMock]:
@@ -250,7 +261,7 @@ def test_complete_item_treats_concurrent_photo_as_duplicate(monkeypatch: pytest.
     session.execute.return_value.one_or_none.return_value = (batch, item)
     session.get.return_value = None
     session.scalar.return_value = 0
-    session.flush.side_effect = IntegrityError("insert", {}, RuntimeError("duplicate photo"))
+    session.flush.side_effect = IntegrityError("insert", {}, IntegrityOrigin(DUPLICATE_PHOTO_CONSTRAINT))
     storage.get_resumable_offset.return_value = item.size_bytes
     storage.resumable_as_staged.return_value = MagicMock()
     photo = MagicMock()
@@ -264,6 +275,32 @@ def test_complete_item_treats_concurrent_photo_as_duplicate(monkeypatch: pytest.
     result = service.complete_item(item.id, batch.owner_user_id, "owner")
 
     assert result.status is UploadItemStatus.DUPLICATE
+    session.rollback.assert_called_once_with()
+    storage.cleanup_finalized.assert_called_once_with(finalized)
+    storage.cleanup_resumable.assert_called_once_with(item.id)
+
+
+def test_complete_item_treats_an_unrelated_integrity_error_as_persistence_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item()
+    item.received_bytes = item.size_bytes
+    session.execute.return_value.one_or_none.return_value = (batch, item)
+    session.get.return_value = None
+    session.scalar.return_value = 0
+    session.flush.side_effect = IntegrityError("insert", {}, IntegrityOrigin("some_other_constraint"))
+    storage.get_resumable_offset.return_value = item.size_bytes
+    storage.resumable_as_staged.return_value = MagicMock()
+    finalized = MagicMock(spec=FinalizedUpload)
+    monkeypatch.setattr(
+        "app.features.photos.uploads.register_staged_photo",
+        MagicMock(return_value=RegisteredPhoto(photo=MagicMock(id=item.id), finalized_upload=finalized)),
+    )
+
+    with pytest.raises(UploadBatchPersistenceError):
+        service.complete_item(item.id, batch.owner_user_id, "owner")
+
     session.rollback.assert_called_once_with()
     storage.cleanup_finalized.assert_called_once_with(finalized)
     storage.cleanup_resumable.assert_called_once_with(item.id)

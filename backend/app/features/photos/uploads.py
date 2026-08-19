@@ -43,6 +43,7 @@ TERMINAL_ITEM_STATUSES = {
     UploadItemStatus.DUPLICATE,
     UploadItemStatus.FAILED,
 }
+DUPLICATE_PHOTO_CONSTRAINT = "uq_photos_uploaded_by_user_id_sha256"
 
 
 class UploadBatchNotFoundError(Exception):
@@ -268,14 +269,17 @@ class UploadBatchService:
             )
         try:
             self._session.flush()
-        except IntegrityError:
+        except IntegrityError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
             self._storage.cleanup_resumable(item.id)
-            return self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+            if _is_duplicate_photo_integrity_error(error):
+                return self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+            raise UploadBatchPersistenceError from error
         except SQLAlchemyError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
+            self._storage.cleanup_resumable(item.id)
             raise UploadBatchPersistenceError from error
 
         try:
@@ -398,6 +402,11 @@ class UploadBatchService:
         except SQLAlchemyError as error:
             self._session.rollback()
             raise UploadBatchPersistenceError from error
+
+
+def _is_duplicate_photo_integrity_error(error: IntegrityError) -> bool:
+    diagnostic = getattr(error.orig, "diag", None)
+    return getattr(diagnostic, "constraint_name", None) == DUPLICATE_PHOTO_CONSTRAINT
 
 
 def _storage_status(error: Exception) -> StorageStatusCode | None:

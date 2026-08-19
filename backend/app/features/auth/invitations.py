@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -60,22 +60,41 @@ class InvitationService:
         query: str | None = None,
         invitation_status: str | None = None,
     ) -> list[InvitationSummary]:
+        now = datetime.now(UTC)
+        conditions = []
+        if query:
+            conditions.append(func.lower(UserInvitation.username).contains(query.casefold(), autoescape=True))
+        if invitation_status:
+            status_condition = {
+                "used": UserInvitation.used_at.is_not(None),
+                "revoked": and_(
+                    UserInvitation.used_at.is_(None),
+                    UserInvitation.revoked_at.is_not(None),
+                ),
+                "expired": and_(
+                    UserInvitation.used_at.is_(None),
+                    UserInvitation.revoked_at.is_(None),
+                    UserInvitation.expires_at <= now,
+                ),
+                "pending": and_(
+                    UserInvitation.used_at.is_(None),
+                    UserInvitation.revoked_at.is_(None),
+                    UserInvitation.expires_at > now,
+                ),
+            }.get(invitation_status)
+            if status_condition is None:
+                return []
+            conditions.append(status_condition)
         statement = (
             select(UserInvitation, User.username)
             .join(User, User.id == UserInvitation.created_by_user_id)
+            .where(*conditions)
             .order_by(UserInvitation.created_at.desc(), UserInvitation.id.desc())
         )
-        now = datetime.now(UTC)
-        invitations = [
+        return [
             self._summary(invitation, creator_username, now)
             for invitation, creator_username in self._session.execute(statement)
         ]
-        if query:
-            normalized_query = query.casefold()
-            invitations = [item for item in invitations if normalized_query in item.username.casefold()]
-        if invitation_status:
-            invitations = [item for item in invitations if item.status == invitation_status]
-        return invitations
 
     def create_invitation(
         self,

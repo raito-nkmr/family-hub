@@ -361,6 +361,20 @@ class GroupService:
     ) -> None:
         if accept:
             lock_administrator_mutations(self._session)
+            invitation_reference = self._session.scalar(
+                select(FamilyGroupMembershipInvitation).where(
+                    FamilyGroupMembershipInvitation.id == invitation_id,
+                    FamilyGroupMembershipInvitation.user_id == user_id,
+                    FamilyGroupMembershipInvitation.status == "pending",
+                )
+            )
+            if invitation_reference is None:
+                raise GroupMembershipInvitationError
+            group = self._session.scalar(
+                select(FamilyGroup).where(FamilyGroup.id == invitation_reference.group_id).with_for_update()
+            )
+            if group is None:
+                raise GroupMembershipInvitationError
         invitation = self._session.scalar(
             select(FamilyGroupMembershipInvitation)
             .where(
@@ -375,14 +389,16 @@ class GroupService:
         invitation.status = "accepted" if accept else "rejected"
         invitation.responded_at = datetime.now(UTC)
         if accept:
-            self._session.add(
-                FamilyGroupMember(
-                    group_id=invitation.group_id,
-                    user_id=user_id,
-                    role=invitation.role,
-                    joined_at=invitation.responded_at,
+            if self._session.get(FamilyGroupMember, (invitation.group_id, user_id)) is None:
+                self._session.add(
+                    FamilyGroupMember(
+                        group_id=invitation.group_id,
+                        user_id=user_id,
+                        role=invitation.role,
+                        joined_at=invitation.responded_at,
+                    )
                 )
-            )
+            group.updated_at = invitation.responded_at
         record_administrative_event(
             self._session,
             scope="group",
