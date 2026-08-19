@@ -31,6 +31,66 @@ const photo: Photo = {
 }
 
 describe('PhotoModal', () => {
+  it('moves to adjacent photos for horizontal touch gestures', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    const { container } = render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const imageWrap = container.querySelector('.modal__image-wrap')!
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 105 }] })
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 180, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 100, clientY: 105 }] })
+
+    expect(onPreviousPhoto).toHaveBeenCalledOnce()
+    expect(onNextPhoto).toHaveBeenCalledOnce()
+  })
+
+  it('ignores short and mostly vertical touch gestures', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    const { container } = render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const imageWrap = container.querySelector('.modal__image-wrap')!
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 140, clientY: 101 }] })
+    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 250 }] })
+
+    expect(onPreviousPhoto).not.toHaveBeenCalled()
+    expect(onNextPhoto).not.toHaveBeenCalled()
+  })
+
   it('groups owner actions with consistent button styling', () => {
     render(
       <PhotoModal

@@ -315,6 +315,7 @@
   min-height: 440px;
   overflow: hidden;
   background: var(--color-bg-modal-image);
+  touch-action: pan-y;
   place-items: center;
 }
 

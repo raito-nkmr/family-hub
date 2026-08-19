@@ -60,8 +60,9 @@ infinite scrolling, and search controls. Failed automatic loading can be retried
 
 On mobile, the photo list shows thumbnails with month headings, favorite state, and sharing state. Users can choose 2, 3,
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
-in photo details. Search conditions and the upload panel start collapsed on mobile; the active search count appears on the
-search toggle, and the upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
+in photo details. Horizontal swipes in the enlarged photo view move between adjacent photos already loaded in the library.
+Search conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and
+the upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
 
 The New view shows photos uploaded by other users to the user's groups and photos newly shared with those groups, ordered
 by operation time. A batch upload or bulk share is represented as one operation. Events before group membership, the user's

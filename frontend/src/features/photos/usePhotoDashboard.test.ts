@@ -143,6 +143,29 @@ describe('usePhotoDashboard', () => {
     expect(result.current.hasMore).toBe(false)
   })
 
+  it('exposes adjacent library photos for detail navigation', async () => {
+    const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
+    const thirdPhoto = { ...photo, id: 'photo-3', original_filename: 'third.jpg' }
+    vi.mocked(getPhotos).mockResolvedValue({
+      items: [photo, secondPhoto, thirdPhoto],
+      next_cursor: null,
+      total_count: 3,
+    })
+    vi.mocked(getPhoto).mockImplementation(
+      async (photoId) => [photo, secondPhoto, thirdPhoto].find(({ id }) => id === photoId) ?? photo,
+    )
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.selectPhoto(secondPhoto))
+
+    expect(result.current.previousPhoto?.id).toBe('photo-1')
+    expect(result.current.nextPhoto?.id).toBe('photo-3')
+  })
+
   it('ignores an old cursor page that completes after a new search', async () => {
     const oldPagePhoto = { ...photo, id: 'old-page-photo' }
     const searchedPhoto = { ...photo, id: 'searched-photo' }

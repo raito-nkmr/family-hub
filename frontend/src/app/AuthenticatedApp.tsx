@@ -234,6 +234,7 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
 
       {photoDashboard.selectedPhoto && (
         <PhotoModal
+          key={photoDashboard.selectedPhoto.id}
           photo={photoDashboard.selectedPhoto}
           currentUserId={currentUser.id}
           updatingMetadata={photoDashboard.updatingMetadata}
@@ -248,6 +249,14 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
           }
           onTrash={() => void photoDashboard.moveSelectedPhotoToTrash()}
           onModerateGroupShare={(groupId, password) => void photoDashboard.moderateGroupShare(groupId, password)}
+          onPreviousPhoto={
+            photoDashboard.previousPhoto
+              ? () => void photoDashboard.selectPhoto(photoDashboard.previousPhoto!)
+              : undefined
+          }
+          onNextPhoto={
+            photoDashboard.nextPhoto ? () => void photoDashboard.selectPhoto(photoDashboard.nextPhoto!) : undefined
+          }
         />
       )}
       {pwaInstall.guideOpen && <PwaInstallGuide onClose={pwaInstall.closeGuide} />}

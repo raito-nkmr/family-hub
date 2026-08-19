@@ -78,6 +78,9 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
   const selectedPhoto = detailQuery.data ?? null
+  const selectedPhotoIndex = photoList.photos.findIndex((photo) => photo.id === selectedPhotoId)
+  const previousPhoto = selectedPhotoIndex > 0 ? photoList.photos[selectedPhotoIndex - 1] : null
+  const nextPhoto = selectedPhotoIndex >= 0 ? (photoList.photos[selectedPhotoIndex + 1] ?? null) : null
   const invalidateLibrary = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix }),
@@ -212,6 +215,8 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     searchOptions: searchOptionsQuery.data ?? null,
     searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
+    previousPhoto,
+    nextPhoto,
     loading:
       groupsQuery.isPending ||
       (storageEnabled && storageQuery.isPending) ||
