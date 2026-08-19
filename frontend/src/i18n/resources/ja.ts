@@ -49,8 +49,8 @@ export const ja: TranslationShape = {
     sectionLabel: '機能内の切り替え',
   },
   home: {
-    title: '家族の今をひと目で',
-    description: '最近の写真、掃除の予定、買い物リストをまとめて確認する。',
+    title: '最近の更新',
+    description: 'まだ確認していない写真や動画、そろそろ行う掃除や買い物リスト一覧です。',
     loading: 'ホームを読み込んでいます',
     loadFailed: 'ホームの情報を読み込めませんでした。',
     photos: '最近の写真',

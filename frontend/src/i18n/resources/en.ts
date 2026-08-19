@@ -45,8 +45,8 @@ export const en = {
     sectionLabel: 'Section',
   },
   home: {
-    title: 'Your family at a glance',
-    description: 'See recent photos, upcoming cleaning, and the shopping list in one place.',
+    title: 'Recent updates',
+    description: "See photos and videos you haven't checked yet, cleaning tasks that are due soon, and shopping lists.",
     loading: 'Loading home',
     loadFailed: 'Could not load the home summary.',
     photos: 'Recent photos',
