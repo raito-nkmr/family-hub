@@ -204,7 +204,7 @@ export const ja: TranslationShape = {
   photos: {
     title: '写真ライブラリ',
     description:
-      'iPhoneの写真を自宅のストレージへ安全に保存・整理し、家族と思い出を共有し、必要なときに原本を書き出す。',
+      'アップロードされた写真や動画です。家族共有写真や自分のバックアップとしても使え、原本のダウンロードも行えます。',
     library: 'LIBRARY',
     listTitle: '写真一覧',
     count: '{{total}}枚中{{shown}}枚を表示',
@@ -240,12 +240,12 @@ export const ja: TranslationShape = {
   },
   photoActivity: {
     title: '新着写真',
-    description: '家族が最近追加した写真や、新しく共有された写真を確認する。',
+    description: '最近追加した写真や、新しく共有された写真です。',
     uploaded: '{{username}}さんが写真を{{count}}枚追加しました',
     shared: '{{username}}さんが写真を{{count}}枚共有しました',
     loading: '新着写真を読み込み中',
     empty: '新着写真はありません',
-    emptyHelp: '家族から共有された新しい写真がここに表示されます。',
+    emptyHelp: '最近共有された写真はまだありません。',
     loadFailed: '新着写真を読み込めませんでした。',
     moreFailed: '新着写真の続きを読み込めませんでした。',
     markSeenFailed: '新着写真を既読にできませんでした。',
@@ -409,7 +409,7 @@ export const ja: TranslationShape = {
   photoTrash: {
     detailEyebrow: 'ゴミ箱の写真',
     title: 'ゴミ箱',
-    description: '保持期間が終わる前に写真を復元するか、完全に削除する。',
+    description: 'ゴミ箱に入れて一定期間経過すると完全に削除されます。',
     count: '{{total}}枚中{{shown}}枚を表示',
     loading: 'ゴミ箱を読み込み中',
     empty: 'ゴミ箱は空です',
@@ -498,7 +498,7 @@ export const ja: TranslationShape = {
   albums: {
     detailEyebrow: 'アルバム',
     title: 'アルバム',
-    description: '旅行や季節ごとに写真をまとめ、振り返りやすく整理する。',
+    description: '旅行やイベントごとにアルバムを作れます。',
     create: 'アルバムを作成',
     edit: 'アルバムを編集',
     editAction: '編集',
@@ -548,7 +548,8 @@ export const ja: TranslationShape = {
   },
   cleaning: {
     title: '掃除',
-    description: '掃除の頻度を設定し、次回の掃除のタイミングを管理する。完了した掃除は「掃除完了」ボタンで記録する。',
+    description:
+      '掃除箇所と頻度を設定することで、次の掃除タイミングを管理できます。完了した掃除は「完了ボタン」を押してください。',
     add: '掃除箇所を追加',
     group: '家族グループ',
     board: '掃除する場所',
@@ -588,7 +589,7 @@ export const ja: TranslationShape = {
   },
   shopping: {
     title: '買い物リスト',
-    description: '必要なものを追加し、買い物中に購入済みとして記録する。',
+    description: '買い出しリストを管理できます。購入したら購入ボタンを押してください。',
     group: '家族グループ',
     itemName: '買うもの',
     itemPlaceholder: '例：牛乳 2本',
@@ -613,7 +614,7 @@ export const ja: TranslationShape = {
   groups: {
     detailEyebrow: '家族グループ',
     title: '家族グループ',
-    description: '家族グループを作成し、メンバーとFamily Hubの機能を共有する。',
+    description: '家族メンバーの管理を行えます。',
     create: 'グループを作成',
     list: '所属グループ',
     count_one: '{{count}}件のグループ',

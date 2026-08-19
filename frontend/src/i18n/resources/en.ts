@@ -206,7 +206,7 @@ export const en = {
   photos: {
     title: 'Photos',
     description:
-      'Safely store and organize iPhone photos on your home storage, share memories with family, and export the originals whenever you need them.',
+      'This is where uploaded photos and videos are stored. Use it to share photos with your family or back up your own photos, and download the originals whenever you need them.',
     library: 'LIBRARY',
     listTitle: 'Photos',
     count: '{{shown}} of {{total}} photos shown',
@@ -242,12 +242,12 @@ export const en = {
   },
   photoActivity: {
     title: 'Recent photos',
-    description: 'See photos that your family recently added or shared with you.',
+    description: 'Photos recently added or newly shared.',
     uploaded: '{{username}} added {{count}} photos',
     shared: '{{username}} shared {{count}} photos',
     loading: 'Loading recent photos',
     empty: 'No recent photos',
-    emptyHelp: 'New photos shared by your family will appear here.',
+    emptyHelp: 'No recently shared photos yet.',
     loadFailed: 'Could not load recent photos.',
     moreFailed: 'Could not load more recent photos.',
     markSeenFailed: 'Could not mark recent photos as seen.',
@@ -415,7 +415,7 @@ export const en = {
   photoTrash: {
     detailEyebrow: 'Trashed photo',
     title: 'Trash',
-    description: 'Restore your photos or permanently delete them before their retention period ends.',
+    description: 'Photos are permanently deleted after remaining in the trash for a set period.',
     count: '{{shown}} of {{total}} photos shown',
     loading: 'Loading trash',
     empty: 'Trash is empty',
@@ -504,7 +504,7 @@ export const en = {
   albums: {
     detailEyebrow: 'Album',
     title: 'Albums',
-    description: 'Organize photos by trip, season, or any moment you want to revisit.',
+    description: 'Create albums for trips and events.',
     create: 'Create album',
     edit: 'Edit album',
     editAction: 'Edit',
@@ -555,7 +555,7 @@ export const en = {
   cleaning: {
     title: 'Cleaning',
     description:
-      'Choose how often each place should be cleaned to see when it’s due next. When you’re done cleaning, select “Mark complete.”',
+      'Set each place and its cleaning frequency to manage when it is next due. When you finish cleaning, press the “Mark complete” button.',
     add: 'Add cleaning task',
     group: 'Family group',
     board: 'Places to clean',
@@ -595,7 +595,7 @@ export const en = {
   },
   shopping: {
     title: 'Shopping List',
-    description: 'Add what the family needs whenever you notice it, then check items off at the store.',
+    description: 'Manage your shopping list. Press the purchase button when you buy an item.',
     group: 'Family group',
     itemName: 'Item to buy',
     itemPlaceholder: 'e.g. Milk × 2',
@@ -620,7 +620,7 @@ export const en = {
   groups: {
     detailEyebrow: 'Family group',
     title: 'Family Groups',
-    description: 'Create a family group to share Family Hub features with its members.',
+    description: 'Manage family members.',
     create: 'Create group',
     list: 'Your groups',
     count_one: '{{count}} group',
