@@ -96,6 +96,9 @@ Start the backend from `backend/`:
 uv run --locked uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 18000
 ```
 
+Application settings use process environment variables first and fall back to `backend/.env`. The explicit `--env-file .env`
+option keeps the local Uvicorn process environment visible to tooling; production systemd uses its configured environment file.
+
 Start the frontend from `frontend/` in another terminal:
 
 ```bash

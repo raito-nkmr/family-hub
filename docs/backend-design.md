@@ -275,7 +275,8 @@ transaction-level advisory lock, then include unreceived bytes from existing act
 Browsers send 8 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
 timeout; after a transient failure, the client reconciles the server offset and retries the chunk up to three times.
 Reconcile the database position with `.part` size after interruption and resume only within the same open page. Expired
-batches are canceled and temporary files removed on access or new-batch creation.
+batches are canceled and temporary files removed on access or new-batch creation. Expiration cleanup locks the batch and all
+its items in batch-then-item order before deleting resumable files, so it cannot race a chunk write.
 
 The current five-second request timeout is intentionally short for development diagnostics on the LAN. It makes a stalled
 request and its retries observable quickly; it is not the production timeout target and increasing it does not fix a
@@ -353,7 +354,9 @@ rollback boundaries explicit at service use-case boundaries. Manage all schema c
 production schema implicitly with `create_all()`. Start with synchronous file and database I/O; measure before introducing
 async database access.
 
-Use typed settings and never hard-code environment paths or credentials. Key settings include `DATABASE_URL`, trusted origins,
+Use typed settings and never hard-code environment paths or credentials. Both the web application and management commands use
+the same settings loader: process environment variables take precedence, and `backend/.env` is the fallback for local direct
+invocation. Key settings include `DATABASE_URL`, trusted origins,
 session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
 `PHOTO_STORAGE_ROOT`, `PHOTO_DERIVATIVE_ROOT`, `BACKUP_STORAGE_ROOT`, storage markers, upload and free-space limits,
 default timezone, Push provider allowlist and
