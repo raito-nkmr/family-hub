@@ -53,13 +53,16 @@ def test_get_album_returns_photos_from_public_catalog() -> None:
     ]
     service, catalog = make_service(session)
     catalog.list_by_ids.return_value = [photo]
+    catalog.favorite_photo_ids.return_value = {photo.id}
     user_id = uuid4()
 
     result = service.get_album(album.id, user_id)
 
     assert result.album.photo_count == 1
     assert result.photos == [photo]
+    assert result.favorite_photo_ids == {photo.id}
     catalog.list_by_ids.assert_called_once_with([photo.id], user_id)
+    catalog.favorite_photo_ids.assert_called_once_with([photo.id], user_id)
 
 
 def test_get_album_raises_when_album_does_not_exist() -> None:

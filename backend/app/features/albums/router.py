@@ -44,7 +44,7 @@ def _detail_response(
             photo_response_from_model(
                 photo,
                 visible_group_ids=detail.visible_group_ids.get(photo.id, set()),
-                is_favorite=False,
+                is_favorite=photo.id in detail.favorite_photo_ids,
             )
             for photo in detail.photos
         ],

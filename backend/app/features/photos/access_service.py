@@ -7,9 +7,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.features.groups.public import FamilyGroupMember
 from app.features.photos.access import photo_is_in_library
-from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite, PhotoShare
+from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite
+from app.features.photos.public import visible_share_group_ids
 from app.features.photos.service import (
     PhotoContent,
     PhotoContentUnavailableError,
@@ -55,20 +55,7 @@ class PhotoAccessService:
         return self._session.get(PhotoFavorite, (user_id, photo_id)) is not None
 
     def visible_share_group_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> dict[UUID, set[UUID]]:
-        if not photo_ids:
-            return {}
-        rows = self._session.execute(
-            select(PhotoShare.photo_id, PhotoShare.group_id)
-            .join(FamilyGroupMember, FamilyGroupMember.group_id == PhotoShare.group_id)
-            .where(
-                PhotoShare.photo_id.in_(photo_ids),
-                FamilyGroupMember.user_id == viewer_user_id,
-            )
-        ).all()
-        visible: dict[UUID, set[UUID]] = {photo_id: set() for photo_id in photo_ids}
-        for photo_id, group_id in rows:
-            visible[photo_id].add(group_id)
-        return visible
+        return visible_share_group_ids(self._session, photo_ids, viewer_user_id)
 
     def set_favorite(self, photo_id: UUID, user_id: UUID, favorite: bool) -> Photo:
         photo = self.get_photo(photo_id, user_id)

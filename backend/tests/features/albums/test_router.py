@@ -106,11 +106,12 @@ def test_create_album_maps_unavailable_group_to_404() -> None:
 
 def test_get_album_returns_photos() -> None:
     photo = make_photo()
-    detail = AlbumDetail(make_summary(photo_count=1), [photo])
+    detail = AlbumDetail(make_summary(photo_count=1), [photo], favorite_photo_ids={photo.id})
 
     response = get_album(detail.album.id, TEST_USER, AlbumServiceStub(detail))
 
     assert response.photos[0].id == photo.id
+    assert response.photos[0].is_favorite is True
     assert response.next_cursor is None
 
 
