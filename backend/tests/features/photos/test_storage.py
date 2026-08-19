@@ -2,9 +2,8 @@ import hashlib
 import json
 from dataclasses import replace
 from datetime import UTC, datetime
-from errno import EIO, ENOSPC
-from io import BytesIO
 from pathlib import Path
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -23,7 +22,6 @@ from app.features.photos.storage import (
     StorageStatusCode,
     StorageUnavailableError,
     UploadOffsetMismatchError,
-    UploadTooLargeError,
 )
 
 EXPECTED_MARKER = "test-storage-marker"
@@ -353,18 +351,6 @@ def test_get_derivative_path_rejects_unsafe_keys(
         storage.get_derivative_path(storage_key)
 
 
-def test_stage_upload_writes_chunks_and_calculates_hash(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    storage = make_available_storage(tmp_path, monkeypatch)
-    photo_id = uuid4()
-
-    result = storage.stage_upload(BytesIO(b"uploaded photo"), photo_id)
-
-    assert result.path == tmp_path / "incoming" / f"{photo_id}.part"
-    assert result.path.read_bytes() == b"uploaded photo"
-    assert result.size_bytes == 14
-    assert result.sha256 == hashlib.sha256(b"uploaded photo").hexdigest()
-
-
 def test_resumable_upload_appends_chunks_and_builds_staged_metadata(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -473,49 +459,6 @@ def test_cleanup_resumable_removes_partial_file(tmp_path: Path, monkeypatch: pyt
     assert storage.get_resumable_offset(item_id) == 0
 
 
-def test_stage_upload_removes_part_when_size_limit_is_exceeded(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    storage = PhotoStorage(make_settings(tmp_path, maximum_upload_bytes=4))
-    write_marker(tmp_path)
-    monkeypatch.setattr(storage_module, "_is_mount_point", lambda path: True)
-    monkeypatch.setattr(storage_module, "_is_read_only", lambda path: False)
-    monkeypatch.setattr(storage_module, "_is_writable", lambda path: True)
-    monkeypatch.setattr(storage_module, "_get_free_bytes", lambda path: MINIMUM_FREE_BYTES + 4)
-    photo_id = uuid4()
-
-    with pytest.raises(UploadTooLargeError):
-        storage.stage_upload(BytesIO(b"12345"), photo_id)
-
-    assert not (tmp_path / "incoming" / f"{photo_id}.part").exists()
-
-
-@pytest.mark.parametrize(
-    ("error_number", "expected_exception"),
-    [(ENOSPC, StorageUnavailableError), (EIO, PhotoStorageError)],
-)
-def test_stage_upload_converts_io_errors(
-    error_number: int,
-    expected_exception: type[Exception],
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    storage = make_available_storage(tmp_path, monkeypatch)
-    photo_id = uuid4()
-
-    class FailingSource:
-        def read(self, size: int) -> bytes:
-            raise OSError(error_number, "simulated write failure")
-
-    with pytest.raises(expected_exception) as error:
-        storage.stage_upload(FailingSource(), photo_id)
-
-    if isinstance(error.value, StorageUnavailableError):
-        assert error.value.status is StorageStatusCode.INSUFFICIENT_SPACE
-    assert not (tmp_path / "incoming" / f"{photo_id}.part").exists()
-
-
 def make_staged_derivative(root: Path, photo_id) -> StagedDerivative:
     path = root / "derivatives" / "incoming" / f"{photo_id}.thumbnail.part"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -574,7 +517,8 @@ def make_sidecar(
 def test_finalize_upload_moves_original_and_writes_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     storage = make_available_storage(tmp_path, monkeypatch)
     photo_id = uuid4()
-    staged = storage.stage_upload(BytesIO(b"photo"), photo_id)
+    storage.append_resumable_chunk(photo_id, 0, b"photo", 5)
+    staged = storage.resumable_as_staged(photo_id, 5)
     derivative = make_staged_derivative(tmp_path, photo_id)
     storage_key = f"originals/2026/07/{photo_id}.jpg"
     metadata = make_sidecar(photo_id, storage_key, staged.size_bytes, staged.sha256, derivative)
@@ -635,7 +579,8 @@ def test_finalize_upload_moves_original_and_writes_sidecar(tmp_path: Path, monke
 def test_update_sidecar_replaces_metadata_atomically(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     storage = make_available_storage(tmp_path, monkeypatch)
     photo_id = uuid4()
-    staged = storage.stage_upload(BytesIO(b"photo"), photo_id)
+    storage.append_resumable_chunk(photo_id, 0, b"photo", 5)
+    staged = storage.resumable_as_staged(photo_id, 5)
     derivative = make_staged_derivative(tmp_path, photo_id)
     metadata = make_sidecar(
         photo_id,
@@ -703,7 +648,8 @@ def test_finalize_upload_removes_original_when_sidecar_rename_fails(
 ) -> None:
     storage = make_available_storage(tmp_path, monkeypatch)
     photo_id = uuid4()
-    staged = storage.stage_upload(BytesIO(b"photo"), photo_id)
+    storage.append_resumable_chunk(photo_id, 0, b"photo", 5)
+    staged = storage.resumable_as_staged(photo_id, 5)
     derivative = make_staged_derivative(tmp_path, photo_id)
     storage_key = f"originals/2026/07/{photo_id}.jpg"
     original_replace = Path.replace
@@ -725,3 +671,25 @@ def test_finalize_upload_removes_original_when_sidecar_rename_fails(
     assert not (tmp_path / storage_key).exists()
     assert not staged.path.exists()
     assert not (tmp_path / "incoming" / f"{photo_id}.json.part").exists()
+
+
+def test_delete_photo_files_logs_photo_id_and_path_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+    photo_id = uuid4()
+    target = tmp_path / "originals" / "2026" / "08" / f"{photo_id}.jpg"
+    target.parent.mkdir(parents=True)
+    logger = MagicMock()
+    monkeypatch.setattr(storage_module, "logger", logger)
+
+    def fail_unlink(self: Path, *, missing_ok: bool = False) -> None:
+        raise OSError("simulated deletion failure")
+
+    monkeypatch.setattr(Path, "unlink", fail_unlink)
+
+    with pytest.raises(PhotoStorageError):
+        storage.delete_photo_files(f"originals/2026/08/{photo_id}.jpg", (), photo_id=photo_id)
+
+    logger.exception.assert_called_once_with("Photo storage file deletion failed photo_id=%s path=%s", photo_id, target)

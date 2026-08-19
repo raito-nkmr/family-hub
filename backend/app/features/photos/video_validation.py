@@ -24,7 +24,12 @@ VIDEO_CONTENT_TYPES = {
     "video/quicktime": ".mov",
     "video/x-m4v": ".m4v",
 }
-_SUPPORTED_FORMATS = {"3g2", "3gp", "m4a", "mj2", "mov", "mp4"}
+_SUPPORTED_FORMATS_BY_CONTENT_TYPE = {
+    "video/mp4": {"mp4"},
+    "video/quicktime": {"mov"},
+    # ffprobe identifies M4V files through the ISO-BMFF mp4 demuxer.
+    "video/x-m4v": {"mov", "mp4"},
+}
 _FFPROBE_TIMEOUT_SECONDS = 30
 
 
@@ -66,7 +71,8 @@ def inspect_video(path: Path, declared_content_type: str, default_timezone: str)
     except (KeyError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as error:
         raise InvalidVideoError("Uploaded file does not contain a usable video stream") from error
 
-    if not format_names & _SUPPORTED_FORMATS or width <= 0 or height <= 0:
+    allowed_formats = _SUPPORTED_FORMATS_BY_CONTENT_TYPE[declared_content_type]
+    if not format_names & allowed_formats or width <= 0 or height <= 0:
         raise InvalidVideoError("Uploaded video format is not supported")
 
     captured_at = _get_creation_time(probe, default_timezone)

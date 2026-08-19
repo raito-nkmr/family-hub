@@ -52,6 +52,27 @@ def test_inspect_video_rejects_missing_video_stream(tmp_path: Path, monkeypatch:
         inspect_video(path, "video/mp4", "Asia/Tokyo")
 
 
+@pytest.mark.parametrize("format_name", ["3gp", "3g2", "m4a", "mj2"])
+def test_inspect_video_rejects_unsupported_container(
+    format_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "clip.mp4"
+    path.write_bytes(b"video")
+    probe = {
+        "streams": [{"codec_type": "video", "width": 1920, "height": 1080}],
+        "format": {"format_name": format_name},
+    }
+    monkeypatch.setattr(
+        "app.features.photos.video_validation.subprocess.run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(probe)),
+    )
+
+    with pytest.raises(InvalidVideoError):
+        inspect_video(path, "video/mp4", "Asia/Tokyo")
+
+
 def test_generate_video_thumbnail_writes_webp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     source = tmp_path / "clip.mp4"
     destination = tmp_path / "clip.webp"

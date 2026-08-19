@@ -5,18 +5,26 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.features.photos import trash_service as trash_service_module
 from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.export_service import PhotoExportService
 from app.features.photos.image_validation import ImageMetadata
 from app.features.photos.metadata_service import PhotoMetadataService
-from app.features.photos.models import PhotoActivityEventType, PhotoDerivativeKind, PhotoVisibility
+from app.features.photos.models import (
+    PhotoActivityEventType,
+    PhotoDerivativeKind,
+    PhotoLifecycleState,
+    PhotoVisibility,
+)
 from app.features.photos.registration import register_staged_photo
 from app.features.photos.service import (
     InvalidTrashCursorError,
     PhotoBulkSelectionError,
     PhotoContentUnavailableError,
+    PhotoDeletePersistenceError,
     PhotoExportSelectionError,
     PhotoNotFoundError,
     PhotoUpdateConflictError,
@@ -27,7 +35,6 @@ from app.features.photos.storage import (
     OriginalNotFoundError,
     PhotoStorage,
     PhotoStorageError,
-    StagedDerivative,
     StagedUpload,
 )
 from app.features.photos.trash_service import PhotoTrashService
@@ -111,20 +118,44 @@ def test_list_trashed_photos_rejects_invalid_cursor() -> None:
         service.list_trashed_photos(uuid4(), cursor="not-a-cursor")
 
 
-def test_set_favorite_creates_user_specific_record() -> None:
+def test_permanent_delete_logs_sidecar_restore_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    photo.lifecycle_state = PhotoLifecycleState.TRASHED
+    photo.trashed_at = datetime(2026, 7, 15, 3, tzinfo=UTC)
+    photo.trashed_by_user_id = photo.uploaded_by_user_id
+    photo.purge_after = datetime(2026, 8, 14, 3, tzinfo=UTC)
+    session.scalar.return_value = photo
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+    service, storage = make_trash_service(session)
+    storage.update_sidecar.side_effect = [None, PhotoStorageError("restore failed")]
+    logger = MagicMock()
+    monkeypatch.setattr(trash_service_module, "logger", logger)
+
+    with pytest.raises(PhotoDeletePersistenceError):
+        service.permanently_delete_photo(photo.id, photo.uploaded_by_user_id)
+
+    logger.exception.assert_called_once_with(
+        "Failed to restore photo sidecar after lifecycle rollback photo_id=%s",
+        photo.id,
+    )
+    session.rollback.assert_called_once_with()
+
+
+def test_set_favorite_uses_idempotent_postgresql_insert() -> None:
     session = MagicMock(spec=Session)
     photo = make_photo()
     user_id = uuid4()
     session.scalar.return_value = photo
-    session.get.return_value = None
     service, _ = make_access_service(session)
 
     result = service.set_favorite(photo.id, user_id, True)
 
     assert result is photo
-    favorite = session.add.call_args.args[0]
-    assert favorite.user_id == user_id
-    assert favorite.photo_id == photo.id
+    statement = session.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "INSERT INTO photo_favorites" in sql
+    assert "ON CONFLICT (user_id, photo_id) DO NOTHING" in sql
     session.commit.assert_called_once_with()
 
 
@@ -505,18 +536,8 @@ def test_update_photo_rejects_stale_metadata_version() -> None:
     storage.update_sidecar.assert_not_called()
 
 
-def configure_staged_upload(storage: MagicMock, tmp_path: Path) -> StagedUpload:
+def configure_staged_upload(tmp_path: Path) -> StagedUpload:
     staged = StagedUpload(uuid4(), tmp_path / "photo.part", 5, "b" * 64)
-    thumbnail = StagedDerivative(
-        path=tmp_path / "thumbnail.part",
-        storage_key=f"thumbnails/2026/07/{staged.photo_id}.webp",
-        content_type="image/webp",
-        width=480,
-        height=360,
-        size_bytes=32_768,
-    )
-    storage.stage_upload.return_value = staged
-    storage.stage_thumbnail.return_value = thumbnail
     return staged
 
 
@@ -527,7 +548,7 @@ def test_register_staged_photo_does_not_change_database_transaction(
     session = MagicMock(spec=Session)
     session.scalar.return_value = None
     storage = MagicMock(spec=PhotoStorage)
-    staged = configure_staged_upload(storage, tmp_path)
+    staged = configure_staged_upload(tmp_path)
     monkeypatch.setattr(
         "app.features.photos.registration.inspect_image",
         lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, None),

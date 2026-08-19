@@ -1,6 +1,7 @@
 import base64
 import binascii
 import json
+import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -21,6 +22,8 @@ from app.features.photos.service import (
     TrashedPhotoPage,
 )
 from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+
+logger = logging.getLogger(__name__)
 
 
 class PhotoTrashService:
@@ -191,14 +194,17 @@ class PhotoTrashService:
             try:
                 self._storage.update_sidecar(previous_metadata)
             except PhotoStorageError:
-                pass
+                logger.exception(
+                    "Failed to restore photo sidecar after lifecycle rollback photo_id=%s",
+                    photo.id,
+                )
             raise PhotoDeletePersistenceError("Could not update photo lifecycle") from error
 
     def _delete_pending_photo(self, photo: Photo) -> None:
         derivative_keys = tuple(derivative.storage_key for derivative in photo.derivatives)
         clear_photo_as_cover(self._session, photo.id)
         try:
-            self._storage.delete_photo_files(photo.storage_key, derivative_keys)
+            self._storage.delete_photo_files(photo.storage_key, derivative_keys, photo_id=photo.id)
         except PhotoStorageError as error:
             self._session.rollback()
             raise PhotoDeleteStorageError("Could not permanently delete photo files") from error

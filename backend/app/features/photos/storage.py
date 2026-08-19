@@ -11,7 +11,6 @@ from enum import StrEnum
 from errno import EDQUOT, ENOSPC
 from pathlib import Path, PurePosixPath
 from secrets import compare_digest
-from typing import BinaryIO
 from uuid import UUID
 
 from app.core.config import Settings
@@ -164,6 +163,7 @@ class FinalizedUpload:
     original_path: Path
     sidecar_path: Path
     derivative_path: Path | None = None
+    photo_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -447,37 +447,6 @@ class PhotoStorage:
             return self._status(StorageStatusCode.MARKER_MISMATCH)
         return self._status(StorageStatusCode.AVAILABLE)
 
-    def stage_upload(self, source: BinaryIO, photo_id: UUID) -> StagedUpload:
-        self._require_upload_ready(self._maximum_upload_bytes)
-        incoming = self._get_or_create_directory(PurePosixPath("incoming"))
-        part_path = incoming / f"{photo_id}.part"
-        digest = hashlib.sha256()
-        size_bytes = 0
-
-        try:
-            with part_path.open("xb") as destination:
-                while chunk := source.read(self._upload_chunk_bytes):
-                    size_bytes += len(chunk)
-                    if size_bytes > self._maximum_upload_bytes:
-                        raise UploadTooLargeError("Uploaded file exceeds the configured size limit")
-                    destination.write(chunk)
-                    digest.update(chunk)
-                destination.flush()
-                os.fsync(destination.fileno())
-        except UploadTooLargeError:
-            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
-            raise
-        except OSError as error:
-            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
-            if error.errno in {ENOSPC, EDQUOT}:
-                raise StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE) from error
-            raise PhotoStorageError("Could not stage uploaded photo") from error
-        except Exception:
-            self.cleanup_staged(StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest()))
-            raise
-
-        return StagedUpload(photo_id, part_path, size_bytes, digest.hexdigest())
-
     def stage_thumbnail(
         self,
         source_path: Path,
@@ -532,23 +501,25 @@ class PhotoStorage:
             try:
                 sidecar_part.replace(sidecar_path)
             except OSError:
-                self._unlink_photo_path_if_available(original_path, self._photo_storage_is_available())
+                self._unlink_photo_path_if_available(
+                    original_path, self._photo_storage_is_available(), photo_id=staged.photo_id
+                )
                 raise
             try:
                 derivative.path.replace(derivative_path)
             except OSError:
                 photo_storage_available = self._photo_storage_is_available()
-                self._unlink_photo_path_if_available(original_path, photo_storage_available)
-                self._unlink_photo_path_if_available(sidecar_path, photo_storage_available)
+                self._unlink_photo_path_if_available(original_path, photo_storage_available, photo_id=staged.photo_id)
+                self._unlink_photo_path_if_available(sidecar_path, photo_storage_available, photo_id=staged.photo_id)
                 raise
         except OSError as error:
             photo_storage_available = self._photo_storage_is_available()
-            self._unlink_photo_path_if_available(staged.path, photo_storage_available)
-            self._unlink_photo_path_if_available(sidecar_part, photo_storage_available)
-            _unlink_if_possible(derivative.path)
+            self._unlink_photo_path_if_available(staged.path, photo_storage_available, photo_id=staged.photo_id)
+            self._unlink_photo_path_if_available(sidecar_part, photo_storage_available, photo_id=staged.photo_id)
+            _unlink_if_possible(derivative.path, photo_id=staged.photo_id)
             raise PhotoStorageError("Could not finalize uploaded photo") from error
 
-        return FinalizedUpload(original_path, sidecar_path, derivative_path)
+        return FinalizedUpload(original_path, sidecar_path, derivative_path, staged.photo_id)
 
     def update_sidecar(self, metadata: SidecarMetadata) -> None:
         payload = json.dumps(metadata.as_json(), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
@@ -566,28 +537,36 @@ class PhotoStorage:
                 os.fsync(destination.fileno())
             sidecar_part.replace(sidecar_path)
         except OSError as error:
-            self._unlink_photo_path_if_available(sidecar_part, self._photo_storage_is_available())
+            self._unlink_photo_path_if_available(
+                sidecar_part, self._photo_storage_is_available(), photo_id=metadata.photo_id
+            )
             raise PhotoStorageError("Could not update photo sidecar") from error
 
     def cleanup_staged(self, staged: StagedUpload) -> None:
         photo_storage_available = self._photo_storage_is_available()
-        self._unlink_photo_path_if_available(staged.path, photo_storage_available)
+        self._unlink_photo_path_if_available(staged.path, photo_storage_available, photo_id=staged.photo_id)
         self._unlink_photo_path_if_available(
-            staged.path.with_name(f"{staged.photo_id}.json.part"), photo_storage_available
+            staged.path.with_name(f"{staged.photo_id}.json.part"), photo_storage_available, photo_id=staged.photo_id
         )
         derivative_part = (
             Path(os.path.abspath(self._derivative_root)) / "incoming" / f"{staged.photo_id}.thumbnail.part"
         )
-        _unlink_if_possible(derivative_part)
+        _unlink_if_possible(derivative_part, photo_id=staged.photo_id)
 
     def cleanup_finalized(self, upload: FinalizedUpload) -> None:
         photo_storage_available = self._photo_storage_is_available()
-        self._unlink_photo_path_if_available(upload.original_path, photo_storage_available)
-        self._unlink_photo_path_if_available(upload.sidecar_path, photo_storage_available)
+        self._unlink_photo_path_if_available(upload.original_path, photo_storage_available, photo_id=upload.photo_id)
+        self._unlink_photo_path_if_available(upload.sidecar_path, photo_storage_available, photo_id=upload.photo_id)
         if upload.derivative_path is not None:
-            _unlink_if_possible(upload.derivative_path)
+            _unlink_if_possible(upload.derivative_path, photo_id=upload.photo_id)
 
-    def delete_photo_files(self, original_storage_key: str, derivative_storage_keys: tuple[str, ...]) -> None:
+    def delete_photo_files(
+        self,
+        original_storage_key: str,
+        derivative_storage_keys: tuple[str, ...],
+        *,
+        photo_id: UUID | None = None,
+    ) -> None:
         """Permanently delete one photo's known files. Missing files are treated as already deleted."""
         status = self._get_writable_storage_status(0)
         if not status.available:
@@ -617,6 +596,7 @@ class PhotoStorage:
             except ValueError as error:
                 raise InvalidStorageKeyError("Photo file resolves outside its storage root") from error
             except OSError as error:
+                logger.exception("Photo storage file deletion failed photo_id=%s path=%s", photo_id, path)
                 raise PhotoStorageError("Could not permanently delete photo files") from error
 
     def _require_upload_ready(self, additional_bytes: int | None) -> None:
@@ -639,9 +619,9 @@ class PhotoStorage:
         return True
 
     @staticmethod
-    def _unlink_photo_path_if_available(path: Path, storage_available: bool) -> None:
+    def _unlink_photo_path_if_available(path: Path, storage_available: bool, *, photo_id: UUID | None = None) -> None:
         if storage_available:
-            _unlink_if_possible(path)
+            _unlink_if_possible(path, photo_id=photo_id)
 
     def _require_writable_storage(self, additional_bytes: int) -> None:
         status = self._get_writable_storage_status(additional_bytes)
@@ -746,8 +726,13 @@ def _isoformat_utc(value: datetime | None) -> str | None:
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
-def _unlink_if_possible(path: Path) -> None:
+def _unlink_if_possible(path: Path, *, photo_id: UUID | None = None) -> None:
     try:
         path.unlink(missing_ok=True)
-    except OSError:
-        pass
+    except OSError as error:
+        logger.warning(
+            "Photo storage cleanup failed photo_id=%s path=%s error_type=%s",
+            photo_id,
+            path,
+            type(error).__name__,
+        )

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -71,11 +72,17 @@ class PhotoAccessService:
 
     def set_favorite(self, photo_id: UUID, user_id: UUID, favorite: bool) -> Photo:
         photo = self.get_photo(photo_id, user_id)
-        record = self._session.get(PhotoFavorite, (user_id, photo_id))
-        if favorite and record is None:
-            self._session.add(PhotoFavorite(user_id=user_id, photo_id=photo_id, created_at=datetime.now(UTC)))
-        elif not favorite and record is not None:
-            self._session.delete(record)
+        if favorite:
+            statement = (
+                insert(PhotoFavorite)
+                .values(user_id=user_id, photo_id=photo_id, created_at=datetime.now(UTC))
+                .on_conflict_do_nothing(index_elements=["user_id", "photo_id"])
+            )
+            self._session.execute(statement)
+        else:
+            record = self._session.get(PhotoFavorite, (user_id, photo_id))
+            if record is not None:
+                self._session.delete(record)
         try:
             self._session.commit()
         except SQLAlchemyError as error:
