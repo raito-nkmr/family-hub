@@ -17,7 +17,6 @@ from app.features.groups.schemas import (
     GroupCreate,
     GroupDetailResponse,
     GroupListResponse,
-    GroupMemberAdd,
     GroupMemberCandidateListResponse,
     GroupMemberCandidateResponse,
     GroupMemberRemovalImpactResponse,
@@ -264,36 +263,6 @@ def invite_group_member(
         )
     except GroupMembershipInvitationError as error:
         raise HTTPException(status_code=409, detail="A pending invitation already exists") from error
-    except (
-        GroupNotFoundError,
-        GroupUserNotFoundError,
-        GroupForbiddenError,
-        GroupMemberAlreadyExistsError,
-    ) as error:
-        _raise_member_error(error)
-
-
-@router.post(
-    "/{group_id}/members",
-    response_model=GroupDetailResponse,
-    dependencies=[Depends(require_csrf_token)],
-)
-def add_group_member(
-    group_id: UUID,
-    body: GroupMemberAdd,
-    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[GroupService, Depends(get_group_service)],
-) -> GroupDetailResponse:
-    try:
-        return _detail_response(
-            service.add_member(
-                group_id,
-                authenticated_user.id,
-                body.user_id,
-                body.role,
-                authenticated_user.username,
-            )
-        )
     except (
         GroupNotFoundError,
         GroupUserNotFoundError,

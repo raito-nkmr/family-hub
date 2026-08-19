@@ -10,7 +10,6 @@ from app.features.auth.public import PublicUser, UserDirectory
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
 from app.features.groups.service import (
     GroupForbiddenError,
-    GroupMemberAlreadyExistsError,
     GroupMembershipInvitationError,
     GroupNameAlreadyExistsError,
     GroupNotFoundError,
@@ -136,6 +135,44 @@ def test_create_group_rolls_back_on_persistence_failure() -> None:
     session.rollback.assert_called_once_with()
 
 
+def test_rename_group_wraps_unexpected_database_errors() -> None:
+    session = MagicMock(spec=Session)
+    actor_id = uuid4()
+    group = make_group(created_by_user_id=actor_id)
+    session.scalar.return_value = group
+    session.get.return_value = make_membership(group.id, actor_id)
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+    service, directory = make_service(session)
+    directory.list_by_ids.return_value = {
+        actor_id: PublicUser(id=actor_id, username="owner", is_active=True),
+    }
+
+    with pytest.raises(GroupPersistenceError):
+        service.rename_group(group.id, actor_id, "owner", "新しい名前")
+
+    session.rollback.assert_called_once_with()
+
+
+def test_invite_member_wraps_unexpected_database_errors() -> None:
+    session = MagicMock(spec=Session)
+    actor_id = uuid4()
+    target_id = uuid4()
+    group = make_group(created_by_user_id=actor_id)
+    session.scalar.return_value = group
+    session.get.side_effect = [make_membership(group.id, actor_id), None]
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+    service, directory = make_service(session)
+    directory.list_by_ids.side_effect = [
+        {actor_id: PublicUser(id=actor_id, username="owner", is_active=True)},
+        {target_id: PublicUser(id=target_id, username="たろう", is_active=True)},
+    ]
+
+    with pytest.raises(GroupPersistenceError):
+        service.invite_member(group.id, actor_id, "owner", target_id, GroupRole.MEMBER)
+
+    session.rollback.assert_called_once_with()
+
+
 def test_list_member_candidates_returns_active_non_members() -> None:
     session = MagicMock(spec=Session)
     actor_id = uuid4()
@@ -154,54 +191,6 @@ def test_list_member_candidates_returns_active_non_members() -> None:
     result = service.list_member_candidates(group.id, actor_id)
 
     assert result == [candidate]
-
-
-def test_add_member_registers_active_user_and_returns_updated_group() -> None:
-    session = MagicMock(spec=Session)
-    actor_id = uuid4()
-    target_id = uuid4()
-    group = make_group(created_by_user_id=actor_id)
-    actor_membership = make_membership(group.id, actor_id)
-    session.scalar.return_value = group
-    session.get.side_effect = [actor_membership, None]
-    service, directory = make_service(session)
-    directory.list_by_ids.return_value = {
-        actor_id: PublicUser(id=actor_id, username="owner", is_active=True),
-        target_id: PublicUser(id=target_id, username="たろう", is_active=True),
-    }
-    expected = object()
-    service.get_group = MagicMock(return_value=expected)
-
-    result = service.add_member(group.id, actor_id, target_id, GroupRole.MEMBER)
-
-    membership = session.add.call_args.args[0]
-    assert isinstance(membership, FamilyGroupMember)
-    assert membership.user_id == target_id
-    assert membership.role is GroupRole.MEMBER
-    assert result is expected
-    session.commit.assert_called_once_with()
-
-
-def test_add_member_rejects_existing_membership() -> None:
-    session = MagicMock(spec=Session)
-    actor_id = uuid4()
-    target_id = uuid4()
-    group = make_group(created_by_user_id=actor_id)
-    actor_membership = make_membership(group.id, actor_id)
-    existing = make_membership(group.id, target_id, role=GroupRole.MEMBER)
-    session.scalar.return_value = group
-    session.get.side_effect = [actor_membership, existing]
-    service, directory = make_service(session)
-    directory.list_by_ids.return_value = {
-        actor_id: PublicUser(id=actor_id, username="owner", is_active=True),
-        target_id: PublicUser(id=target_id, username="たろう", is_active=True),
-    }
-
-    with pytest.raises(GroupMemberAlreadyExistsError):
-        service.add_member(group.id, actor_id, target_id, GroupRole.MEMBER)
-
-    session.add.assert_not_called()
-    session.commit.assert_not_called()
 
 
 def test_accept_membership_invitation_locks_group_before_invitation_and_adds_member() -> None:

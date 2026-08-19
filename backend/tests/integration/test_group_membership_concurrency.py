@@ -13,7 +13,7 @@ from app.features.auth.public import UserDirectory
 from app.features.cleaning.models import CleaningTask
 from app.features.cleaning.service import CleaningNotFoundError, CleaningService
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
-from app.features.groups.service import GroupMemberAlreadyExistsError, GroupMembershipInvitationError, GroupService
+from app.features.groups.service import GroupMembershipInvitationError, GroupService
 from app.features.shopping.models import ShoppingItem
 from app.features.shopping.service import ShoppingNotFoundError, ShoppingService
 
@@ -25,7 +25,7 @@ pytestmark = [
 ]
 
 
-def test_invitation_acceptance_and_direct_member_add_do_not_insert_duplicate_membership() -> None:
+def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
     assert TEST_DATABASE_URL is not None
     engine = create_engine(TEST_DATABASE_URL, connect_args={"options": "-c timezone=UTC"})
     actor_id = uuid4()
@@ -93,30 +93,27 @@ def test_invitation_acceptance_and_direct_member_add_do_not_insert_duplicate_mem
                 return "invitation-not-pending"
         return "accepted"
 
-    def add_member_directly() -> str:
+    def accept_invitation_again() -> str:
         assert start.wait(timeout=5)
         with Session(engine) as session:
             try:
-                GroupService(session, UserDirectory(session)).add_member(
-                    group_id,
-                    actor_id,
+                GroupService(session, UserDirectory(session)).decide_membership_invitation(
+                    invitation_id,
                     target_id,
-                    GroupRole.MEMBER,
+                    f"membership-target-{target_id.hex}",
+                    True,
                 )
-            except GroupMemberAlreadyExistsError:
-                return "already-member"
-        return "added"
+            except GroupMembershipInvitationError:
+                return "invitation-not-pending"
+        return "accepted"
 
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(accept_invitation), executor.submit(add_member_directly)]
+            futures = [executor.submit(accept_invitation), executor.submit(accept_invitation_again)]
             start.set()
             outcomes = [future.result(timeout=10) for future in futures]
 
-        assert sorted(outcomes) in (
-            ["accepted", "already-member"],
-            ["added", "invitation-not-pending"],
-        )
+        assert sorted(outcomes) == ["accepted", "invitation-not-pending"]
         with Session(engine) as session:
             assert (
                 session.scalar(

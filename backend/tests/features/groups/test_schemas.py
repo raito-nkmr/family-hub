@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.features.groups.models import GroupRole
-from app.features.groups.schemas import GroupCreate, GroupMemberAdd, GroupResponse
+from app.features.groups.schemas import GroupCreate, GroupResponse
 from app.features.groups.service import GroupSummary
 
 
@@ -16,14 +16,6 @@ def test_group_create_trims_name() -> None:
 def test_group_create_rejects_blank_name() -> None:
     with pytest.raises(ValidationError, match="group name must not be blank"):
         GroupCreate(name="   ")
-
-
-def test_group_member_add_defaults_to_member() -> None:
-    user_id = uuid4()
-    body = GroupMemberAdd(user_id=user_id)
-
-    assert body.user_id == user_id
-    assert body.role is GroupRole.MEMBER
 
 
 def test_group_response_normalizes_datetimes_to_utc() -> None:

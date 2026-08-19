@@ -212,29 +212,32 @@ class GroupService:
         actor_username: str,
         name: str,
     ) -> GroupDetail:
-        group = self._get_group_for_admin(group_id, actor_user_id)
-        previous_name = group.name
-        group.name = name
-        group.updated_at = datetime.now(UTC)
-        record_administrative_event(
-            self._session,
-            scope="group",
-            action="group.renamed",
-            actor_user_id=actor_user_id,
-            actor_username=actor_username,
-            group_id=group.id,
-            target_type="group",
-            target_id=str(group.id),
-            details={"previous_name": previous_name, "name": name},
-        )
         try:
+            group = self._get_group_for_admin(group_id, actor_user_id)
+            previous_name = group.name
+            group.name = name
+            group.updated_at = datetime.now(UTC)
+            record_administrative_event(
+                self._session,
+                scope="group",
+                action="group.renamed",
+                actor_user_id=actor_user_id,
+                actor_username=actor_username,
+                group_id=group.id,
+                target_type="group",
+                target_id=str(group.id),
+                details={"previous_name": previous_name, "name": name},
+            )
             self._session.commit()
+            return self.get_group(group_id, actor_user_id)
         except IntegrityError as error:
             self._session.rollback()
             if self._constraint_name(error) == "uq_family_groups_name":
                 raise GroupNameAlreadyExistsError from error
             raise GroupPersistenceError("Could not rename group") from error
-        return self.get_group(group_id, actor_user_id)
+        except SQLAlchemyError as error:
+            self._session.rollback()
+            raise GroupPersistenceError("Could not rename group") from error
 
     def administration_overview(self, group_id: UUID, actor_user_id: UUID) -> dict[str, int]:
         self._get_group_for_admin(group_id, actor_user_id, lock=False)
@@ -304,40 +307,43 @@ class GroupService:
         user_id: UUID,
         role: GroupRole,
     ) -> tuple[FamilyGroupMembershipInvitation, PublicUser]:
-        self._get_group_for_admin(group_id, actor_user_id)
-        user = self._user_directory.list_by_ids({user_id}).get(user_id)
-        if user is None or not user.is_active:
-            raise GroupUserNotFoundError
-        if self._session.get(FamilyGroupMember, (group_id, user_id)) is not None:
-            raise GroupMemberAlreadyExistsError
-        invitation = FamilyGroupMembershipInvitation(
-            id=uuid4(),
-            group_id=group_id,
-            user_id=user_id,
-            requested_by_user_id=actor_user_id,
-            role=role,
-            status="pending",
-            created_at=datetime.now(UTC),
-            responded_at=None,
-        )
-        self._session.add(invitation)
-        record_administrative_event(
-            self._session,
-            scope="group",
-            action="membership.invited",
-            actor_user_id=actor_user_id,
-            actor_username=actor_username,
-            group_id=group_id,
-            target_type="user",
-            target_id=str(user_id),
-            details={"username": user.username, "role": role.value},
-        )
         try:
+            self._get_group_for_admin(group_id, actor_user_id)
+            user = self._user_directory.list_by_ids({user_id}).get(user_id)
+            if user is None or not user.is_active:
+                raise GroupUserNotFoundError
+            if self._session.get(FamilyGroupMember, (group_id, user_id)) is not None:
+                raise GroupMemberAlreadyExistsError
+            invitation = FamilyGroupMembershipInvitation(
+                id=uuid4(),
+                group_id=group_id,
+                user_id=user_id,
+                requested_by_user_id=actor_user_id,
+                role=role,
+                status="pending",
+                created_at=datetime.now(UTC),
+                responded_at=None,
+            )
+            self._session.add(invitation)
+            record_administrative_event(
+                self._session,
+                scope="group",
+                action="membership.invited",
+                actor_user_id=actor_user_id,
+                actor_username=actor_username,
+                group_id=group_id,
+                target_type="user",
+                target_id=str(user_id),
+                details={"username": user.username, "role": role.value},
+            )
             self._session.commit()
+            return invitation, user
         except IntegrityError as error:
             self._session.rollback()
             raise GroupMembershipInvitationError from error
-        return invitation, user
+        except SQLAlchemyError as error:
+            self._session.rollback()
+            raise GroupPersistenceError("Could not invite group member") from error
 
     def list_my_membership_invitations(self, user_id: UUID) -> list[tuple[FamilyGroupMembershipInvitation, str]]:
         return list(
@@ -428,59 +434,6 @@ class GroupService:
             self._session.scalars(select(FamilyGroupMember.user_id).where(FamilyGroupMember.group_id == group_id)).all()
         )
         return [user for user in self._user_directory.list_active() if user.id not in member_ids]
-
-    def add_member(
-        self,
-        group_id: UUID,
-        actor_user_id: UUID,
-        user_id: UUID,
-        role: GroupRole,
-        actor_username: str = "unknown",
-    ) -> GroupDetail:
-        if role is GroupRole.ADMIN:
-            lock_administrator_mutations(self._session)
-        group = self._get_group_for_admin(group_id, actor_user_id)
-        users = self._user_directory.list_by_ids({user_id})
-        user = users.get(user_id)
-        if user is None or not user.is_active:
-            raise GroupUserNotFoundError
-        if self._session.get(FamilyGroupMember, (group_id, user.id)) is not None:
-            raise GroupMemberAlreadyExistsError
-
-        now = datetime.now(UTC)
-        self._session.add(
-            FamilyGroupMember(
-                group_id=group_id,
-                user_id=user.id,
-                role=role,
-                joined_at=now,
-            )
-        )
-        pending_invitation = self._session.scalar(
-            select(FamilyGroupMembershipInvitation).where(
-                FamilyGroupMembershipInvitation.group_id == group_id,
-                FamilyGroupMembershipInvitation.user_id == user.id,
-                FamilyGroupMembershipInvitation.status == "pending",
-            )
-        )
-        if pending_invitation is not None:
-            pending_invitation.status = "canceled"
-            pending_invitation.responded_at = now
-        group.updated_at = now
-        if actor_username != "unknown":
-            record_administrative_event(
-                self._session,
-                scope="group",
-                action="membership.added",
-                actor_user_id=actor_user_id,
-                actor_username=actor_username,
-                group_id=group_id,
-                target_type="user",
-                target_id=str(user.id),
-                details={"username": user.username, "role": role.value},
-            )
-        self._commit("Could not add group member")
-        return self.get_group(group_id, actor_user_id)
 
     def update_member_role(
         self,
