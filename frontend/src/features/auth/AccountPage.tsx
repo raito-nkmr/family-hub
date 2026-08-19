@@ -6,7 +6,10 @@ import { ApiError } from '../../shared/api/client'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatDateTime } from '../../shared/lib/format'
-import { DeleteIcon, LogoutIcon, RefreshIcon, SaveIcon } from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { DeleteIcon, LogoutIcon, SaveIcon } from '../../shared/ui/icons'
 import { NotificationSettings } from '../notifications/NotificationSettings'
 import { PwaInstallCard } from '../pwa/PwaInstallCard'
 import { changePassword, getSessions, logoutAll, revokeSession, type AuthUserSession } from './api'
@@ -152,11 +155,7 @@ export function AccountPage({
               disabled={changingPassword}
               onChange={(event) => setConfirmation(event.target.value)}
             />
-            {passwordError && (
-              <p className="page-message page-message--error" role="alert">
-                {passwordError}
-              </p>
-            )}
+            {passwordError && <PageMessage>{passwordError}</PageMessage>}
             <button className="success-button icon-button" type="submit" disabled={changingPassword}>
               <SaveIcon />
               {t(changingPassword ? 'account.changingPassword' : 'account.changePassword')}
@@ -170,25 +169,11 @@ export function AccountPage({
               <h2 id="sessions-heading">{t('account.sessionsTitle')}</h2>
               <p>{t('account.sessionsHelp')}</p>
             </div>
-            <button
-              className="refresh-button"
-              type="button"
-              disabled={sessionsQuery.isFetching}
-              onClick={() => void sessionsQuery.refetch()}
-            >
-              <RefreshIcon />
-              <span>{t('common.refresh')}</span>
-            </button>
+            <RefreshButton onClick={() => sessionsQuery.refetch()} disabled={sessionsQuery.isFetching} />
           </div>
-          {displayedSessionError && (
-            <p className="page-message page-message--error" role="alert">
-              {displayedSessionError}
-            </p>
-          )}
+          {displayedSessionError && <PageMessage>{displayedSessionError}</PageMessage>}
           {sessionsQuery.isPending ? (
-            <div className="feature-loading" aria-label={t('account.loadingSessions')}>
-              <span className="spinner" />
-            </div>
+            <LoadingState label={t('account.loadingSessions')} />
           ) : (
             <ul className="session-list">
               {sessions.map((session) => (

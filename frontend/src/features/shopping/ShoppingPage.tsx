@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../shared/lib/format'
-import { CheckIcon, PlusIcon, RefreshIcon, ShoppingCartIcon, UndoIcon } from '../../shared/ui/icons'
+import { CheckIcon, PlusIcon, ShoppingCartIcon, UndoIcon } from '../../shared/ui/icons'
+import { EmptyState } from '../../shared/ui/EmptyState'
+import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
+import { PageMessage } from '../../shared/ui/PageMessage'
 import { useShopping } from './useShopping'
 
 interface ShoppingPageProps {
@@ -30,32 +33,18 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
       </section>
 
       <section className="shopping-board" aria-labelledby="shopping-board-heading">
-        <div className="shopping-board__toolbar">
-          <div>
-            <label htmlFor="shopping-group">{t('shopping.group')}</label>
-            <select
-              id="shopping-group"
-              value={state.selectedGroupId ?? ''}
-              disabled={state.loading || state.submitting || state.pendingItemIds.size > 0 || state.groups.length === 0}
-              onChange={(event) => void state.selectGroup(event.target.value)}
-            >
-              {state.groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            className="refresh-button"
-            type="button"
-            disabled={state.loading || state.submitting || state.pendingItemIds.size > 0}
-            onClick={() => void state.refresh()}
-          >
-            <RefreshIcon />
-            <span>{t('common.refresh')}</span>
-          </button>
-        </div>
+        <GroupScopedToolbar
+          groups={state.groups}
+          selectedGroupId={state.selectedGroupId}
+          selectId="shopping-group"
+          label={t('shopping.group')}
+          selectDisabled={
+            state.loading || state.submitting || state.pendingItemIds.size > 0 || state.groups.length === 0
+          }
+          refreshDisabled={state.loading || state.submitting || state.pendingItemIds.size > 0}
+          onSelectGroup={state.selectGroup}
+          onRefresh={state.refresh}
+        />
 
         {state.groups.length > 0 && (
           <form className="shopping-add" onSubmit={(event) => void submit(event)}>
@@ -93,11 +82,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
           </div>
         </div>
 
-        {state.pageError && (
-          <div className="page-message page-message--error" role="alert">
-            {state.pageError}
-          </div>
-        )}
+        {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
         {state.loading ? (
           <div className="shopping-list" aria-label={t('shopping.loading')}>
             {Array.from({ length: 3 }, (_, index) => (
@@ -105,21 +90,19 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
             ))}
           </div>
         ) : state.groups.length === 0 ? (
-          <div className="empty-state shopping-empty-state">
-            <span>
-              <ShoppingCartIcon />
-            </span>
-            <h3>{t('shopping.groupNeeded')}</h3>
-            <p>{t('shopping.groupNeededHelp')}</p>
-          </div>
+          <EmptyState
+            className="shopping-empty-state"
+            icon={<ShoppingCartIcon />}
+            title={t('shopping.groupNeeded')}
+            description={t('shopping.groupNeededHelp')}
+          />
         ) : activeItems.length === 0 ? (
-          <div className="empty-state shopping-empty-state">
-            <span>
-              <CheckIcon />
-            </span>
-            <h3>{t('shopping.empty')}</h3>
-            <p>{t('shopping.emptyHelp')}</p>
-          </div>
+          <EmptyState
+            className="shopping-empty-state"
+            icon={<CheckIcon />}
+            title={t('shopping.empty')}
+            description={t('shopping.emptyHelp')}
+          />
         ) : (
           <div className="shopping-list">
             {activeItems.map((item) => (

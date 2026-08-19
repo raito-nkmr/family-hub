@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { isUnauthorizedError } from '../../../shared/api/errors'
 import { formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { AddPhotoIcon, CancelIcon } from '../../../shared/ui/icons'
+import { DialogActions } from '../../../shared/ui/DialogActions'
+import { LoadingState } from '../../../shared/ui/LoadingState'
+import { AddPhotoIcon } from '../../../shared/ui/icons'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
 import { useUnauthorizedError } from '../../../shared/api/useUnauthorizedError'
 import type { PhotoFilters, PhotoSearchOptions } from '../../photos/api'
@@ -81,9 +83,7 @@ export function PhotoPickerDialog({
       />
 
       {photoList.loading ? (
-        <div className="feature-loading" aria-label={t('photos.loadingList')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('photos.loadingList')} />
       ) : photoList.photos.length > 0 ? (
         <div className="photo-picker-grid">
           {photoList.photos.map((photo) => {
@@ -126,16 +126,7 @@ export function PhotoPickerDialog({
           {error || listError}
         </p>
       )}
-      <div className="dialog-actions">
-        <button
-          className="danger-button danger-button--filled icon-button"
-          type="button"
-          onClick={onClose}
-          disabled={submitting}
-        >
-          <CancelIcon />
-          {t('common.cancel')}
-        </button>
+      <DialogActions disabled={submitting} onCancel={onClose}>
         <button
           className="primary-button icon-button"
           type="button"
@@ -145,7 +136,7 @@ export function PhotoPickerDialog({
           <AddPhotoIcon />
           {submitting ? t('albums.adding') : t('albums.addSelected', { count: selectedCount })}
         </button>
-      </div>
+      </DialogActions>
     </Dialog>
   )
 }

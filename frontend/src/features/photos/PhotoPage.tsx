@@ -1,5 +1,6 @@
 import { useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PageMessage } from '../../shared/ui/PageMessage'
 import type { FamilyGroup } from '../groups/api'
 import {
   getPhotoExportUrl,
@@ -143,16 +144,8 @@ export function PhotoPage({
         />
       </section>
 
-      {bulkSharingMessage && (
-        <p className="page-message page-message--success" role="status">
-          {bulkSharingMessage}
-        </p>
-      )}
-      {exportMessage && (
-        <p className="page-message page-message--success" role="status">
-          {exportMessage}
-        </p>
-      )}
+      {bulkSharingMessage && <PageMessage variant="success">{bulkSharingMessage}</PageMessage>}
+      {exportMessage && <PageMessage variant="success">{exportMessage}</PageMessage>}
       <PhotoLibrary
         currentUserId={currentUserId}
         photos={photos}

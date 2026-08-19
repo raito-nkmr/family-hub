@@ -3,8 +3,8 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../../shared/api/client'
 import type { Theme } from '../../shared/types/theme'
-import { CheckIcon, LoginIcon, MoonIcon, PersonAddIcon, SunIcon } from '../../shared/ui/icons'
-import { LanguageToggle } from '../../shared/ui/LanguageToggle'
+import { PublicAuthLayout } from '../../shared/ui/PublicAuthLayout'
+import { CheckIcon, LoginIcon, PersonAddIcon } from '../../shared/ui/icons'
 import { acceptInvitation } from './api'
 
 const MINIMUM_PASSWORD_LENGTH = 8
@@ -61,88 +61,75 @@ export function InvitationAcceptanceScreen({
   }
 
   return (
-    <main className="login-page">
-      <div className="login-page__actions">
-        <LanguageToggle />
-        <button
-          className="theme-toggle"
-          type="button"
-          aria-label={t(theme === 'dark' ? 'common.lightMode' : 'common.darkMode')}
-          aria-pressed={theme === 'dark'}
-          onClick={onToggleTheme}
-        >
-          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-        </button>
-      </div>
-      <section className="login-panel invitation-acceptance" aria-labelledby="invitation-acceptance-heading">
-        <span className="brand__mark login-panel__mark">
-          <PersonAddIcon />
-        </span>
-        <p className="eyebrow">{t('invitations.acceptEyebrow')}</p>
-        {createdUsername ? (
-          <>
-            <h1 id="invitation-acceptance-heading">{t('invitations.ready')}</h1>
-            <p className="login-panel__description">{t('invitations.readyHelp', { username: createdUsername })}</p>
+    <PublicAuthLayout
+      theme={theme}
+      onToggleTheme={onToggleTheme}
+      icon={<PersonAddIcon />}
+      eyebrow={t('invitations.acceptEyebrow')}
+      title={t(createdUsername ? 'invitations.ready' : 'invitations.account')}
+      titleId="invitation-acceptance-heading"
+      description={t(createdUsername ? 'invitations.readyHelp' : 'invitations.accountHelp', {
+        username: createdUsername ?? undefined,
+      })}
+      panelClassName="invitation-acceptance"
+    >
+      {createdUsername ? (
+        <>
+          <button
+            className="login-button icon-button invitation-acceptance__continue"
+            type="button"
+            onClick={onContinueToLogin}
+          >
+            <LoginIcon />
+            {t('invitations.continue')}
+          </button>
+        </>
+      ) : (
+        <>
+          <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
+            <label htmlFor={passwordId}>{t('invitations.password')}</label>
+            <input
+              id={passwordId}
+              type="password"
+              value={password}
+              minLength={MINIMUM_PASSWORD_LENGTH}
+              maxLength={128}
+              autoComplete="new-password"
+              required
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <label htmlFor={confirmationId}>{t('invitations.confirmPassword')}</label>
+            <input
+              id={confirmationId}
+              type="password"
+              value={confirmation}
+              minLength={MINIMUM_PASSWORD_LENGTH}
+              maxLength={128}
+              autoComplete="new-password"
+              required
+              onChange={(event) => setConfirmation(event.target.value)}
+            />
             <button
-              className="login-button icon-button invitation-acceptance__continue"
-              type="button"
-              onClick={onContinueToLogin}
+              className="login-button icon-button"
+              type="submit"
+              disabled={
+                submitting || password.length < MINIMUM_PASSWORD_LENGTH || confirmation.length < MINIMUM_PASSWORD_LENGTH
+              }
             >
-              <LoginIcon />
-              {t('invitations.continue')}
+              <CheckIcon />
+              {t(submitting ? 'invitations.creatingAccount' : 'invitations.account')}
             </button>
-          </>
-        ) : (
-          <>
-            <h1 id="invitation-acceptance-heading">{t('invitations.account')}</h1>
-            <p className="login-panel__description">{t('invitations.accountHelp')}</p>
-            <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
-              <label htmlFor={passwordId}>{t('invitations.password')}</label>
-              <input
-                id={passwordId}
-                type="password"
-                value={password}
-                minLength={MINIMUM_PASSWORD_LENGTH}
-                maxLength={128}
-                autoComplete="new-password"
-                required
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <label htmlFor={confirmationId}>{t('invitations.confirmPassword')}</label>
-              <input
-                id={confirmationId}
-                type="password"
-                value={confirmation}
-                minLength={MINIMUM_PASSWORD_LENGTH}
-                maxLength={128}
-                autoComplete="new-password"
-                required
-                onChange={(event) => setConfirmation(event.target.value)}
-              />
-              <button
-                className="login-button icon-button"
-                type="submit"
-                disabled={
-                  submitting ||
-                  password.length < MINIMUM_PASSWORD_LENGTH ||
-                  confirmation.length < MINIMUM_PASSWORD_LENGTH
-                }
-              >
-                <CheckIcon />
-                {t(submitting ? 'invitations.creatingAccount' : 'invitations.account')}
-              </button>
-            </form>
-            {error && (
-              <p className="login-error" role="alert">
-                {error}
-              </p>
-            )}
-            <button className="invitation-acceptance__back" type="button" onClick={onContinueToLogin}>
-              {t('invitations.back')}
-            </button>
-          </>
-        )}
-      </section>
-    </main>
+          </form>
+          {error && (
+            <p className="login-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="invitation-acceptance__back" type="button" onClick={onContinueToLogin}>
+            {t('invitations.back')}
+          </button>
+        </>
+      )}
+    </PublicAuthLayout>
   )
 }

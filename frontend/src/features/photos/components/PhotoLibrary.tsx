@@ -1,8 +1,11 @@
 import type { TFunction } from 'i18next'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CancelIcon, ExportIcon, PhotoIcon, RefreshIcon, SelectIcon, ShareIcon } from '../../../shared/ui/icons'
+import { EmptyState } from '../../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
+import { PageMessage } from '../../../shared/ui/PageMessage'
+import { RefreshButton } from '../../../shared/ui/RefreshButton'
+import { CancelIcon, ExportIcon, PhotoIcon, SelectIcon, ShareIcon } from '../../../shared/ui/icons'
 import type { PhotoFilters, PhotoListItem, PhotoSearchOptions, PhotoTimeline } from '../api'
 import { PhotoCard } from './PhotoCard'
 import { PhotoGridDensity } from './PhotoGridDensity'
@@ -151,10 +154,7 @@ export function PhotoLibrary({
               {t('common.cancel')}
             </span>
           </button>
-          <button className="refresh-button" type="button" onClick={onRefresh} disabled={loading || selecting}>
-            <RefreshIcon />
-            <span>{t('common.refresh')}</span>
-          </button>
+          <RefreshButton onClick={onRefresh} disabled={loading || selecting} />
         </div>
       </div>
 
@@ -200,11 +200,7 @@ export function PhotoLibrary({
         />
       )}
 
-      {pageError && (
-        <div className="page-message page-message--error" role="alert">
-          {pageError}
-        </div>
-      )}
+      {pageError && <PageMessage>{pageError}</PageMessage>}
 
       {photos.length > 0 && <PhotoGridDensity columns={gridColumns} onChange={changeGridColumns} />}
 
@@ -251,13 +247,7 @@ export function PhotoLibrary({
           />
         </>
       ) : (
-        <div className="empty-state">
-          <span>
-            <PhotoIcon />
-          </span>
-          <h3>{t('photos.noResults')}</h3>
-          <p>{t('photos.noResultsHelp')}</p>
-        </div>
+        <EmptyState icon={<PhotoIcon />} title={t('photos.noResults')} description={t('photos.noResultsHelp')} />
       )}
     </section>
   )

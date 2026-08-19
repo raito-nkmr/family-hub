@@ -1,7 +1,11 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../shared/lib/format'
-import { CancelIcon, CloseIcon, ContentCopyIcon, DeleteIcon, PersonAddIcon, RefreshIcon } from '../../shared/ui/icons'
+import { EmptyState } from '../../shared/ui/EmptyState'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { CancelIcon, CloseIcon, ContentCopyIcon, DeleteIcon, PersonAddIcon } from '../../shared/ui/icons'
 import type { InvitationExpiryHours } from './api'
 import { copyTextToClipboard } from './clipboard'
 import { useInvitations } from './useInvitations'
@@ -111,11 +115,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
                 {t(copyStatus === 'copied' ? 'invitations.copied' : 'invitations.copy')}
               </button>
             </div>
-            {copyStatus === 'failed' && (
-              <p className="page-message page-message--error" role="alert">
-                {t('invitations.copyFailed')}
-              </p>
-            )}
+            {copyStatus === 'failed' && <PageMessage>{t('invitations.copyFailed')}</PageMessage>}
             <button
               className="invitation-result__close icon-button"
               type="button"
@@ -126,11 +126,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             </button>
           </div>
         )}
-        {state.error && (
-          <div className="page-message page-message--error" role="alert">
-            {state.error}
-          </div>
-        )}
+        {state.error && <PageMessage>{state.error}</PageMessage>}
       </section>
 
       <section className="invitation-library" aria-labelledby="invitation-list-heading">
@@ -139,20 +135,10 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             <h2 id="invitation-list-heading">{t('invitations.pendingTitle')}</h2>
             <p>{t('invitations.pendingHelp')}</p>
           </div>
-          <button
-            className="refresh-button"
-            type="button"
-            disabled={state.loading}
-            onClick={() => void state.refresh()}
-          >
-            <RefreshIcon />
-            <span>{t('common.refresh')}</span>
-          </button>
+          <RefreshButton onClick={state.refresh} disabled={state.loading} />
         </div>
         {state.loading ? (
-          <div className="feature-loading" aria-label={t('invitations.loading')}>
-            <span className="spinner" />
-          </div>
+          <LoadingState label={t('invitations.loading')} />
         ) : pendingInvitations.length > 0 ? (
           <div className="invitation-list">
             {pendingInvitations.map((invitation) => (
@@ -177,11 +163,11 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             ))}
           </div>
         ) : (
-          <div className="empty-state">
-            <PersonAddIcon />
-            <h3>{t('invitations.noPending')}</h3>
-            <p>{t('invitations.noPendingHelp')}</p>
-          </div>
+          <EmptyState
+            icon={<PersonAddIcon />}
+            title={t('invitations.noPending')}
+            description={t('invitations.noPendingHelp')}
+          />
         )}
         {pastInvitations.length > 0 && (
           <details className="invitation-past">

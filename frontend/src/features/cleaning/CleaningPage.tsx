@@ -1,14 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../shared/lib/format'
-import {
-  AddTaskIcon,
-  CancelIcon,
-  CheckCircleIcon,
-  CleaningIcon,
-  EditIcon,
-  RefreshIcon,
-  UndoIcon,
-} from '../../shared/ui/icons'
+import { AddTaskIcon, CancelIcon, CheckCircleIcon, CleaningIcon, EditIcon, UndoIcon } from '../../shared/ui/icons'
+import { EmptyState } from '../../shared/ui/EmptyState'
+import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
+import { PageMessage } from '../../shared/ui/PageMessage'
 import { CleaningTaskFormDialog } from './components/CleaningTaskFormDialog'
 import { getCleaningDueStatus } from './status'
 import { useCleaning } from './useCleaning'
@@ -46,34 +41,18 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
         </section>
 
         <section className="cleaning-board" aria-labelledby="cleaning-board-heading">
-          <div className="cleaning-board__toolbar">
-            <div>
-              <label htmlFor="cleaning-group">{t('cleaning.group')}</label>
-              <select
-                id="cleaning-group"
-                value={state.selectedGroupId ?? ''}
-                disabled={
-                  state.loading || state.submitting || state.pendingTaskIds.size > 0 || state.groups.length === 0
-                }
-                onChange={(event) => void state.selectGroup(event.target.value)}
-              >
-                {state.groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              className="refresh-button"
-              type="button"
-              disabled={state.loading || state.submitting || state.pendingTaskIds.size > 0}
-              onClick={() => void state.refresh()}
-            >
-              <RefreshIcon />
-              <span>{t('common.refresh')}</span>
-            </button>
-          </div>
+          <GroupScopedToolbar
+            groups={state.groups}
+            selectedGroupId={state.selectedGroupId}
+            selectId="cleaning-group"
+            label={t('cleaning.group')}
+            selectDisabled={
+              state.loading || state.submitting || state.pendingTaskIds.size > 0 || state.groups.length === 0
+            }
+            refreshDisabled={state.loading || state.submitting || state.pendingTaskIds.size > 0}
+            onSelectGroup={state.selectGroup}
+            onRefresh={state.refresh}
+          />
 
           <div className="section-heading cleaning-board__heading">
             <div>
@@ -86,11 +65,7 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
             </div>
           </div>
 
-          {state.pageError && (
-            <div className="page-message page-message--error" role="alert">
-              {state.pageError}
-            </div>
-          )}
+          {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
           {state.loading ? (
             <div className="cleaning-grid" aria-label={t('cleaning.loading')}>
               {Array.from({ length: 3 }, (_, index) => (
@@ -98,21 +73,19 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
               ))}
             </div>
           ) : state.groups.length === 0 ? (
-            <div className="empty-state cleaning-empty-state">
-              <span>
-                <CleaningIcon />
-              </span>
-              <h3>{t('cleaning.groupNeeded')}</h3>
-              <p>{t('cleaning.groupNeededHelp')}</p>
-            </div>
+            <EmptyState
+              className="cleaning-empty-state"
+              icon={<CleaningIcon />}
+              title={t('cleaning.groupNeeded')}
+              description={t('cleaning.groupNeededHelp')}
+            />
           ) : activeTasks.length === 0 ? (
-            <div className="empty-state cleaning-empty-state">
-              <span>
-                <CleaningIcon />
-              </span>
-              <h3>{t('cleaning.empty')}</h3>
-              <p>{t(isAdmin ? 'cleaning.emptyAdmin' : 'cleaning.emptyMember')}</p>
-            </div>
+            <EmptyState
+              className="cleaning-empty-state"
+              icon={<CleaningIcon />}
+              title={t('cleaning.empty')}
+              description={t(isAdmin ? 'cleaning.emptyAdmin' : 'cleaning.emptyMember')}
+            />
           ) : (
             <div className="cleaning-grid">
               {activeTasks.map((task) => {

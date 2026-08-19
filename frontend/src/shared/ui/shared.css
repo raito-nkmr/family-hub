@@ -126,6 +126,37 @@
   width: 18px;
 }
 
+.group-scoped-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+}
+
+.group-scoped-toolbar > div {
+  display: grid;
+  gap: 0.4rem;
+  width: min(360px, 100%);
+}
+
+.group-scoped-toolbar label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.group-scoped-toolbar select {
+  min-height: 48px;
+  padding: 0.65rem 0.8rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+}
+
 .photo-grid,
 .loading-grid {
   display: grid;

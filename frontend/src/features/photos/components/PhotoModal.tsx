@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent, type TouchEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatBytes, formatDateTime } from '../../../shared/lib/format'
 import { Dialog } from '../../../shared/ui/Dialog'
+import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
 import { DeleteIcon, FavoriteBorderIcon, FavoriteIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
@@ -314,11 +315,7 @@ export function PhotoModal({
             )}
           </form>
         </div>
-        {error && (
-          <div className="page-message page-message--error" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <PageMessage>{error}</PageMessage>}
       </div>
     </Dialog>
   )

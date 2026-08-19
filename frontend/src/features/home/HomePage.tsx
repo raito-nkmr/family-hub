@@ -7,9 +7,11 @@ import {
   CleaningIcon,
   PhotoActivityIcon,
   PhotoLibraryIcon,
-  RefreshIcon,
   ShoppingCartIcon,
 } from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
 import { getCleaningDueStatus } from '../cleaning/status'
 import type { FamilyGroup } from '../groups/api'
 import { PwaInstallCard } from '../pwa/PwaInstallCard'
@@ -61,10 +63,7 @@ export function HomePage({
           <h1>{t('home.title')}</h1>
           <p>{t('home.description')}</p>
         </div>
-        <button className="refresh-button" type="button" onClick={onRefresh} disabled={loading}>
-          <RefreshIcon />
-          <span>{t('common.refresh')}</span>
-        </button>
+        <RefreshButton onClick={onRefresh} disabled={loading} />
       </header>
 
       {showPwaInstallPrompt && (
@@ -75,15 +74,9 @@ export function HomePage({
         />
       )}
 
-      {error && (
-        <div className="page-message page-message--error" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <PageMessage>{error}</PageMessage>}
       {loading ? (
-        <div className="feature-loading" aria-label={t('home.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('home.loading')} />
       ) : (
         <div className="home-grid">
           <section className="home-panel home-panel--photos" aria-labelledby="home-photos-heading">

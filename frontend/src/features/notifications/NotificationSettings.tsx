@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { NotificationType } from '../../shared/api/generated'
+import { PageMessage } from '../../shared/ui/PageMessage'
 import { ApkInstallIcon, NotificationIcon, NotificationsActiveIcon, SaveIcon } from '../../shared/ui/icons'
 import { useNotificationSettings } from './useNotificationSettings'
 
@@ -53,11 +54,7 @@ export function NotificationSettings({
         {t(statusKey)}
       </p>
 
-      {settings.error && (
-        <p className="page-message page-message--error" role="alert">
-          {t(`notifications.errors.${settings.error}`)}
-        </p>
-      )}
+      {settings.error && <PageMessage>{t(`notifications.errors.${settings.error}`)}</PageMessage>}
 
       {!settings.loading && settings.config?.enabled && settings.permission !== 'unsupported' && (
         <div className="notification-settings__actions">

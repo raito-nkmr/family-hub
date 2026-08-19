@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { AlbumIcon, PlusIcon, RefreshIcon } from '../../shared/ui/icons'
+import { EmptyState } from '../../shared/ui/EmptyState'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { AlbumIcon, PlusIcon } from '../../shared/ui/icons'
 import type { Photo, PhotoListItem } from '../photos/public'
 import { AlbumCard } from './components/AlbumCard'
 import { AlbumDetailView } from './components/AlbumDetailView'
@@ -17,11 +21,7 @@ export function AlbumPage({ onUnauthorized, onSelectPhoto }: AlbumPageProps) {
   const state = useAlbums({ onUnauthorized })
 
   if (state.detailLoading) {
-    return (
-      <main id="top" className="feature-loading" aria-label={t('albums.loading')}>
-        <span className="spinner" />
-      </main>
-    )
+    return <LoadingState as="main" id="top" label={t('albums.loading')} />
   }
 
   return (
@@ -67,22 +67,10 @@ export function AlbumPage({ onUnauthorized, onSelectPhoto }: AlbumPageProps) {
                     : t('albums.emptySummary')}
                 </p>
               </div>
-              <button
-                className="refresh-button"
-                type="button"
-                onClick={() => void state.refresh()}
-                disabled={state.loading}
-              >
-                <RefreshIcon />
-                <span>{t('common.refresh')}</span>
-              </button>
+              <RefreshButton onClick={state.refresh} disabled={state.loading} />
             </div>
 
-            {state.pageError && (
-              <div className="page-message page-message--error" role="alert">
-                {state.pageError}
-              </div>
-            )}
+            {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
 
             {state.loading ? (
               <div className="album-grid" aria-label={t('albums.loading')}>
@@ -97,13 +85,12 @@ export function AlbumPage({ onUnauthorized, onSelectPhoto }: AlbumPageProps) {
                 ))}
               </div>
             ) : (
-              <div className="empty-state album-empty-state">
-                <span>
-                  <AlbumIcon />
-                </span>
-                <h3>{t('albums.emptyTitle')}</h3>
-                <p>{t('albums.emptyHelp')}</p>
-              </div>
+              <EmptyState
+                className="album-empty-state"
+                icon={<AlbumIcon />}
+                title={t('albums.emptyTitle')}
+                description={t('albums.emptyHelp')}
+              />
             )}
           </section>
         </main>

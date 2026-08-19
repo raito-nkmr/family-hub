@@ -6,9 +6,13 @@ import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatDateTime } from '../../shared/lib/format'
 import { Dialog } from '../../shared/ui/Dialog'
+import { EmptyState } from '../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../shared/ui/InfiniteScrollTrigger'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
 import { useConfirmation } from '../../shared/ui/confirmation'
-import { DeleteIcon, RefreshIcon, UndoIcon } from '../../shared/ui/icons'
+import { DeleteIcon, UndoIcon } from '../../shared/ui/icons'
 import {
   getTrashedPhotos,
   getTrashedPhotoThumbnailUrl,
@@ -86,37 +90,20 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
             <p>{t('photoTrash.count', { shown: photos.length, total: pages[0]?.total_count ?? 0 })}</p>
           )}
         </div>
-        <button
-          className="refresh-button"
-          type="button"
-          onClick={() => void trashQuery.refetch()}
-          disabled={trashQuery.isFetching}
-        >
-          <RefreshIcon />
-          {t('common.refresh')}
-        </button>
+        <RefreshButton onClick={() => trashQuery.refetch()} disabled={trashQuery.isFetching} />
       </header>
-      {error && (
-        <div className="page-message page-message--error" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <PageMessage>{error}</PageMessage>}
       {trashQuery.isPending ? (
-        <div className="feature-loading" aria-label={t('photoTrash.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('photoTrash.loading')} />
       ) : trashQuery.error && !isUnauthorizedError(trashQuery.error) ? (
-        <div className="page-message page-message--error" role="alert">
-          {t('photoTrash.loadFailed')}
-        </div>
+        <PageMessage>{t('photoTrash.loadFailed')}</PageMessage>
       ) : photos.length === 0 ? (
-        <div className="empty-state">
-          <span>
-            <DeleteIcon />
-          </span>
-          <h2>{t('photoTrash.empty')}</h2>
-          <p>{t('photoTrash.emptyHelp')}</p>
-        </div>
+        <EmptyState
+          icon={<DeleteIcon />}
+          title={t('photoTrash.empty')}
+          description={t('photoTrash.emptyHelp')}
+          titleAs="h2"
+        />
       ) : (
         <>
           <PhotoGridDensity columns={gridColumns} onChange={changeGridColumns} />
@@ -162,7 +149,7 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
             <p>{t('photoTrash.deletedAt', { date: formatDateTime(selectedPhoto.trashed_at!) })}</p>
             <p>{t('photoTrash.purgeAfter', { date: formatDateTime(selectedPhoto.purge_after!) })}</p>
             {selectedPhoto.lifecycle_state === 'purge_pending' ? (
-              <p className="page-message">{t('photoTrash.purgePending')}</p>
+              <PageMessage variant="neutral">{t('photoTrash.purgePending')}</PageMessage>
             ) : (
               <div className="trash-photo-dialog__actions">
                 <button

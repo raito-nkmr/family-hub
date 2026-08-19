@@ -5,14 +5,10 @@ import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatBytes, formatDateTime } from '../../shared/lib/format'
-import {
-  AddModeratorIcon,
-  BlockIcon,
-  CheckIcon,
-  RefreshIcon,
-  RemoveModeratorIcon,
-  SaveIcon,
-} from '../../shared/ui/icons'
+import { LoadingState } from '../../shared/ui/LoadingState'
+import { PageMessage } from '../../shared/ui/PageMessage'
+import { RefreshButton } from '../../shared/ui/RefreshButton'
+import { AddModeratorIcon, BlockIcon, CheckIcon, RemoveModeratorIcon, SaveIcon } from '../../shared/ui/icons'
 import {
   assignAdministrativeGroupAdministrator,
   getAdministrationSnapshot,
@@ -71,30 +67,19 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
           <h1>{t('systemStatus.title')}</h1>
           <p>{t('systemStatus.description')}</p>
         </div>
-        <button
-          className="refresh-button"
-          type="button"
+        <RefreshButton
           disabled={statusQuery.isFetching}
-          onClick={() => void Promise.all([statusQuery.refetch(), administrationQuery.refetch()])}
-        >
-          <RefreshIcon />
-          {t('common.refresh')}
-        </button>
+          onClick={() => Promise.all([statusQuery.refetch(), administrationQuery.refetch()])}
+        />
       </header>
       {statusQuery.error && !isUnauthorizedError(statusQuery.error) && (
-        <div className="page-message page-message--error" role="alert">
-          {t('systemStatus.loadFailed')}
-        </div>
+        <PageMessage>{t('systemStatus.loadFailed')}</PageMessage>
       )}
       {status?.alerts.map((alert) => (
-        <div className="page-message page-message--error" role="alert" key={alert}>
-          {t(`systemStatus.alerts.${alert}`)}
-        </div>
+        <PageMessage key={alert}>{t(`systemStatus.alerts.${alert}`)}</PageMessage>
       ))}
       {statusQuery.isPending ? (
-        <div className="feature-loading" aria-label={t('systemStatus.loading')}>
-          <span className="spinner" />
-        </div>
+        <LoadingState label={t('systemStatus.loading')} />
       ) : status ? (
         <div className="maintenance-grid">
           <section className="maintenance-card maintenance-card--wide">
@@ -166,7 +151,7 @@ export function SystemStatusPage({ onUnauthorized }: SystemStatusPageProps) {
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
             </label>
-            {actionError && <p className="page-message page-message--error">{actionError}</p>}
+            {actionError && <PageMessage>{actionError}</PageMessage>}
             <div className="maintenance-table-wrap">
               <table className="maintenance-table">
                 <thead>
