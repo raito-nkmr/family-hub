@@ -783,6 +783,7 @@ export const en = {
     groupCandidates: 'Could not load available users.',
     invitationLoad: 'Could not load invitations.',
     invitationReserved: 'That username is already used or reserved by another invitation.',
+    invitationDecision: 'Could not accept or decline the group invitation.',
     invitationCreate: 'Could not create the invitation.',
     invitationRevokeConfirm: 'Revoke the invitation for {{username}}?',
     invitationRevoke: 'Could not revoke the invitation.',

@@ -772,6 +772,7 @@ export const ja: TranslationShape = {
     groupCandidates: '追加できるユーザーを読み込めませんでした。',
     invitationLoad: '招待を読み込めませんでした。',
     invitationReserved: 'そのユーザー名は使用済みか、別の招待で予約されています。',
+    invitationDecision: 'グループ招待を承認または辞退できませんでした。',
     invitationCreate: '招待を作成できませんでした。',
     invitationRevokeConfirm: '{{username}} への招待を取り消しますか？',
     invitationRevoke: '招待を取り消せませんでした。',

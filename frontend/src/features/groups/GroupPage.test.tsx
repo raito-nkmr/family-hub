@@ -136,6 +136,42 @@ describe('GroupPage', () => {
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
   })
 
+  it('shows a message when membership invitations cannot be loaded', async () => {
+    vi.mocked(getGroups).mockResolvedValue([])
+    vi.mocked(getMyGroupMembershipInvitations).mockRejectedValue(new ApiError(503, 'unavailable'))
+
+    render(<GroupPage currentUserId="current-user" onUnauthorized={vi.fn()} />, {
+      wrapper: createAppWrapper(),
+    })
+
+    await waitFor(() => expect(screen.getByText('招待を読み込めませんでした。')).toBeInTheDocument())
+  })
+
+  it('shows a message when accepting an invitation fails', async () => {
+    vi.mocked(getGroups).mockResolvedValue([])
+    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([
+      {
+        id: 'invitation-1',
+        group_id: 'group-1',
+        group_name: '同居家族',
+        user_id: 'current-user',
+        username: 'current-user',
+        role: 'member',
+        status: 'pending',
+        created_at: '2026-07-15T00:00:00Z',
+      },
+    ])
+    vi.mocked(decideGroupMembershipInvitation).mockRejectedValue(new ApiError(503, 'unavailable'))
+    const user = userEvent.setup()
+
+    render(<GroupPage currentUserId="current-user" onUnauthorized={vi.fn()} />, {
+      wrapper: createAppWrapper(),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '承認' }))
+    await waitFor(() => expect(screen.getByText('グループ招待を承認または辞退できませんでした。')).toBeInTheDocument())
+  })
+
   it('returns control to the app when accepting an invitation expires', async () => {
     vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([
       {

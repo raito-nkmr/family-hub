@@ -243,6 +243,12 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             {t('groups.create')}
           </button>
         </section>
+        {invitationsQuery.error && !isUnauthorizedError(invitationsQuery.error) && (
+          <PageMessage>{t('errors.invitationLoad')}</PageMessage>
+        )}
+        {invitationMutation.error && !isUnauthorizedError(invitationMutation.error) && (
+          <PageMessage>{t('errors.invitationDecision')}</PageMessage>
+        )}
         {(invitationsQuery.data?.length ?? 0) > 0 && (
           <section className="group-library">
             <h2>{t('groups.pendingInvitations')}</h2>
