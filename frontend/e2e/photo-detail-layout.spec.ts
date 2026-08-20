@@ -167,9 +167,35 @@ async function renderedImageWidth(page: Page) {
   })
 }
 
+async function expectCaptureDateWithinDetails(page: Page) {
+  const layout = await page.evaluate(() => {
+    const detailsRect = document.querySelector<HTMLElement>('.modal__details')!.getBoundingClientRect()
+    const fieldRect = document.querySelector<HTMLElement>('.photo-memo__datetime-field')!.getBoundingClientRect()
+    const input = document.querySelector<HTMLInputElement>(".photo-memo input[type='datetime-local']")!
+    const inputRect = input.getBoundingClientRect()
+    const inputStyle = getComputedStyle(input)
+    return {
+      viewportWidth: window.innerWidth,
+      details: { left: detailsRect.left, right: detailsRect.right },
+      field: { left: fieldRect.left, right: fieldRect.right },
+      input: { left: inputRect.left, right: inputRect.right },
+      inputPadding: { left: inputStyle.paddingLeft, right: inputStyle.paddingRight },
+    }
+  })
+  const tolerance = 1
+
+  expect(layout.field.left).toBeGreaterThanOrEqual(layout.details.left - tolerance)
+  expect(layout.field.right).toBeLessThanOrEqual(layout.details.right + tolerance)
+  expect(layout.input.left).toBeGreaterThanOrEqual(layout.details.left - tolerance)
+  expect(layout.input.right).toBeLessThanOrEqual(layout.details.right + tolerance)
+  expect(layout.input.right).toBeLessThanOrEqual(layout.viewportWidth + tolerance)
+  expect(layout.inputPadding).toEqual({ left: '0px', right: '0px' })
+}
+
 for (const viewport of [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'iphone', width: 393, height: 852 },
+  { name: 'compact-mobile', width: 360, height: 640 },
 ]) {
   test(`contains common photo aspect ratios on ${viewport.name} WebKit`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
@@ -179,9 +205,12 @@ for (const viewport of [
     for (const filename of ['portrait.jpg', 'landscape.jpg', 'square.jpg']) {
       await openPhoto(page, filename)
       await expect(page.locator('.modal__image')).toHaveJSProperty('complete', true)
+      await expectCaptureDateWithinDetails(page)
       await expectContainedMedia(page)
       if (filename === 'portrait.jpg') {
-        expect(await renderedImageWidth(page)).toBeGreaterThanOrEqual(viewport.name === 'iphone' ? 390 : 540)
+        expect(await renderedImageWidth(page)).toBeGreaterThanOrEqual(
+          viewport.name === 'desktop' ? 540 : viewport.width - 3,
+        )
       }
       await page.getByRole('button', { name: 'Close photo preview' }).click()
     }
@@ -198,4 +227,17 @@ test('keeps a bounded fallback stage when MOV playback fails', async ({ page }) 
   await expect(fallback).toBeVisible()
   await expect(fallback).toHaveCSS('display', 'flex')
   await expectContainedMedia(page)
+})
+
+test('keeps the Japanese capture date control inside a compact mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.addInitScript(() => window.localStorage.setItem('family-hub-language', 'ja'))
+  await mockPhotoApi(page)
+  await page.goto('/photos/library')
+  await page.locator('.photo-card').first().click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ja')
+  await expect(page.getByLabel('撮影日時を補正')).toBeVisible()
+  await expectCaptureDateWithinDetails(page)
+  await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 360)
 })

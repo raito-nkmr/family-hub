@@ -537,9 +537,11 @@ fieldset.upload-visibility,
 }
 
 .upload-visibility select,
-.photo-memo textarea,
-.photo-memo input[type='datetime-local'] {
+.photo-memo textarea {
+  display: block;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--color-border-default);
   border-radius: 0.65rem;
   padding: 0.65rem 0.75rem;
@@ -548,9 +550,46 @@ fieldset.upload-visibility,
   font: inherit;
 }
 
+/* iOS WebKit adds padding outside the declared width of padded temporal inputs (WebKit bug 301648). */
+.photo-memo__datetime-field {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--color-bg-surface);
+}
+
+.photo-memo__datetime-field:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.photo-memo__datetime-field input[type='datetime-local'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.photo-memo__datetime-field input[type='datetime-local']:focus {
+  outline: 0;
+}
+
 .photo-memo {
   min-width: 0;
   margin-top: 0;
+}
+
+.photo-memo form {
+  min-width: 0;
 }
 
 .photo-memo h3 {
@@ -562,8 +601,9 @@ fieldset.upload-visibility,
   resize: vertical;
 }
 
-.photo-memo form > div {
+.photo-memo__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;

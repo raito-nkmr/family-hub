@@ -328,16 +328,18 @@ export function PhotoModal({
                   <label className="sr-only" htmlFor={captureDateId}>
                     {t('photoDetails.captureDateEdit')}
                   </label>
-                  <input
-                    id={captureDateId}
-                    type="datetime-local"
-                    value={captureDate}
-                    disabled={metadataBusy}
-                    onChange={(event) =>
-                      setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
-                    }
-                  />
-                  <div>
+                  <div className="photo-memo__datetime-field">
+                    <input
+                      id={captureDateId}
+                      type="datetime-local"
+                      value={captureDate}
+                      disabled={metadataBusy}
+                      onChange={(event) =>
+                        setCaptureDateState({ photoId: photo.id, source: captureDateSource, value: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="photo-memo__actions">
                     <button
                       className="success-button icon-button"
                       type="submit"
@@ -375,7 +377,7 @@ export function PhotoModal({
                   placeholder={t('photoDetails.memoPlaceholder')}
                   onChange={(event) => setMemoState({ photoId: photo.id, value: event.target.value })}
                 />
-                <div>
+                <div className="photo-memo__actions">
                   <small>{memo.length} / 2000</small>
                   <button
                     className="success-button icon-button"
