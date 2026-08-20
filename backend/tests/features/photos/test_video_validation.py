@@ -37,6 +37,30 @@ def test_inspect_video_reads_dimensions_and_creation_time(tmp_path: Path, monkey
     assert result.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
 
 
+def test_inspect_video_uses_rotation_for_display_dimensions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "portrait.mov"
+    path.write_bytes(b"video")
+    probe = {
+        "streams": [
+            {
+                "codec_type": "video",
+                "width": 1920,
+                "height": 1080,
+                "side_data_list": [{"side_data_type": "Display Matrix", "rotation": -90}],
+            }
+        ],
+        "format": {"format_name": "mov"},
+    }
+    monkeypatch.setattr(
+        "app.features.photos.video_validation.subprocess.run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(probe)),
+    )
+
+    result = inspect_video(path, "video/quicktime", "Asia/Tokyo")
+
+    assert (result.width, result.height) == (1080, 1920)
+
+
 def test_inspect_video_rejects_missing_video_stream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "clip.mp4"
     path.write_bytes(b"audio")

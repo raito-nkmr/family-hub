@@ -256,8 +256,9 @@ must point at a separate mounted external HDD and is used only by maintenance co
 
 Never use client filenames or extensions to construct paths. The server chooses extensions after content validation. Accept
 JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Also accept MP4, QuickTime MOV, and M4V video files;
-`ffprobe` must find a supported container and a usable video stream. Use the first MPO image or first video frame for
-validation and thumbnails while preserving the original file.
+`ffprobe` must find a supported container and a usable video stream. Registration requires positive display-oriented width
+and height from every accepted image or video, applying EXIF image orientation and video rotation metadata before storing
+dimensions. Use the first MPO image or first video frame for validation and thumbnails while preserving the original file.
 
 At finalization, create a WebP thumbnail with a longest edge of at most 480 px, quality 80, and method 4 on the internal SSD.
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original

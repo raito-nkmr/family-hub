@@ -2,7 +2,7 @@ from collections.abc import Collection
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator, model_validator
 
 from app.features.photos.models import (
     PhotoActivityEventType,
@@ -90,8 +90,8 @@ class PhotoResponse(BaseModel):
     content_type: str
     size_bytes: int
     sha256: str
-    width: int | None
-    height: int | None
+    width: PositiveInt
+    height: PositiveInt
     captured_at: datetime | None
     uploaded_at: datetime
     lifecycle_state: PhotoLifecycleState
@@ -150,8 +150,8 @@ class PhotoListItemResponse(BaseModel):
     visibility: PhotoVisibility
     original_filename: str
     content_type: str
-    width: int | None
-    height: int | None
+    width: PositiveInt
+    height: PositiveInt
     captured_at: datetime | None
     uploaded_at: datetime
     is_favorite: bool

@@ -1207,7 +1207,7 @@ export type PhotoListItemResponse = {
   /**
    * Height
    */
-  height: number | null
+  height: number
   /**
    * Id
    */
@@ -1236,7 +1236,7 @@ export type PhotoListItemResponse = {
   /**
    * Width
    */
-  width: number | null
+  width: number
 }
 
 /**
@@ -1280,7 +1280,7 @@ export type PhotoResponse = {
   /**
    * Height
    */
-  height: number | null
+  height: number
   /**
    * Id
    */
@@ -1355,7 +1355,7 @@ export type PhotoResponse = {
   /**
    * Width
    */
-  width: number | null
+  width: number
 }
 
 /**

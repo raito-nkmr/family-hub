@@ -42,6 +42,16 @@ def test_photo_response_rejects_naive_datetime() -> None:
         PhotoResponse.model_validate(photo)
 
 
+@pytest.mark.parametrize(("width", "height"), [(None, 480), (640, None), (0, 480), (640, 0), (-1, 480), (640, -1)])
+def test_photo_response_requires_positive_dimensions(width: int | None, height: int | None) -> None:
+    photo = make_photo()
+    photo.width = width  # type: ignore[assignment]
+    photo.height = height  # type: ignore[assignment]
+
+    with pytest.raises(ValidationError):
+        PhotoResponse.model_validate(photo)
+
+
 def test_photo_response_only_contains_share_groups_visible_to_viewer() -> None:
     photo = make_photo(visibility=PhotoVisibility.SHARED)
     hidden_group_id = photo.shares[0].group_id

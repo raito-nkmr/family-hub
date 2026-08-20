@@ -69,6 +69,13 @@ export function PhotoModal({
     captureDateState.photoId === photo.id && captureDateState.source === captureDateSource
       ? captureDateState.value
       : toDateTimeLocal(captureDateSource)
+  const [displayDimensions, setDisplayDimensions] = useState<{
+    photoId: string
+    width: number
+    height: number
+  } | null>(null)
+  const activeDimensions = displayDimensions?.photoId === photo.id ? displayDimensions : photo
+  const mediaAspectRatio = `${activeDimensions.width} / ${activeDimensions.height}`
   const [moderationPasswordState, setModerationPasswordState] = useState(() => ({ photoId: photo.id, value: '' }))
   const moderationPassword = moderationPasswordState.photoId === photo.id ? moderationPasswordState.value : ''
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -111,7 +118,7 @@ export function PhotoModal({
       className="modal__panel"
       closeClassName="modal__close"
       closeLabel={t('photoDetails.close')}
-      size="large"
+      size="extra-large"
       surface="media"
       onClose={onClose}
       overlayContent={
@@ -153,13 +160,26 @@ export function PhotoModal({
         <>
           <div
             className="modal__image-wrap"
+            style={{ aspectRatio: mediaAspectRatio }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={() => {
               swipeStartRef.current = null
             }}
           >
-            <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+            <PhotoPreview
+              key={photo.id}
+              photo={photo}
+              className="modal__image"
+              source="original"
+              onDisplayDimensions={(width, height) => {
+                setDisplayDimensions((current) =>
+                  current?.photoId === photo.id && current.width === width && current.height === height
+                    ? current
+                    : { photoId: photo.id, width, height },
+                )
+              }}
+            />
           </div>
           <div className="modal__details">
             <div>

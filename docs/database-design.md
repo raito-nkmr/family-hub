@@ -147,10 +147,11 @@ purchase time must both be null or both be set. Index `(group_id, purchased_at, 
 Stores one metadata row per original. Important fields are uploader and username snapshot, display filename, relative
 `storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, capture and upload timestamps, lifecycle
 state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner. The same row represents either an
-image or a supported video; `content_type` distinguishes them and dimensions describe the video stream when applicable.
+image or a supported video; `content_type` distinguishes them. Dimensions describe the displayed orientation after applying
+EXIF image orientation or video rotation metadata.
 
 Constraints include unique `storage_key`, required existing owner, unique `(uploaded_by_user_id, sha256)`, positive size,
-lowercase 64-character SHA-256, paired dimensions or both null, and valid lifecycle/timestamp combinations. Do not include
+lowercase 64-character SHA-256, required positive width and height, and valid lifecycle/timestamp combinations. Do not include
 allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. Supported media
 includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V.
 
@@ -316,6 +317,7 @@ rewrite the baseline. The project has since added derivatives, `pg_trgm` filenam
 metadata, favorites and album groups, activity events and read states, trash lifecycle, maintenance history, Push subscriptions
 and outbox, per-device delivery state, unique group names, audit events, and group membership invitations through subsequent
 migrations up to `20260723_13` and the current revisions, including the forced-password-change flag for operator resets.
+Current revisions also require positive dimensions for every registered photo and video.
 
 Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
 with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with

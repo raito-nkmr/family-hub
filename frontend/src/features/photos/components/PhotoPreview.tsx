@@ -14,10 +14,12 @@ export function PhotoPreview({
   photo,
   className = '',
   source = 'thumbnail',
+  onDisplayDimensions,
 }: {
   photo: PreviewPhoto
   className?: string
   source?: 'thumbnail' | 'original'
+  onDisplayDimensions?: (width: number, height: number) => void
 }) {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
@@ -40,6 +42,10 @@ export function PhotoPreview({
         preload="metadata"
         poster={getPhotoThumbnailUrl(photo.id)}
         aria-label={photo.original_filename}
+        onLoadedMetadata={(event) => {
+          const { videoWidth, videoHeight } = event.currentTarget
+          if (videoWidth > 0 && videoHeight > 0) onDisplayDimensions?.(videoWidth, videoHeight)
+        }}
         onError={() => setFailed(true)}
       >
         <source src={getPhotoContentUrl(photo.id)} type={photo.content_type} />
@@ -53,6 +59,10 @@ export function PhotoPreview({
       src={source === 'thumbnail' ? getPhotoThumbnailUrl(photo.id) : getPhotoContentUrl(photo.id)}
       alt={photo.original_filename}
       loading="lazy"
+      onLoad={(event) => {
+        const { naturalWidth, naturalHeight } = event.currentTarget
+        if (naturalWidth > 0 && naturalHeight > 0) onDisplayDimensions?.(naturalWidth, naturalHeight)
+      }}
       onError={() => setFailed(true)}
     />
   )

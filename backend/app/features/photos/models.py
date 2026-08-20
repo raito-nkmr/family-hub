@@ -68,10 +68,7 @@ class Photo(Base):
         ),
         CheckConstraint("size_bytes > 0", name="ck_photos_size_bytes_positive"),
         CheckConstraint("sha256 ~ '^[0-9a-f]{64}$'", name="ck_photos_sha256_lower_hex"),
-        CheckConstraint(
-            "(width IS NULL AND height IS NULL) OR (width > 0 AND height > 0)",
-            name="ck_photos_dimensions",
-        ),
+        CheckConstraint("width > 0 AND height > 0", name="ck_photos_dimensions"),
         CheckConstraint(
             "lifecycle_state IN ('active', 'trashed', 'purge_pending')",
             name="ck_photos_lifecycle_state",
@@ -98,8 +95,8 @@ class Photo(Base):
     content_type: Mapped[str] = mapped_column(Text)
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     sha256: Mapped[str] = mapped_column(String(64))
-    width: Mapped[int | None] = mapped_column(Integer)
-    height: Mapped[int | None] = mapped_column(Integer)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
     captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     lifecycle_state: Mapped[str] = mapped_column(

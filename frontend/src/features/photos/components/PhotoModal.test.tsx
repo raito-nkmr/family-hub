@@ -31,6 +31,55 @@ const photo: Photo = {
 }
 
 describe('PhotoModal', () => {
+  it.each([
+    { label: 'portrait', width: 3024, height: 4032, aspectRatio: '3024 / 4032' },
+    { label: 'landscape', width: 4032, height: 2268, aspectRatio: '4032 / 2268' },
+    { label: 'square', width: 1200, height: 1200, aspectRatio: '1200 / 1200' },
+  ])('uses the original dimensions for a $label media stage', ({ width, height, aspectRatio }) => {
+    const { container } = render(
+      <PhotoModal
+        photo={{ ...photo, width, height }}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    expect(container.querySelector('.modal__image-wrap')).toHaveStyle({ aspectRatio })
+  })
+
+  it('updates the media stage to the decoded display orientation', () => {
+    const { container } = render(
+      <PhotoModal
+        photo={{ ...photo, width: 4032, height: 3024 }}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+      />,
+    )
+    const image = screen.getByAltText('photo.jpg')
+    Object.defineProperties(image, {
+      naturalWidth: { value: 3024 },
+      naturalHeight: { value: 4032 },
+    })
+
+    fireEvent.load(image)
+
+    expect(container.querySelector('.modal__image-wrap')).toHaveStyle({ aspectRatio: '3024 / 4032' })
+  })
+
   it('moves to adjacent photos when desktop edge controls are clicked', () => {
     const onPreviousPhoto = vi.fn()
     const onNextPhoto = vi.fn()
@@ -165,7 +214,7 @@ describe('PhotoModal', () => {
     const trash = screen.getByRole('button', { name: 'ゴミ箱へ移動' })
     const panel = screen.getByRole('dialog').firstElementChild
 
-    expect(panel).toHaveClass('dialog__panel--size-large', 'dialog__panel--surface-media')
+    expect(panel).toHaveClass('dialog__panel--size-extra-large', 'dialog__panel--surface-media')
     expect(favorite.parentElement).toHaveClass('photo-detail-actions')
     expect(favorite).toHaveClass('secondary-button', 'icon-button')
     expect(download).toHaveClass('secondary-button', 'icon-button')

@@ -64,7 +64,9 @@ infinite scrolling, and search controls. Failed automatic loading can be retried
 On mobile, the photo list shows thumbnails with month headings, favorite state, and sharing state. Users can choose 2, 3,
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
 in photo details. On desktop, clicking the left or right edge of the enlarged photo view moves to the adjacent photo;
-horizontal swipes provide the same navigation on mobile. Both operate on photos already loaded in the library. Search
+horizontal swipes provide the same navigation on mobile. Both operate on photos already loaded in the library.
+Photo details fit the complete image or video inside a bounded media stage without cropping. If the device cannot display or
+play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
 upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
 

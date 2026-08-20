@@ -45,11 +45,8 @@
 
   .modal__image-wrap {
     height: auto;
-    min-height: 50svh;
-  }
-
-  .modal__image {
-    max-height: 65svh;
+    min-height: min(16rem, 35svh);
+    max-height: min(82svh, 720px);
   }
 
   .metadata-list {
@@ -321,14 +318,6 @@
     width: 100%;
     min-height: 100svh;
     border-radius: 0;
-  }
-
-  .modal__image-wrap {
-    min-height: 55svh;
-  }
-
-  .modal__image {
-    max-height: 60svh;
   }
 
   .modal__details {
