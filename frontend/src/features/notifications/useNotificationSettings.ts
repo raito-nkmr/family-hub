@@ -144,9 +144,11 @@ export function useNotificationSettings({ locale, onUnauthorized }: UseNotificat
     } catch (subscribeError) {
       if (createdSubscription && !serverSubscriptionCreated) await createdSubscription.unsubscribe().catch(() => false)
       if (!isUnauthorizedError(subscribeError)) {
-        setError(
-          subscribeError instanceof ApiError && subscribeError.status === 409 ? 'subscriptionLimit' : 'subscribe',
-        )
+        const isSubscriptionLimit =
+          subscribeError instanceof ApiError &&
+          subscribeError.status === 409 &&
+          (subscribeError.code === 'push_subscription_limit_reached' || subscribeError.code === undefined)
+        setError(isSubscriptionLimit ? 'subscriptionLimit' : 'subscribe')
       }
     } finally {
       setBusyAction(null)

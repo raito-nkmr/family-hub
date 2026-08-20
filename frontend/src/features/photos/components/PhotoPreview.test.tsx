@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Photo } from '../api'
 import { PhotoPreview } from './PhotoPreview'
+import { createPhotoMediaCache } from './photoMediaCache'
+import { PhotoMediaCacheContext } from './photoMediaCacheContext'
 
 const photo = {
   id: 'photo/id',
@@ -80,5 +82,29 @@ describe('PhotoPreview', () => {
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByText('プレビュー未対応')).toBeInTheDocument()
+  })
+
+  it('releases an oversized original when the preview is unmounted', async () => {
+    const revokeObjectUrl = vi.fn()
+    const largeBlob = new Blob([new Uint8Array(64 * 1024 * 1024 + 1)])
+    const cache = createPhotoMediaCache({
+      fetchMedia: vi.fn<typeof fetch>().mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: async () => largeBlob,
+      } as Response),
+      createObjectUrl: () => 'blob:large-photo',
+      revokeObjectUrl,
+    })
+    const { unmount } = render(
+      <PhotoMediaCacheContext.Provider value={cache}>
+        <PhotoPreview photo={photo} source="original" />
+      </PhotoMediaCacheContext.Provider>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('img')).toHaveAttribute('src', 'blob:large-photo'))
+    unmount()
+
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:large-photo')
   })
 })

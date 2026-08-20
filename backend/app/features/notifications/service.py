@@ -35,6 +35,10 @@ class NotificationSubscriptionLimitError(Exception):
     pass
 
 
+class NotificationSubscriptionEndpointConflictError(Exception):
+    pass
+
+
 class NotificationService:
     def __init__(self, session: Session, settings: Settings) -> None:
         self._session = session
@@ -76,7 +80,9 @@ class NotificationService:
         subscription = self._session.scalar(
             select(PushSubscription).where(PushSubscription.endpoint_hash == endpoint_hash).with_for_update()
         )
-        if subscription is None or subscription.user_id != context.user.id:
+        if subscription is not None and subscription.user_id != context.user.id:
+            raise NotificationSubscriptionEndpointConflictError
+        if subscription is None:
             subscription_count = self._session.scalar(
                 select(func.count(PushSubscription.id)).where(PushSubscription.user_id == context.user.id)
             )
@@ -98,7 +104,6 @@ class NotificationService:
             )
             self._session.add(subscription)
         else:
-            subscription.user_id = context.user.id
             subscription.user_session_id = context.user_session.id
             subscription.endpoint = endpoint
             subscription.p256dh_key = body.keys.p256dh

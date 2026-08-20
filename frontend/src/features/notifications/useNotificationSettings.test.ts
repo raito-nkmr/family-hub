@@ -6,6 +6,7 @@ import {
   getNotificationConfig,
   updateNotificationPreferences,
 } from './api'
+import { ApiError } from '../../shared/api/client'
 import { useNotificationSettings } from './useNotificationSettings'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 
@@ -158,5 +159,20 @@ describe('useNotificationSettings', () => {
 
     expect(deletePushSubscription).not.toHaveBeenCalled()
     expect(result.current.error).toBe('subscribe')
+  })
+
+  it.each([
+    { code: 'push_subscription_limit_reached', expected: 'subscriptionLimit' },
+    { code: 'push_subscription_endpoint_conflict', expected: 'subscribe' },
+  ])('maps a push subscription 409 code to $expected', async ({ code, expected }) => {
+    vi.mocked(createPushSubscription).mockRejectedValue(new ApiError(409, 'conflict', code))
+    const { result } = renderHook(() => useNotificationSettings({ locale: 'ja', onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.enable())
+
+    expect(result.current.error).toBe(expected)
   })
 })

@@ -78,8 +78,9 @@ Owns family login, server-side sessions, system roles, invitation-based account 
 limiting. It contains routers, service logic, `User`, `UserSession`, and `UserInvitation` models, Argon2id password helpers,
 rate limiting, authentication dependencies, invitation handling, and a deliberately small `public.py` boundary.
 
-Login and password changes lock the target `User` row with `FOR UPDATE` before verifying the current hash. This prevents an
-old-password login from creating a new session concurrently with a password change.
+Login, password changes, and current-password reauthentication lock the target `User` row with `FOR UPDATE` before
+verifying the current hash. This prevents an old-password login or protected mutation from passing concurrently with a
+password change. The query uses `populate_existing` so verification reads the row version obtained after the lock.
 
 An operator password reset marks the user as requiring a password change. The user may authenticate only to retrieve the
 current session, change the password, or log out while this flag is set; all other authenticated feature APIs return `403`.
@@ -158,7 +159,9 @@ Notifications own session-bound Web Push subscriptions, preferences, and outbox.
 the stored subscription user and session owner identical. Photo sharing and shopping additions create
 outbox entries in the same transaction as the business change; cleaning due notifications are enqueued periodically. Workers
 exclude expired sessions, claim with timestamps and tokens, requeue stale claims, and retry only failed devices. Endpoints are
-HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository.
+HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository. An endpoint hash already owned
+by another user is rejected with `409 Conflict` and the `push_subscription_endpoint_conflict` error code; the subscription
+limit uses `push_subscription_limit_reached`.
 
 ## Dependency direction
 

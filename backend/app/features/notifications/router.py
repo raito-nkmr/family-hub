@@ -18,6 +18,7 @@ from app.features.notifications.service import (
     NotificationEndpointNotAllowedError,
     NotificationPersistenceError,
     NotificationService,
+    NotificationSubscriptionEndpointConflictError,
     NotificationSubscriptionLimitError,
 )
 
@@ -50,8 +51,19 @@ def create_push_subscription(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Push endpoint is not allowed",
         ) from error
+    except NotificationSubscriptionEndpointConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "push_subscription_endpoint_conflict",
+                "message": "Push subscription endpoint belongs to another user",
+            },
+        ) from error
     except NotificationSubscriptionLimitError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Push subscription limit reached") from error
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "push_subscription_limit_reached", "message": "Push subscription limit reached"},
+        ) from error
     except NotificationPersistenceError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Web Push is unavailable"

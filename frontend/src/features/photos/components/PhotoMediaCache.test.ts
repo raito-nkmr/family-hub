@@ -11,8 +11,8 @@ describe('createPhotoMediaCache', () => {
     const first = cache.load('/api/v1/photos/photo-1/content')
     const second = cache.load('/api/v1/photos/photo-1/content')
 
-    await expect(first).resolves.toBe('blob:photo')
-    await expect(second).resolves.toBe('blob:photo')
+    await expect(first).resolves.toEqual({ objectUrl: 'blob:photo', cached: true })
+    await expect(second).resolves.toEqual({ objectUrl: 'blob:photo', cached: true })
     expect(fetchMedia).toHaveBeenCalledOnce()
     expect(cache.get('/api/v1/photos/photo-1/content')).toBe('blob:photo')
 
@@ -28,5 +28,30 @@ describe('createPhotoMediaCache', () => {
 
     await expect(cache.load('/api/v1/photos/photo-1/content')).rejects.toThrow()
     expect(cache.get('/api/v1/photos/photo-1/content')).toBeUndefined()
+  })
+
+  it('keeps an oversized image out of the cache until its temporary URL is released', async () => {
+    const largeBlob = new Blob([new Uint8Array(64 * 1024 * 1024 + 1)])
+    const fetchMedia = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => largeBlob,
+    } as Response)
+    const revokeObjectUrl = vi.fn()
+    const cache = createPhotoMediaCache({
+      fetchMedia,
+      createObjectUrl: () => 'blob:large-photo',
+      revokeObjectUrl,
+    })
+
+    await expect(cache.load('/api/v1/photos/large/content')).resolves.toEqual({
+      objectUrl: 'blob:large-photo',
+      cached: false,
+    })
+    expect(cache.get('/api/v1/photos/large/content')).toBeUndefined()
+
+    cache.release('blob:large-photo')
+
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:large-photo')
   })
 })

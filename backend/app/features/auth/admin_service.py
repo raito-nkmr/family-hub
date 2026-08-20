@@ -248,7 +248,9 @@ class AdministrativeService:
         self._commit()
 
     def _reauthenticate(self, administrator_id: UUID, password: str) -> User:
-        administrator = self._session.get(User, administrator_id)
+        administrator = self._session.scalar(
+            select(User).where(User.id == administrator_id).with_for_update().execution_options(populate_existing=True)
+        )
         if (
             administrator is None
             or not administrator.is_active

@@ -73,6 +73,8 @@ Photo details fit the complete image or video inside a bounded media stage witho
 play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
 upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
+When photo detail metadata cannot be loaded, the detail modal remains open with the selected photo's list information and
+offers a manual retry. Detail-only editing controls are shown only after the full metadata response succeeds.
 
 The New view shows photos uploaded by other users to the user's groups and photos newly shared with those groups, ordered
 by operation time. A batch upload or bulk share is represented as one operation. Events before group membership, the user's

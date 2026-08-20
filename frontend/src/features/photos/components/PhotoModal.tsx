@@ -6,12 +6,12 @@ import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
 import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, RetryIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
-import { getPhotoDownloadUrl, type Photo } from '../api'
+import { getPhotoDownloadUrl, type Photo, type PhotoListItem } from '../api'
 import { formatPhotoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoModalProps {
-  photo: Photo
+  photo: Photo | PhotoListItem
   photoDetailLoading?: boolean
   photoDetailError?: string | null
   currentUserId: string
@@ -32,7 +32,17 @@ interface PhotoModalProps {
 
 const SWIPE_THRESHOLD_PX = 50
 
-export function PhotoModal({
+export function PhotoModal(props: PhotoModalProps) {
+  return isPhotoDetails(props.photo) ? (
+    <PhotoModalDetails {...props} photo={props.photo} />
+  ) : (
+    <PhotoModalFallback {...props} />
+  )
+}
+
+type PhotoModalDetailsProps = Omit<PhotoModalProps, 'photo'> & { photo: Photo }
+
+function PhotoModalDetails({
   photo,
   photoDetailLoading = false,
   photoDetailError = null,
@@ -50,7 +60,7 @@ export function PhotoModal({
   onModerateGroupShare,
   onPreviousPhoto,
   onNextPhoto,
-}: PhotoModalProps) {
+}: PhotoModalDetailsProps) {
   const { t } = useTranslation()
   const confirm = useConfirmation()
   const captureDateId = useId()
@@ -406,6 +416,81 @@ export function PhotoModal({
       )}
     </Dialog>
   )
+}
+
+function PhotoModalFallback({
+  photo,
+  photoDetailLoading = false,
+  photoDetailError = null,
+  updatingMetadata,
+  onClose,
+  onRetryPhotoDetail,
+  onPreviousPhoto,
+  onNextPhoto,
+}: Omit<PhotoModalProps, 'photo'> & { photo: PhotoListItem }) {
+  const { t } = useTranslation()
+  const metadataBusy = updatingMetadata || photoDetailLoading
+  const mediaAspectRatio = `${photo.width} / ${photo.height}`
+
+  return (
+    <Dialog
+      titleId="photo-title"
+      overlayClassName="modal"
+      className="modal__panel"
+      closeClassName="modal__close"
+      closeLabel={t('photoDetails.close')}
+      size="extra-large"
+      surface="media"
+      onClose={onClose}
+      overlayContent={
+        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
+          <button
+            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
+            type="button"
+            disabled={metadataBusy || !onPreviousPhoto}
+            aria-label={t('photoDetails.previousPhoto')}
+            onClick={onPreviousPhoto}
+          >
+            <BackIcon />
+          </button>
+          <button
+            className="modal__edge-navigation-button modal__edge-navigation-button--next"
+            type="button"
+            disabled={metadataBusy || !onNextPhoto}
+            aria-label={t('photoDetails.nextPhoto')}
+            onClick={onNextPhoto}
+          >
+            <BackIcon />
+          </button>
+        </nav>
+      }
+    >
+      <div className="modal__image-wrap" style={{ aspectRatio: mediaAspectRatio }}>
+        <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+      </div>
+      <div className="modal__details">
+        <p className="eyebrow">{t('photoDetails.eyebrow')}</p>
+        <h2 id="photo-title">{photo.original_filename}</h2>
+        {photoDetailError ? (
+          <>
+            <PageMessage>{photoDetailError}</PageMessage>
+            {onRetryPhotoDetail && (
+              <button className="secondary-button icon-button" type="button" onClick={onRetryPhotoDetail}>
+                <RetryIcon />
+                {t('photos.retryDetail')}
+              </button>
+            )}
+          </>
+        ) : (
+          <PageMessage>{t('common.loading')}</PageMessage>
+        )}
+      </div>
+    </Dialog>
+  )
+}
+
+function isPhotoDetails(photo: Photo | PhotoListItem): photo is Photo {
+  return 'metadata_version' in photo
 }
 
 function toDateTimeLocal(value: string | null | undefined): string {

@@ -188,7 +188,7 @@ describe('usePhotoDashboard', () => {
     expect(result.current.nextPhoto?.id).toBe('photo-3')
   })
 
-  it('keeps the current detail while the next photo loads', async () => {
+  it('does not expose the previous detail while the next photo loads', async () => {
     const secondPhoto = { ...photo, id: 'photo-2', original_filename: 'second.jpg' }
     let resolveSecond: ((value: Photo) => void) | undefined
     vi.mocked(getPhoto).mockImplementation(async (photoId) => {
@@ -211,7 +211,10 @@ describe('usePhotoDashboard', () => {
       secondRequest = result.current.selectPhoto(secondPhoto)
     })
 
-    await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(photo.id))
+    await waitFor(() => {
+      expect(result.current.selectedPhoto).toBeNull()
+      expect(result.current.selectedPhotoSummary?.id).toBe(secondPhoto.id)
+    })
     resolveSecond?.(secondPhoto)
     await act(() => secondRequest)
 
@@ -234,7 +237,8 @@ describe('usePhotoDashboard', () => {
     await act(() => result.current.selectPhoto(photo))
     await act(() => result.current.selectPhoto(secondPhoto))
 
-    expect(result.current.selectedPhoto?.id).toBe(photo.id)
+    expect(result.current.selectedPhoto).toBeNull()
+    expect(result.current.selectedPhotoSummary?.id).toBe(secondPhoto.id)
     expect(result.current.photoDetailError).toBe('写真の詳細を取得できませんでした。')
 
     shouldFail = false
@@ -242,6 +246,24 @@ describe('usePhotoDashboard', () => {
 
     await waitFor(() => expect(result.current.selectedPhoto?.id).toBe(secondPhoto.id))
     expect(result.current.photoDetailError).toBeNull()
+  })
+
+  it('keeps the selected list summary visible when the first detail request fails', async () => {
+    vi.mocked(getPhoto).mockRejectedValue(new Error('unavailable'))
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.selectPhoto(photo))
+
+    expect(result.current.selectedPhoto).toBeNull()
+    expect(result.current.selectedPhotoSummary).toMatchObject({
+      id: photo.id,
+      original_filename: photo.original_filename,
+    })
+    expect(result.current.photoDetailError).toBe('写真の詳細を取得できませんでした。')
   })
 
   it('ignores an old cursor page that completes after a new search', async () => {
@@ -303,6 +325,7 @@ describe('usePhotoDashboard', () => {
     act(() => result.current.reset())
 
     expect(result.current.selectedPhoto).toBeNull()
+    expect(result.current.selectedPhotoSummary).toBeNull()
     expect(result.current.uploadQueue).toEqual([])
   })
 

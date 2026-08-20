@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
@@ -78,7 +78,6 @@ export function usePhotoLibrary({
     queryKey: queryKeys.photo(selectedPhotoId ?? ''),
     queryFn: ({ signal }) => getPhoto(selectedPhotoId!, signal),
     enabled: selectedPhotoId !== null,
-    placeholderData: keepPreviousData,
   })
   const unauthorizedCandidate = [
     storageQuery.error,
@@ -90,7 +89,8 @@ export function usePhotoLibrary({
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
-  const selectedPhoto = selectedPhotoId === null ? null : (detailQuery.data ?? null)
+  const selectedPhoto = selectedPhotoId !== null && detailQuery.data?.id === selectedPhotoId ? detailQuery.data : null
+  const [selectedPhotoSummary, setSelectedPhotoSummary] = useState<PhotoListItem | null>(null)
   const selectedPhotoIndex = photoList.photos.findIndex((photo) => photo.id === selectedPhotoId)
   const previousPhoto = selectedPhotoIndex > 0 ? photoList.photos[selectedPhotoIndex - 1] : null
   const nextPhoto = selectedPhotoIndex >= 0 ? (photoList.photos[selectedPhotoIndex + 1] ?? null) : null
@@ -145,6 +145,7 @@ export function usePhotoLibrary({
     const requestId = ++photoDetailRequestIdRef.current
     const hadSelectedPhoto = selectedPhotoId !== null
     setSelectedPhotoId(photo.id)
+    setSelectedPhotoSummary(toPhotoListItem(photo))
     setPageMutationError(null)
     setMetadataError(null)
     setPhotoDetailError(null)
@@ -231,6 +232,7 @@ export function usePhotoLibrary({
       await trashPhoto(selectedPhoto.id)
       removePhotoFromPages(queryClient, photoFilters, selectedPhoto.id)
       setSelectedPhotoId(null)
+      setSelectedPhotoSummary(null)
       await invalidateLibrary()
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
@@ -259,6 +261,7 @@ export function usePhotoLibrary({
     searchOptions: searchOptionsQuery.data ?? null,
     searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
+    selectedPhotoSummary,
     photoDetailLoading: detailQuery.isFetching,
     photoDetailError,
     retryPhotoDetail,
@@ -287,19 +290,39 @@ export function usePhotoLibrary({
     moveSelectedPhotoToTrash,
     selectPhoto,
     closePhoto: useCallback(() => {
+      photoDetailRequestIdRef.current += 1
       setMetadataError(null)
       setPhotoDetailError(null)
       setSelectedPhotoId(null)
+      setSelectedPhotoSummary(null)
     }, []),
     reportError: setPageMutationError,
     reset: useCallback(() => {
+      photoDetailRequestIdRef.current += 1
       setSelectedPhotoId(null)
+      setSelectedPhotoSummary(null)
       setPageMutationError(null)
       setMetadataError(null)
       setPhotoDetailError(null)
       setUpdatingMetadata(false)
     }, []),
     invalidateLibrary,
+  }
+}
+
+function toPhotoListItem(photo: Photo | PhotoListItem): PhotoListItem {
+  return {
+    captured_at: photo.captured_at,
+    content_type: photo.content_type,
+    height: photo.height,
+    id: photo.id,
+    is_favorite: photo.is_favorite,
+    original_filename: photo.original_filename,
+    uploaded_at: photo.uploaded_at,
+    uploaded_by_user_id: photo.uploaded_by_user_id,
+    uploaded_by_username: photo.uploaded_by_username,
+    visibility: photo.visibility,
+    width: photo.width,
   }
 }
 

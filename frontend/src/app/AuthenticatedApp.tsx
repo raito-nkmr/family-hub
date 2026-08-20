@@ -265,10 +265,10 @@ function AuthenticatedAppShell({
         </div>
       </div>
 
-      {photoDashboard.selectedPhoto && (
+      {(photoDashboard.selectedPhoto || photoDashboard.selectedPhotoSummary) && (
         <PhotoModal
-          key={photoDashboard.selectedPhoto.id}
-          photo={photoDashboard.selectedPhoto}
+          key={(photoDashboard.selectedPhoto ?? photoDashboard.selectedPhotoSummary)!.id}
+          photo={photoDashboard.selectedPhoto ?? photoDashboard.selectedPhotoSummary!}
           photoDetailLoading={photoDashboard.photoDetailLoading}
           photoDetailError={photoDashboard.photoDetailError}
           currentUserId={currentUser.id}

@@ -9,6 +9,7 @@ from app.features.auth.dependencies import require_csrf_token
 from app.features.auth.public import AuthContext
 from app.features.notifications.models import NotificationType
 from app.features.notifications.router import (
+    create_push_subscription,
     delete_push_subscription,
     router,
     update_notification_preferences,
@@ -17,9 +18,15 @@ from app.features.notifications.router import (
 from app.features.notifications.schemas import (
     NotificationPreferenceItem,
     NotificationPreferenceUpdate,
+    PushSubscriptionCreate,
     PushSubscriptionLocaleUpdate,
 )
-from app.features.notifications.service import NotificationPersistenceError, NotificationService
+from app.features.notifications.service import (
+    NotificationPersistenceError,
+    NotificationService,
+    NotificationSubscriptionEndpointConflictError,
+    NotificationSubscriptionLimitError,
+)
 from app.main import create_app
 from tests.features.auth.factories import make_user_session
 
@@ -38,6 +45,13 @@ def make_preferences() -> NotificationPreferenceUpdate:
     )
 
 
+def make_subscription() -> PushSubscriptionCreate:
+    return PushSubscriptionCreate(
+        endpoint="https://web.push.apple.com/subscription",
+        keys={"p256dh": "p" * 20, "auth": "a" * 10},
+    )
+
+
 def test_unsubscribe_persistence_failure_returns_service_unavailable() -> None:
     service = MagicMock(spec=NotificationService)
     service.unsubscribe.side_effect = NotificationPersistenceError
@@ -46,6 +60,35 @@ def test_unsubscribe_persistence_failure_returns_service_unavailable() -> None:
         delete_push_subscription(uuid4(), make_context(), service)
 
     assert error.value.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("service_error", "expected_detail"),
+    [
+        (
+            NotificationSubscriptionEndpointConflictError,
+            {
+                "code": "push_subscription_endpoint_conflict",
+                "message": "Push subscription endpoint belongs to another user",
+            },
+        ),
+        (
+            NotificationSubscriptionLimitError,
+            {"code": "push_subscription_limit_reached", "message": "Push subscription limit reached"},
+        ),
+    ],
+)
+def test_subscription_conflicts_return_machine_readable_409(
+    service_error: type[Exception], expected_detail: dict[str, str]
+) -> None:
+    service = MagicMock(spec=NotificationService)
+    service.subscribe.side_effect = service_error
+
+    with pytest.raises(HTTPException) as error:
+        create_push_subscription(make_subscription(), make_context(), service)
+
+    assert error.value.status_code == 409
+    assert error.value.detail == expected_detail
 
 
 def test_preference_persistence_failure_returns_service_unavailable() -> None:
