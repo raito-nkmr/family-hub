@@ -171,4 +171,29 @@ describe('PhotoLibrary', () => {
 
     expect(onRequestExport).toHaveBeenCalledWith(['photo-1'])
   })
+
+  it('uses a separate shared selection badge position', async () => {
+    const user = userEvent.setup()
+    render(
+      <PhotoLibrary
+        photos={[{ ...photo, content_type: 'video/mp4' }]}
+        filters={{}}
+        timeline={timeline}
+        totalCount={1}
+        loading={false}
+        loadingMore={false}
+        hasMore={false}
+        pageError={null}
+        {...callbacks}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '写真を選択' }))
+    await user.click(screen.getByRole('button', { name: 'summer.jpgを選択' }))
+
+    const card = screen.getByRole('button', { name: 'summer.jpgの選択を解除' })
+    expect(card.querySelector('.photo-badge--selection')).toHaveClass('photo-badge--bottom-left', 'photo-badge--active')
+    expect(card.querySelector('.photo-badge--selection svg')).toBeInTheDocument()
+    expect(card.querySelector('.photo-badge--video')).toHaveClass('photo-badge--top-right')
+  })
 })

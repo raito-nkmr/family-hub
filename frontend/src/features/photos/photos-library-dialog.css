@@ -108,12 +108,23 @@
   bottom: var(--photo-badge-offset);
 }
 
+.photo-badge--bottom-left {
+  bottom: var(--photo-badge-offset);
+  left: var(--photo-badge-offset);
+}
+
 .photo-badge--favorite {
   color: color-mix(in srgb, var(--color-action-danger) 70%, #fff);
 }
 
 .photo-badge--shared {
   color: #bcebd7;
+}
+
+.photo-badge--selection.photo-badge--active {
+  color: var(--color-button-primary-text);
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
 }
 
 .photo-badge__icon {

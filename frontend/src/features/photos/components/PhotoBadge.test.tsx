@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { FavoriteIcon, ShareIcon, VideoLibraryIcon } from '../../../shared/ui/icons'
+import { CheckIcon, FavoriteIcon, ShareIcon, VideoLibraryIcon } from '../../../shared/ui/icons'
 import { PhotoBadge } from './PhotoBadge'
 
 describe('PhotoBadge', () => {
@@ -25,5 +25,18 @@ describe('PhotoBadge', () => {
     expect(badges[2]).toHaveClass('photo-badge--shared', 'photo-badge--bottom-right')
     expect(container.querySelectorAll('.photo-badge__icon')).toHaveLength(3)
     expect(screen.getByTitle('お気に入り')).toBeInTheDocument()
+  })
+
+  it('supports an active selection state with the same badge treatment', () => {
+    const { container } = render(
+      <PhotoBadge variant="selection" position="bottom-left" label="写真を選択" active icon={<CheckIcon />} />,
+    )
+
+    expect(container.querySelector('.photo-badge')).toHaveClass(
+      'photo-badge--selection',
+      'photo-badge--bottom-left',
+      'photo-badge--active',
+    )
+    expect(container.querySelector('.photo-badge__icon svg')).toBeInTheDocument()
   })
 })

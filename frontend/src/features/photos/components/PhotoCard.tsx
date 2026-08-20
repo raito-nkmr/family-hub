@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { FavoriteIcon, ShareIcon, VideoLibraryIcon } from '../../../shared/ui/icons'
+import { CheckIcon, FavoriteIcon, ShareIcon, VideoLibraryIcon } from '../../../shared/ui/icons'
 import type { PhotoListItem } from '../api'
 import { isVideoContentType } from '../contentType'
 import { PhotoBadge } from './PhotoBadge'
@@ -46,9 +46,15 @@ export function PhotoCard({
           </PhotoBadge>
         )}
         {selecting && (
-          <span className="photo-card__selection-mark" aria-hidden="true">
-            {selected ? '✓' : ''}
-          </span>
+          <PhotoBadge
+            variant="selection"
+            position="bottom-left"
+            label={t(selected ? 'bulkPhotoSharing.deselectPhoto' : 'bulkPhotoSharing.selectPhoto', {
+              filename: photo.original_filename,
+            })}
+            active={selected}
+            icon={selected ? <CheckIcon /> : undefined}
+          />
         )}
         {photo.visibility === 'shared' && (
           <PhotoBadge variant="shared" position="bottom-right" label={t('photos.family')} icon={<ShareIcon />}>
