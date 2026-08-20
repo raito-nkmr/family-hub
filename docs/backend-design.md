@@ -366,6 +366,42 @@ subscription limit, and optional `MONITORING_PING_URL_*` values. Development def
 
 ## Testing strategy
 
+### PostgreSQL test databases
+
+Unit tests use mocked sessions or temporary resources, so the normal test run does not need a database connection. The
+PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` is set. The migration round-trip test additionally
+requires `MIGRATION_TEST_DATABASE_URL`.
+
+For local testing, use two disposable databases on the development PostgreSQL instance at `127.0.0.1:15432`. Reuse the
+existing local PostgreSQL role, but use database names such as `family_hub_test` and `family_hub_migration_test`; the role
+must exist, while the databases must be created before running the tests. Never use the production PostgreSQL endpoint at
+`127.0.0.1:5433` or a production database for tests.
+
+Set the URLs in the current shell rather than committing credentials or adding them to repository files:
+
+```bash
+read -rsp 'TEST_DATABASE_URL: ' TEST_DATABASE_URL
+echo
+export TEST_DATABASE_URL
+read -rsp 'MIGRATION_TEST_DATABASE_URL: ' MIGRATION_TEST_DATABASE_URL
+echo
+export MIGRATION_TEST_DATABASE_URL
+```
+
+Apply the latest schema to the ordinary integration-test database, then run the complete backend suite. The migration test
+uses its separate empty database and applies and rolls back the full Alembic history itself:
+
+```bash
+DATABASE_URL="$TEST_DATABASE_URL" uv run --locked alembic upgrade head
+uv run --locked pytest
+```
+
+Unset the variables when finished if the shell will be reused for another database:
+
+```bash
+unset TEST_DATABASE_URL MIGRATION_TEST_DATABASE_URL
+```
+
 ### Storage
 
 Use pytest temporary directories, never the real HDD. Test chunk writes, hashing, original/JSON renames, size limits,

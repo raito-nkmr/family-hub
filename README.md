@@ -142,6 +142,10 @@ npm --prefix frontend run test:e2e:live
 
 Keep the live-test credentials outside the repository and shell history.
 
+Backend PostgreSQL integration tests use disposable databases and are skipped when their connection URLs are not set. See
+[`backend-design.md`](docs/backend-design.md#postgresql-test-databases) for the local ports, separate migration database,
+and shell-only environment-variable setup. Never point these tests at the production database on `127.0.0.1:5433`.
+
 ## Documentation
 
 The README intentionally stays focused on orientation and setup. Detailed behavior, design decisions, operational
