@@ -502,23 +502,6 @@ fieldset.upload-visibility,
   font-size: 0.75rem;
 }
 
-.photo-sharing__password input {
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  padding: 0.7rem 0.8rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-  font: inherit;
-}
-
-.photo-sharing__password input:focus {
-  border-color: var(--color-action-accent);
-  outline: 2px solid color-mix(in srgb, var(--color-action-accent) 35%, transparent);
-}
-
 .photo-detail-actions {
   display: grid;
   grid-template-columns: repeat(3, max-content);
@@ -564,8 +547,7 @@ fieldset.upload-visibility,
   gap: 0.25rem;
 }
 
-.upload-visibility select,
-.photo-memo textarea {
+.upload-visibility select {
   display: block;
   width: 100%;
   min-width: 0;

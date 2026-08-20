@@ -278,6 +278,7 @@ export function PhotoModal({
                         <label className="photo-sharing__password">
                           {t('photoDetails.currentPassword')}
                           <input
+                            className="form-control"
                             type="password"
                             value={moderationPassword}
                             autoComplete="current-password"
@@ -369,6 +370,7 @@ export function PhotoModal({
                   {t('photoDetails.memo')}
                 </label>
                 <textarea
+                  className="form-control"
                   id={memoId}
                   value={memo}
                   maxLength={2000}

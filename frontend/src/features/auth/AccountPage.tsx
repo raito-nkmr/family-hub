@@ -122,6 +122,7 @@ export function AccountPage({
           <form className="account-form" onSubmit={(event) => void submitPassword(event)}>
             <label htmlFor={currentPasswordId}>{t('account.currentPassword')}</label>
             <input
+              className="form-control"
               id={currentPasswordId}
               type="password"
               value={currentPassword}
@@ -133,6 +134,7 @@ export function AccountPage({
             />
             <label htmlFor={newPasswordId}>{t('account.newPassword')}</label>
             <input
+              className="form-control"
               id={newPasswordId}
               type="password"
               value={newPassword}
@@ -145,6 +147,7 @@ export function AccountPage({
             />
             <label htmlFor={confirmationId}>{t('account.confirmPassword')}</label>
             <input
+              className="form-control"
               id={confirmationId}
               type="password"
               value={confirmation}

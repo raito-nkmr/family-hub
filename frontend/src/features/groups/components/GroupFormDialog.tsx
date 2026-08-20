@@ -32,6 +32,7 @@ export function GroupFormDialog({ submitting, error, onSubmit, onClose }: GroupF
       <form className="group-form" onSubmit={(event) => void handleSubmit(event)}>
         <label htmlFor={nameId}>{t('groups.name')}</label>
         <input
+          className="form-control form-control--subtle"
           id={nameId}
           value={name}
           maxLength={120}

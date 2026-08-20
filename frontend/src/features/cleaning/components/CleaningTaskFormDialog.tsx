@@ -37,6 +37,7 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
       <form className="cleaning-task-form" onSubmit={(event) => void handleSubmit(event)}>
         <label htmlFor={nameId}>{t('cleaning.place')}</label>
         <input
+          className="form-control form-control--subtle"
           id={nameId}
           value={name}
           maxLength={120}
@@ -50,6 +51,7 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
         <label htmlFor={intervalId}>{t('cleaning.frequency')}</label>
         <div className="cleaning-task-form__interval">
           <input
+            className="form-control form-control--subtle"
             id={intervalId}
             type="number"
             inputMode="numeric"

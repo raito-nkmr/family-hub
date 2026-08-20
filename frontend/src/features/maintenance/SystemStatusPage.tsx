@@ -167,6 +167,7 @@ export function SystemStatusPage({ currentUserId, onUnauthorized, onCurrentUserC
             <label className="maintenance-password">
               <span>{t('systemStatus.currentPassword')}</span>
               <input
+                className="form-control"
                 type="password"
                 value={currentPassword}
                 autoComplete="current-password"
@@ -268,6 +269,7 @@ export function SystemStatusPage({ currentUserId, onUnauthorized, onCurrentUserC
                       })}
                     </small>
                     <select
+                      className="form-control"
                       aria-label={t('systemStatus.recoveryUser')}
                       value={recoveryUsers[group.id] ?? ''}
                       onChange={(event) =>

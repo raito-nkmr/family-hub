@@ -57,16 +57,6 @@
   margin-top: 1.25rem;
 }
 
-.account-form input {
-  width: 100%;
-  padding: 0.65rem 0.75rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 0.65rem;
-  font: inherit;
-}
-
 .account-form .primary-button {
   justify-self: start;
   margin-top: 0.5rem;

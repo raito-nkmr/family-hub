@@ -57,6 +57,7 @@ export function LoginScreen({ initialError, theme, onLogin, onToggleTheme }: Log
       <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
         <label htmlFor={usernameId}>{t('auth.username')}</label>
         <input
+          className="form-control form-control--subtle"
           id={usernameId}
           name="username"
           type="text"
@@ -69,6 +70,7 @@ export function LoginScreen({ initialError, theme, onLogin, onToggleTheme }: Log
         />
         <label htmlFor={passwordId}>{t('auth.password')}</label>
         <input
+          className="form-control form-control--subtle"
           id={passwordId}
           name="password"
           type="password"

@@ -80,6 +80,7 @@ export function RequiredPasswordChangeScreen({
       <form className="login-form" onSubmit={(event) => void submit(event)}>
         <label htmlFor={currentPasswordId}>{t('auth.currentPassword')}</label>
         <input
+          className="form-control form-control--subtle"
           id={currentPasswordId}
           type="password"
           value={currentPassword}
@@ -90,6 +91,7 @@ export function RequiredPasswordChangeScreen({
         />
         <label htmlFor={newPasswordId}>{t('auth.newPassword')}</label>
         <input
+          className="form-control form-control--subtle"
           id={newPasswordId}
           type="password"
           value={newPassword}
@@ -102,6 +104,7 @@ export function RequiredPasswordChangeScreen({
         />
         <label htmlFor={confirmationId}>{t('auth.confirmPassword')}</label>
         <input
+          className="form-control form-control--subtle"
           id={confirmationId}
           type="password"
           value={confirmation}

@@ -95,6 +95,7 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 <label>
                   {t('groups.rename')}
                   <input
+                    className="form-control form-control--subtle"
                     value={renameValue}
                     maxLength={100}
                     placeholder={selectedGroup.name}
