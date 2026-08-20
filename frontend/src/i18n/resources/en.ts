@@ -140,7 +140,7 @@ export const en = {
     logoutFailed: 'Could not log out. Check your connection.',
     eyebrow: 'FAMILY HUB',
     title: 'Welcome back',
-    description: 'Sign in to your private Family Hub.',
+    description: 'Sign in to Family Hub.',
     username: 'Username',
     password: 'Password',
     signingIn: 'Signing in…',

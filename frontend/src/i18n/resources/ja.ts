@@ -141,7 +141,7 @@ export const ja: TranslationShape = {
     logoutFailed: 'ログアウトできませんでした。接続を確認してください。',
     eyebrow: 'FAMILY HUB',
     title: 'おかえりなさい',
-    description: 'プライベートなFamily Hubへログインする。',
+    description: 'Family Hubへログイン。',
     username: 'ユーザー名',
     password: 'パスワード',
     signingIn: '確認しています…',
