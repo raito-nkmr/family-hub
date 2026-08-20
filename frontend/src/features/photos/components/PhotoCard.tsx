@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { FavoriteIcon } from '../../../shared/ui/icons'
+import { FavoriteIcon, ShareIcon, VideoLibraryIcon } from '../../../shared/ui/icons'
 import type { PhotoListItem } from '../api'
 import { isVideoContentType } from '../contentType'
+import { PhotoBadge } from './PhotoBadge'
 import { PhotoPreview } from './PhotoPreview'
 
 interface PhotoCardProps {
@@ -39,19 +40,28 @@ export function PhotoCard({
     >
       <div className="photo-card__image-wrap">
         <PhotoPreview photo={photo} className="photo-card__image" />
-        {isVideoContentType(photo.content_type) && <span className="photo-card__media-type">{t('photos.video')}</span>}
+        {isVideoContentType(photo.content_type) && (
+          <PhotoBadge variant="video" position="top-right" label={t('photos.video')} icon={<VideoLibraryIcon />}>
+            {t('photos.video')}
+          </PhotoBadge>
+        )}
         {selecting && (
           <span className="photo-card__selection-mark" aria-hidden="true">
             {selected ? '✓' : ''}
           </span>
         )}
         {photo.visibility === 'shared' && (
-          <span className="photo-card__visibility photo-card__visibility--shared">{t('photos.family')}</span>
+          <PhotoBadge variant="shared" position="bottom-right" label={t('photos.family')} icon={<ShareIcon />}>
+            {t('photos.family')}
+          </PhotoBadge>
         )}
         {photo.is_favorite && (
-          <span className="photo-card__favorite" aria-label={t('photoDetails.favorite')}>
-            <FavoriteIcon />
-          </span>
+          <PhotoBadge
+            variant="favorite"
+            position="top-left"
+            label={t('photoDetails.favorite')}
+            icon={<FavoriteIcon />}
+          />
         )}
       </div>
     </button>

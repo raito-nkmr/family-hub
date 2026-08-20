@@ -297,24 +297,24 @@
     background: var(--color-action-filled-bg);
   }
 
-  .photo-card__favorite {
-    top: 0.25rem;
-    left: 0.25rem;
-    width: 1.15rem;
-    height: 1.15rem;
+  .photo-badge {
+    --photo-badge-offset: 0.25rem;
+
+    width: 1.35rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    min-height: 1.35rem;
+    padding: 0;
+    font-size: 0.55rem;
   }
 
-  .photo-card__favorite svg {
+  .photo-badge__label {
+    display: none;
+  }
+
+  .photo-badge__icon {
     width: 0.72rem;
     height: 0.72rem;
-  }
-
-  .photo-card__visibility {
-    right: 0.25rem;
-    bottom: 0.25rem;
-    padding: 0.18rem 0.35rem;
-    font-size: 0.55rem;
-    letter-spacing: 0.02em;
   }
 
   .modal__panel {

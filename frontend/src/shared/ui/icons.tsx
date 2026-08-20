@@ -41,6 +41,7 @@ import ApkInstallSymbol from './icons/material-symbols/apk-install.svg?react'
 import LoginSymbol from './icons/material-symbols/login.svg?react'
 import LogoutSymbol from './icons/material-symbols/logout.svg?react'
 import MoreVertSymbol from './icons/material-symbols/more-vert.svg?react'
+import VideoLibrarySymbol from './icons/material-symbols/video-library.svg?react'
 
 export function BlockIcon() {
   return <BlockSymbol className="material-symbol-icon" />
@@ -108,6 +109,10 @@ export function RetryIcon() {
 
 export function PhotoIcon() {
   return <PhotoSymbol className="material-symbol-icon" />
+}
+
+export function VideoLibraryIcon() {
+  return <VideoLibrarySymbol className="material-symbol-icon" />
 }
 
 export function PhotoActivityIcon() {

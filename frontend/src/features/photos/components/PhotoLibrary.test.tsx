@@ -75,7 +75,7 @@ describe('PhotoLibrary', () => {
     expect(screen.getByAltText('summer.jpg')).toBeInTheDocument()
     expect(screen.queryByText('summer.jpg')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '2025年7月' })).toBeInTheDocument()
-    expect(container.querySelector('.photo-card__visibility')).not.toBeInTheDocument()
+    expect(container.querySelector('.photo-badge--shared')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('写真を読み込み中')).not.toBeInTheDocument()
   })
 

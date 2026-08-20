@@ -70,53 +70,62 @@
   transform: scale(1.025);
 }
 
-.photo-card__visibility {
+.photo-badge {
+  --photo-badge-offset: 0.65rem;
+
   position: absolute;
-  right: 0.65rem;
-  bottom: 0.65rem;
-  border-radius: 999px;
-  padding: 0.28rem 0.55rem;
-  background: rgb(11 23 38 / 78%);
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.3rem 0.55rem;
   color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  background: rgb(11 23 38 / 80%);
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 999px;
+  box-shadow: 0 0.2rem 0.55rem rgb(3 12 22 / 18%);
   backdrop-filter: blur(8px);
-}
-
-.photo-card__visibility--shared {
-  background: rgb(23 113 93 / 88%);
-}
-
-.photo-card__media-type {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  padding: 0.28rem 0.55rem;
-  color: #fff;
-  background: rgb(11 23 38 / 78%);
-  border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  line-height: 1;
 }
 
-.photo-card__favorite {
-  position: absolute;
-  top: 0.65rem;
-  left: 0.65rem;
+.photo-badge--top-left {
+  top: var(--photo-badge-offset);
+  left: var(--photo-badge-offset);
+}
+
+.photo-badge--top-right {
+  top: var(--photo-badge-offset);
+  right: var(--photo-badge-offset);
+}
+
+.photo-badge--bottom-right {
+  right: var(--photo-badge-offset);
+  bottom: var(--photo-badge-offset);
+}
+
+.photo-badge--favorite {
+  color: color-mix(in srgb, var(--color-action-danger) 70%, #fff);
+}
+
+.photo-badge--shared {
+  color: #bcebd7;
+}
+
+.photo-badge__icon {
   display: grid;
-  width: 2rem;
-  height: 2rem;
-  color: var(--color-action-danger);
-  background: var(--color-bg-surface);
-  border-radius: 50%;
+  width: 0.95rem;
+  height: 0.95rem;
   place-items: center;
 }
 
-.photo-card__favorite svg {
-  width: 1.15rem;
-  height: 1.15rem;
+.photo-badge__icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .section-heading__actions {
