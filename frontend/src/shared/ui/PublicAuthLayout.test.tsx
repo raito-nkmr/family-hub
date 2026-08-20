@@ -27,6 +27,9 @@ describe('PublicAuthLayout', () => {
     expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
     expect(screen.getByTestId('brand-icon')).toBeInTheDocument()
     expect(screen.getByRole('form', { name: 'ログインフォーム' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'ログイン' })).toContainElement(
+      screen.getByRole('button', { name: '表示言語をENに切り替える' }),
+    )
 
     await user.click(screen.getByRole('button', { name: 'ダークモードへ切り替える' }))
     expect(onToggleTheme).toHaveBeenCalledOnce()

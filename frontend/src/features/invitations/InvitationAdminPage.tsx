@@ -62,6 +62,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             <label htmlFor={usernameId}>
               <span>{t('invitations.username')}</span>
               <input
+                className="form-control"
                 id={usernameId}
                 value={username}
                 minLength={1}
@@ -76,6 +77,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             <label htmlFor={expiryId}>
               <span>{t('invitations.expiry')}</span>
               <select
+                className="form-control"
                 id={expiryId}
                 value={expiresInHours}
                 onChange={(event) => setExpiresInHours(Number(event.target.value) as InvitationExpiryHours)}
@@ -105,6 +107,7 @@ export function InvitationAdminPage({ onUnauthorized }: InvitationAdminPageProps
             <div>
               <input
                 ref={invitationUrlInputRef}
+                className="form-control"
                 value={invitationUrl}
                 aria-label={t('invitations.urlLabel')}
                 readOnly

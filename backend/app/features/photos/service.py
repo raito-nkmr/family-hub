@@ -33,14 +33,6 @@ class PhotoContentUnavailableError(Exception):
         self.photo_id = photo_id
 
 
-class PhotoTooLargeError(Exception):
-    pass
-
-
-class PhotoUploadPersistenceError(Exception):
-    pass
-
-
 class InvalidPhotoSharingError(Exception):
     pass
 
@@ -58,6 +50,10 @@ class PhotoDeleteStorageError(Exception):
 
 
 class PhotoDeletePersistenceError(Exception):
+    pass
+
+
+class PhotoPurgeNotDueError(Exception):
     pass
 
 
@@ -91,40 +87,3 @@ class TrashedPhotoPage:
     favorite_photo_ids: set[UUID]
     next_cursor: str | None
     total_count: int
-
-
-class PhotoService:
-    """Compatibility facade for tests and older integrations.
-
-    Production routes depend on the feature-specific services directly. Keeping this
-    lazy facade avoids making a broad breaking change for callers that still import
-    the old service while the split is rolled out.
-    """
-
-    def __init__(
-        self,
-        session,
-        storage,
-        default_timezone: str,
-        trash_retention_days: int = 30,
-    ) -> None:
-        from app.features.photos.access_service import PhotoAccessService
-        from app.features.photos.export_service import PhotoExportService
-        from app.features.photos.metadata_service import PhotoMetadataService
-        from app.features.photos.trash_service import PhotoTrashService
-        from app.features.photos.upload_service import PhotoUploadService
-
-        self._services = (
-            PhotoAccessService(session, storage),
-            PhotoMetadataService(session, storage),
-            PhotoUploadService(session, storage, default_timezone),
-            PhotoTrashService(session, storage, trash_retention_days),
-            PhotoExportService(session, storage),
-        )
-
-    def __getattr__(self, name: str):
-        for service in self._services:
-            method = getattr(service, name, None)
-            if method is not None:
-                return method
-        raise AttributeError(name)

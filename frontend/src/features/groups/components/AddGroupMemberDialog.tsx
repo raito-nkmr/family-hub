@@ -44,6 +44,7 @@ export function AddGroupMemberDialog({
       <form className="group-form" onSubmit={(event) => void handleSubmit(event)}>
         <label htmlFor={userId}>{t('groups.user')}</label>
         <select
+          className="form-control form-control--subtle"
           id={userId}
           value={selectedUserId}
           required
@@ -62,7 +63,12 @@ export function AddGroupMemberDialog({
           <p className="group-form__hint">{t('groups.noCandidates')}</p>
         )}
         <label htmlFor={roleId}>{t('groups.role')}</label>
-        <select id={roleId} value={role} onChange={(event) => setRole(event.target.value as GroupRole)}>
+        <select
+          className="form-control form-control--subtle"
+          id={roleId}
+          value={role}
+          onChange={(event) => setRole(event.target.value as GroupRole)}
+        >
           <option value="member">{t('common.member')}</option>
           <option value="admin">{t('common.admin')}</option>
         </select>

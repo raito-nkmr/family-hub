@@ -137,20 +137,36 @@ class NotificationWorker:
                 if status_code in {404, 410}:
                     self._session.delete(subscription)
                 else:
-                    subscription.failure_count += 1
-                    delivery.last_error = "push_delivery_failed"
-                    if delivery.attempt_count >= 5:
-                        delivery.status = NotificationDeliveryStatus.FAILED
-                        delivery.processed_at = datetime.now(UTC)
+                    if self._mark_delivery_failure(delivery, subscription):
                         exhausted_errors += 1
                     else:
                         transient_errors += 1
+            except OSError as error:
+                logger.warning(
+                    "Web Push communication failed notification_id=%s error_type=%s",
+                    item.id,
+                    type(error).__name__,
+                )
+                if self._mark_delivery_failure(delivery, subscription):
+                    exhausted_errors += 1
+                else:
+                    transient_errors += 1
         if transient_errors > 0:
             self._retry(item, "push_delivery_failed")
         elif exhausted_errors > 0:
             self._finish(item, NotificationOutboxStatus.FAILED, "push_delivery_failed")
         else:
             self._finish(item, NotificationOutboxStatus.SENT)
+
+    @staticmethod
+    def _mark_delivery_failure(delivery: NotificationDelivery, subscription: PushSubscription) -> bool:
+        subscription.failure_count += 1
+        delivery.last_error = "push_delivery_failed"
+        if delivery.attempt_count >= 5:
+            delivery.status = NotificationDeliveryStatus.FAILED
+            delivery.processed_at = datetime.now(UTC)
+            return True
+        return False
 
     def _active_subscriptions(self, user_id) -> list[PushSubscription]:
         now = datetime.now(UTC)

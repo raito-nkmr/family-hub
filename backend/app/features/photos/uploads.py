@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.features.groups.public import get_user_group_ids, lock_user_group_ids
+from app.features.groups.public import lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
 from app.features.photos.models import (
     Photo,
@@ -43,6 +43,7 @@ TERMINAL_ITEM_STATUSES = {
     UploadItemStatus.DUPLICATE,
     UploadItemStatus.FAILED,
 }
+DUPLICATE_PHOTO_CONSTRAINT = "uq_photos_uploaded_by_user_id_sha256"
 
 
 class UploadBatchNotFoundError(Exception):
@@ -91,7 +92,7 @@ class UploadBatchService:
         if len({file.client_id for file in files}) != len(files):
             raise UploadBatchInvalidError("Client file identifiers must be unique")
         resolved_group_ids = group_ids or set()
-        if get_user_group_ids(self._session, owner_user_id, resolved_group_ids) != resolved_group_ids:
+        if lock_user_group_ids(self._session, owner_user_id, resolved_group_ids) != resolved_group_ids:
             raise UploadBatchInvalidError("One or more sharing groups are unavailable")
         maximum = self._storage.maximum_upload_bytes
         if maximum is None or any(
@@ -169,6 +170,21 @@ class UploadBatchService:
             items_statement = items_statement.with_for_update()
         items = list(self._session.scalars(items_statement).all())
         if batch.status == UploadBatchStatus.ACTIVE and batch.expires_at <= datetime.now(UTC):
+            batch = self._session.scalar(
+                select(UploadBatch)
+                .where(UploadBatch.id == batch.id, UploadBatch.owner_user_id == owner_user_id)
+                .with_for_update()
+            )
+            if batch is None:
+                raise UploadBatchNotFoundError
+            items = list(
+                self._session.scalars(
+                    select(UploadItem)
+                    .where(UploadItem.batch_id == batch.id)
+                    .order_by(UploadItem.created_at, UploadItem.id)
+                    .with_for_update()
+                ).all()
+            )
             self._expire_batch(batch, items)
         return batch, items
 
@@ -268,14 +284,17 @@ class UploadBatchService:
             )
         try:
             self._session.flush()
-        except IntegrityError:
+        except IntegrityError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
             self._storage.cleanup_resumable(item.id)
-            return self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+            if _is_duplicate_photo_integrity_error(error):
+                return self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+            raise UploadBatchPersistenceError from error
         except SQLAlchemyError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
+            self._storage.cleanup_resumable(item.id)
             raise UploadBatchPersistenceError from error
 
         try:
@@ -313,7 +332,9 @@ class UploadBatchService:
 
     def _require_active(self, batch: UploadBatch, item: UploadItem) -> None:
         if batch.status == UploadBatchStatus.ACTIVE and batch.expires_at <= datetime.now(UTC):
-            items = list(self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id)).all())
+            items = list(
+                self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
+            )
             self._expire_batch(batch, items)
         if batch.status != UploadBatchStatus.ACTIVE:
             raise UploadBatchInvalidError("Upload batch is no longer active")
@@ -367,14 +388,18 @@ class UploadBatchService:
     def _expire_stale_batches(self, *, commit: bool = True) -> None:
         batches = list(
             self._session.scalars(
-                select(UploadBatch).where(
+                select(UploadBatch)
+                .where(
                     UploadBatch.status == UploadBatchStatus.ACTIVE,
                     UploadBatch.expires_at <= datetime.now(UTC),
                 )
+                .with_for_update()
             ).all()
         )
         for batch in batches:
-            items = list(self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id)).all())
+            items = list(
+                self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
+            )
             self._expire_batch(batch, items, commit=False)
         if batches and commit:
             self._commit()
@@ -398,6 +423,11 @@ class UploadBatchService:
         except SQLAlchemyError as error:
             self._session.rollback()
             raise UploadBatchPersistenceError from error
+
+
+def _is_duplicate_photo_integrity_error(error: IntegrityError) -> bool:
+    diagnostic = getattr(error.orig, "diag", None)
+    return getattr(diagnostic, "constraint_name", None) == DUPLICATE_PHOTO_CONSTRAINT
 
 
 def _storage_status(error: Exception) -> StorageStatusCode | None:

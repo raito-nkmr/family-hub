@@ -9,6 +9,7 @@ import {
   createPushSubscriptionApiV1NotificationsSubscriptionsPost,
   deletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDelete,
   getNotificationConfigApiV1NotificationsConfigGet,
+  updatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePut,
   updateNotificationPreferencesApiV1NotificationsPreferencesPut,
 } from '../../shared/api/generated'
 import { sdkData } from '../../shared/api/sdkClient'
@@ -27,6 +28,10 @@ export function deletePushSubscription(subscriptionId: string): Promise<void> {
       path: { subscription_id: subscriptionId },
     }),
   )
+}
+
+export function updateNotificationLocale(locale: 'en' | 'ja'): Promise<void> {
+  return sdkData(updatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePut({ body: { locale } }))
 }
 
 export function updateNotificationPreferences(

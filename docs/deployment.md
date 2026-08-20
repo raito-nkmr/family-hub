@@ -3,16 +3,14 @@
 ## Purpose and status
 
 This document defines how Family Hub is served at the same HTTPS URL from iPhones inside and outside the home. It is the
-source of truth for the target architecture and acceptance criteria. A Named Tunnel, Caddy, Uvicorn, and a release have
-been deployed to the real host for public testing, and access through the custom domain has been verified. Production
-operation has not started. Separation of the production database, the main operational timers, and the first restore test
-are complete; the next automatic timer runs, reboot behavior, and real-device acceptance after the fiber connection is
-available remain open. The repository does not include host-specific production state; operators should record and verify
-that state outside the repository using this design and the production runbook.
+source of truth for the current deployment architecture and acceptance criteria. Family Hub is currently operated through
+a custom domain on the Cloudflare Free plan using one Named Tunnel, with Caddy, Uvicorn, and the application release on
+the origin host. The repository does not include host-specific production state; operators should record and verify that
+state outside the repository using this design and the production runbook.
 
-Family Hub authentication remains the primary authentication system, and Cloudflare Access is not added in the initial
-configuration. Because the public hostname is reachable from the Internet, all data APIs except health, login, and
-invitation acceptance remain protected by Family Hub session authentication and authorization.
+Family Hub authentication remains the primary authentication system, and Cloudflare Access is not used. Because the public
+hostname is reachable from the Internet, all data APIs except health, login, and invitation acceptance remain protected by
+Family Hub session authentication and authorization.
 
 ## Target architecture
 
@@ -196,7 +194,7 @@ Cloudflare-proxied requests have plan-specific body-size limits; Free and Pro pl
 
 - The production React client always uses the batch chunk-upload API.
 - Keep each chunk comfortably below Cloudflare's request limit.
-- Keep `POST /api/v1/photos` for compatibility, but do not guarantee near-limit files through Cloudflare.
+- The batch chunk-upload API is the only supported photo upload route; do not rely on a single-request upload endpoint.
 - Recheck the current official limit and the actual `413` boundary after changing the production plan or Cloudflare settings.
 
 Treat `PHOTO_MAX_UPLOAD_BYTES` as the whole-file application limit and `PHOTO_UPLOAD_CHUNK_BYTES` as the per-request
@@ -217,8 +215,8 @@ Only the notification worker makes outbound HTTPS connections to providers. The 
 requests to arbitrary URLs, and the inbound exposure of Caddy, Uvicorn, PostgreSQL, and photo storage must not change.
 
 See [`web-push.md`](./web-push.md) for notification triggers, the relationship between subscriptions and login sessions,
-and retry behavior. Keep notification timers disabled until VAPID configuration and iPhone validation are complete. Both
-were verified in the current public test environment on July 20, 2026, and the notification timers are enabled there.
+and retry behavior. Keep notification timers disabled until VAPID configuration and iPhone validation are complete. Record
+the verification and current timer state in the host operational record.
 
 ## Dead-man monitoring for maintenance jobs
 

@@ -80,16 +80,7 @@
   width: 7rem;
 }
 
-.invitation-create input,
-.invitation-create select,
-.invitation-result input {
-  min-width: 0;
-  min-height: 46px;
-  padding: 0.7rem 0.85rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
+.invitation-result .form-control {
   flex: 1;
 }
 

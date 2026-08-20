@@ -9,7 +9,6 @@ from app.core.lifespan import create_lifespan
 from app.core.middleware import (
     PrivateApiCacheControlMiddleware,
     RequestLoggingMiddleware,
-    SinglePhotoUploadSizeLimitMiddleware,
 )
 from app.features.albums.router import router as albums_router
 from app.features.auth.admin_router import router as admin_router
@@ -46,10 +45,6 @@ async def log_http_exception(request: Request, error: HTTPException):
 def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or get_settings()
     app = FastAPI(lifespan=create_lifespan(app_settings))
-    app.add_middleware(
-        SinglePhotoUploadSizeLimitMiddleware,
-        maximum_upload_bytes=app_settings.photo_max_upload_bytes,
-    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origin_list,

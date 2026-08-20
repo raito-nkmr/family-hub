@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 
 from app.features.auth.dependencies import (
@@ -25,7 +25,6 @@ from app.features.photos.dependencies import (
     get_photo_metadata_service,
     get_photo_query_service,
     get_photo_storage,
-    get_photo_upload_service,
 )
 from app.features.photos.export_router import router as export_router
 from app.features.photos.metadata_service import PhotoMetadataService
@@ -35,12 +34,6 @@ from app.features.photos.queries import (
     PhotoAlbumNotFoundError,
     PhotoListFilters,
     PhotoQueryService,
-)
-from app.features.photos.registration import (
-    DuplicatePhotoError,
-    InvalidPhotoError,
-    PhotoUploadStorageError,
-    UnsupportedPhotoTypeError,
 )
 from app.features.photos.schemas import (
     BulkPhotoSharingAdd,
@@ -66,15 +59,13 @@ from app.features.photos.service import (
     PhotoBulkSelectionError,
     PhotoContentUnavailableError,
     PhotoNotFoundError,
-    PhotoTooLargeError,
     PhotoUpdateConflictError,
     PhotoUpdateForbiddenError,
     PhotoUpdatePersistenceError,
     PhotoUpdateStorageError,
 )
-from app.features.photos.storage import PhotoStorage, StorageStatusCode
+from app.features.photos.storage import PhotoStorage
 from app.features.photos.trash_router import router as trash_router
-from app.features.photos.upload_service import PhotoUploadService
 
 router = APIRouter(
     tags=["photos"],
@@ -104,49 +95,6 @@ async def get_storage_status(storage: Annotated[PhotoStorage, Depends(get_photo_
         minimum_free_bytes=status.minimum_free_bytes,
         total_bytes=status.total_bytes,
     )
-
-
-@router.post(
-    "",
-    response_model=PhotoResponse,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_csrf_token)],
-)
-def upload_photo(
-    file: Annotated[UploadFile, File()],
-    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[PhotoUploadService, Depends(get_photo_upload_service)],
-    access_service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
-    group_ids: Annotated[list[UUID] | None, Form()] = None,
-) -> PhotoResponse:
-    try:
-        photo = service.upload_photo(
-            file.file,
-            original_filename=file.filename or "unnamed",
-            declared_content_type=file.content_type,
-            uploaded_by_user_id=authenticated_user.id,
-            uploaded_by_username=authenticated_user.username,
-            group_ids=set(group_ids or []),
-        )
-    except PhotoTooLargeError as error:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Photo is too large") from error
-    except (UnsupportedPhotoTypeError, InvalidPhotoError) as error:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported photo") from error
-    except DuplicatePhotoError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Photo already exists") from error
-    except InvalidPhotoSharingError as error:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Photo group is not available") from error
-    except PhotoUploadStorageError as error:
-        if error.storage_status is StorageStatusCode.INSUFFICIENT_SPACE:
-            raise HTTPException(
-                status_code=status.HTTP_507_INSUFFICIENT_STORAGE,
-                detail="Insufficient storage",
-            ) from error
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Photo storage unavailable",
-        ) from error
-    return _photo_response(photo, access_service, authenticated_user.id)
 
 
 @router.get("", response_model=PhotoListResponse)

@@ -35,8 +35,10 @@ The implemented flow is:
 | Shopping item added | An unpurchased item is added to a group | Group members, excluding the actor | Disabled | `/shopping` |
 
 Notification messages are localized templates selected from the subscription's `en` or `ja` language. They do not
-include photo names, cleaning-task names, or shopping-item names. The same operation does not create duplicate outbox
-entries for the same user. The settings UI saves the enabled state of all three categories together.
+include photo names, cleaning-task names, or shopping-item names. The authenticated app updates all Push subscriptions for
+the current login session through `PUT /api/v1/notifications/subscriptions/locale` when the UI language changes; this
+background update does not block the language switch. The same operation does not create duplicate outbox entries for the
+same user. The settings UI saves the enabled state of all three categories together.
 
 ## Subscriptions and login sessions
 
@@ -79,6 +81,7 @@ All notification APIs require authentication, and mutation APIs also require CSR
 | `GET /api/v1/notifications/config` | Returns Web Push availability, the public VAPID key, the current session's subscription IDs, and notification preferences |
 | `POST /api/v1/notifications/subscriptions` | Registers a Push subscription for the current login session |
 | `DELETE /api/v1/notifications/subscriptions/{id}` | Removes a Push subscription from the current login session |
+| `PUT /api/v1/notifications/subscriptions/locale` | Updates the notification language for all subscriptions in the current login session; succeeds when there are no subscriptions |
 | `PUT /api/v1/notifications/preferences` | Updates all three category preferences for the user |
 
 Web Push is enabled only when `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY_FILE`, and `PUSH_VAPID_SUBJECT` are all
@@ -93,10 +96,10 @@ browser subscription registration and removal, the settings UI, recipient genera
 count normalization, and worker claiming and per-device retries. Worker PostgreSQL integration tests run in environments
 with `TEST_DATABASE_URL` configured.
 
-On July 20, 2026, VAPID was configured in the public test environment and a subscription was registered from the iPhone
-Home Screen PWA. A shopping-item addition by another user was verified end to end through the outbox, Web Push provider,
-and Service Worker, including a background Japanese notification and app-icon badge. Both the outbox and per-device
-delivery were `sent`, and the delivery and cleaning-due timers were `enabled` and `active`.
+The July 20, 2026 verification configured VAPID and registered a subscription from the iPhone Home Screen PWA. A
+shopping-item addition by another user was verified end to end through the outbox, Web Push provider, and Service Worker,
+including a background Japanese notification and app-icon badge. Both the outbox and per-device delivery were `sent` at
+that time, and the delivery and cleaning-due timers were `enabled` and `active`.
 
 The following acceptance checks remain:
 

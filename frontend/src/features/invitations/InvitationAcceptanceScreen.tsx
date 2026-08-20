@@ -89,6 +89,7 @@ export function InvitationAcceptanceScreen({
           <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
             <label htmlFor={passwordId}>{t('invitations.password')}</label>
             <input
+              className="form-control form-control--subtle"
               id={passwordId}
               type="password"
               value={password}
@@ -100,6 +101,7 @@ export function InvitationAcceptanceScreen({
             />
             <label htmlFor={confirmationId}>{t('invitations.confirmPassword')}</label>
             <input
+              className="form-control form-control--subtle"
               id={confirmationId}
               type="password"
               value={confirmation}

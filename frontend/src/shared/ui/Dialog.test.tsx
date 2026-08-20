@@ -70,4 +70,32 @@ describe('Dialog', () => {
     expect(opener).toHaveFocus()
     expect(opener).toHaveProperty('inert', false)
   })
+
+  it('keeps body scrolling locked while a nested dialog is open', async () => {
+    const user = userEvent.setup()
+    function Example() {
+      const [nestedOpen, setNestedOpen] = useState(false)
+      return (
+        <Dialog titleId="outer-title" onClose={vi.fn()}>
+          <h2 id="outer-title">Outer</h2>
+          <button type="button" onClick={() => setNestedOpen(true)}>
+            Open nested
+          </button>
+          {nestedOpen && (
+            <Dialog titleId="inner-title" onClose={() => setNestedOpen(false)}>
+              <h2 id="inner-title">Inner</h2>
+            </Dialog>
+          )}
+        </Dialog>
+      )
+    }
+
+    render(<Example />)
+    await user.click(screen.getByRole('button', { name: 'Open nested' }))
+    expect(document.body).toHaveClass('modal-open')
+
+    const closeButtons = screen.getAllByRole('button', { name: 'ダイアログを閉じる' })
+    await user.click(closeButtons.at(-1)!)
+    expect(document.body).toHaveClass('modal-open')
+  })
 })

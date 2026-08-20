@@ -14,12 +14,14 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260818_02"]
-    assert scripts.get_bases() == ["20260715_01"]
+    assert scripts.get_heads() == ["20260820_05"]
+    assert scripts.get_bases() == ["20260820_01"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260818_02",
-        "20260818_01",
-        "20260715_01",
+        "20260820_05",
+        "20260820_04",
+        "20260820_03",
+        "20260820_02",
+        "20260820_01",
     ]
 
 
@@ -38,8 +40,10 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "CREATE TABLE notification_deliveries" in sql
     assert "CREATE TABLE administrative_audit_events" in sql
     assert "uq_family_groups_name" in sql
-    assert "ADD COLUMN must_change_password BOOLEAN DEFAULT false NOT NULL" in sql
+    assert "must_change_password BOOLEAN DEFAULT 'false' NOT NULL" in sql
     assert "fk_push_subscriptions_user_session_user_id_user_sessions" in sql
+    assert "width INTEGER NOT NULL" in sql
+    assert "height INTEGER NOT NULL" in sql
 
 
 def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_path, monkeypatch, capsys) -> None:

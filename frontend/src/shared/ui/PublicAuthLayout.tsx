@@ -32,19 +32,19 @@ export function PublicAuthLayout({
 
   return (
     <main className="login-page">
-      <div className="login-page__actions">
-        <LanguageToggle />
-        <button
-          className="theme-toggle"
-          type="button"
-          aria-label={t(theme === 'dark' ? 'common.lightMode' : 'common.darkMode')}
-          aria-pressed={theme === 'dark'}
-          onClick={onToggleTheme}
-        >
-          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-        </button>
-      </div>
       <section className={panelClasses} aria-labelledby={titleId}>
+        <div className="login-page__actions">
+          <LanguageToggle />
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={t(theme === 'dark' ? 'common.lightMode' : 'common.darkMode')}
+            aria-pressed={theme === 'dark'}
+            onClick={onToggleTheme}
+          >
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
+        </div>
         <span className="brand__mark login-panel__mark">{icon}</span>
         <p className="eyebrow">{eyebrow}</p>
         <h1 id={titleId}>{title}</h1>

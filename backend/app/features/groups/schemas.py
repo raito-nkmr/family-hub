@@ -18,11 +18,6 @@ class GroupCreate(BaseModel):
         return normalized
 
 
-class GroupMemberAdd(BaseModel):
-    user_id: UUID
-    role: GroupRole = GroupRole.MEMBER
-
-
 class GroupMemberRoleUpdate(BaseModel):
     role: GroupRole
 

@@ -81,37 +81,50 @@ def check_photo_integrity(
 
     for photo in photos:
         photo_id = str(photo.id)
-        original_path = storage_root.joinpath(*Path(photo.storage_key).parts)
-        sidecar_path = original_path.with_suffix(".json")
-        expected_originals.add(original_path)
-        expected_sidecars.add(sidecar_path)
-
         try:
-            verified_original_path = storage.get_original_path(photo.storage_key)
+            original_path, sidecar_path = storage.get_original_file_paths(photo.storage_key)
         except PhotoStorageError:
-            issues.append(IntegrityIssue("original_missing", str(original_path), photo_id))
+            issues.append(IntegrityIssue("original_invalid", str(storage_root / "<invalid-storage-key>"), photo_id))
+            original_path = sidecar_path = storage_root / "<invalid-storage-key>"
         else:
-            try:
-                if verified_original_path.stat().st_size != photo.size_bytes:
-                    issues.append(IntegrityIssue("original_size_mismatch", str(verified_original_path), photo_id))
-                if verify_hashes and _file_sha256(verified_original_path) != photo.sha256:
-                    issues.append(IntegrityIssue("original_hash_mismatch", str(verified_original_path), photo_id))
-            except OSError:
-                issues.append(IntegrityIssue("original_unreadable", str(verified_original_path), photo_id))
+            expected_originals.add(original_path)
+            expected_sidecars.add(sidecar_path)
 
-        try:
-            actual_sidecar = _load_json(sidecar_path)
-        except FileNotFoundError:
-            issues.append(IntegrityIssue("sidecar_missing", str(sidecar_path), photo_id))
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            issues.append(IntegrityIssue("sidecar_invalid", str(sidecar_path), photo_id))
-        else:
-            if actual_sidecar != build_sidecar_metadata(photo).as_json():
-                issues.append(IntegrityIssue("sidecar_mismatch", str(sidecar_path), photo_id))
+            try:
+                verified_original_path = storage.get_original_path(photo.storage_key)
+            except PhotoStorageError:
+                issues.append(IntegrityIssue("original_missing", str(original_path), photo_id))
+            else:
+                try:
+                    if verified_original_path.stat().st_size != photo.size_bytes:
+                        issues.append(IntegrityIssue("original_size_mismatch", str(verified_original_path), photo_id))
+                    if verify_hashes and _file_sha256(verified_original_path) != photo.sha256:
+                        issues.append(IntegrityIssue("original_hash_mismatch", str(verified_original_path), photo_id))
+                except OSError:
+                    issues.append(IntegrityIssue("original_unreadable", str(verified_original_path), photo_id))
+
+            if sidecar_path.is_symlink():
+                issues.append(IntegrityIssue("sidecar_invalid", str(sidecar_path), photo_id))
+            else:
+                try:
+                    actual_sidecar = _load_json(sidecar_path)
+                except FileNotFoundError:
+                    issues.append(IntegrityIssue("sidecar_missing", str(sidecar_path), photo_id))
+                except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                    issues.append(IntegrityIssue("sidecar_invalid", str(sidecar_path), photo_id))
+                else:
+                    if actual_sidecar != build_sidecar_metadata(photo).as_json():
+                        issues.append(IntegrityIssue("sidecar_mismatch", str(sidecar_path), photo_id))
 
         for derivative in photo.derivatives:
             checked_derivatives += 1
-            derivative_path = derivative_root.joinpath(*Path(derivative.storage_key).parts)
+            try:
+                derivative_path = storage.get_derivative_file_path(derivative.storage_key)
+            except PhotoStorageError:
+                issues.append(
+                    IntegrityIssue("derivative_invalid", str(derivative_root / "<invalid-storage-key>"), photo_id)
+                )
+                continue
             expected_derivatives.add(derivative_path)
             try:
                 verified_derivative_path = storage.get_derivative_path(derivative.storage_key)

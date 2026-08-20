@@ -12,10 +12,10 @@ layout.
   - Cursor-based infinite scrolling, timeline navigation, and server-side search
   - Image and video uploads with first-frame thumbnails and in-browser playback
   - Favorites, shared photos, photo activity, shared memos, and group-based visibility
-  - Mobile detail-view swipes between adjacent photos in the library
+  - Desktop edge clicks and mobile detail-view swipes between adjacent photos in the library
   - Group albums with selectable cover photos
   - Bulk sharing to multiple family groups
-  - Individual downloads and streamed ZIP exports for owned photos
+  - Individual downloads and streamed ZIP exports for photos the user can view
   - Trash, restore, permanent deletion, and storage integrity checks
 - **Household coordination**
   - Cleaning tasks with configurable intervals, completion history, pause, and resume
@@ -96,6 +96,9 @@ Start the backend from `backend/`:
 uv run --locked uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 18000
 ```
 
+Application settings use process environment variables first and fall back to `backend/.env`. The explicit `--env-file .env`
+option keeps the local Uvicorn process environment visible to tooling; production systemd uses its configured environment file.
+
 Start the frontend from `frontend/` in another terminal:
 
 ```bash
@@ -139,6 +142,10 @@ npm --prefix frontend run test:e2e:live
 
 Keep the live-test credentials outside the repository and shell history.
 
+Backend PostgreSQL integration tests use disposable databases and are skipped when their connection URLs are not set. See
+[`backend-design.md`](docs/backend-design.md#postgresql-test-databases) for the local ports, separate migration database,
+and shell-only environment-variable setup. Never point these tests at the production database on `127.0.0.1:5433`.
+
 ## Documentation
 
 The README intentionally stays focused on orientation and setup. Detailed behavior, design decisions, operational
@@ -154,6 +161,6 @@ procedures, storage rules, and production assumptions are documented separately:
 
 ## Project status
 
-Family Hub is an actively developed personal project. Production deployment infrastructure exists, but production
-operation and some real-device validation remain ongoing. See the detailed documentation for current limitations and
-operational prerequisites.
+Family Hub is an actively developed personal project. It is currently operated through a custom domain on the Cloudflare
+Free plan using one Named Tunnel; Cloudflare Access is not used. Some real-device validation and operational checks may
+remain ongoing. See the detailed documentation for current limitations and operational prerequisites.

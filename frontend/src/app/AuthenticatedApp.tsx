@@ -4,18 +4,22 @@ import { useTranslation } from 'react-i18next'
 import { logout, type AuthUser } from '../features/auth/api'
 import { RequiredPasswordChangeScreen } from '../features/auth/RequiredPasswordChangeScreen'
 import { PhotoModal } from '../features/photos/components/PhotoModal'
+import { PhotoMediaCacheProvider } from '../features/photos/components/PhotoMediaCacheProvider'
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
 import { usePhotoActivity } from '../features/photos/usePhotoActivity'
 import { usePhotoDashboard } from '../features/photos/usePhotoDashboard'
 import { PrivacyPage } from '../features/privacy/PrivacyPage'
 import { PwaInstallGuide } from '../features/pwa/PwaInstallGuide'
 import { usePwaInstallGuide } from '../features/pwa/usePwaInstallGuide'
+import { useNotificationLocaleSync } from '../features/notifications/useNotificationLocaleSync'
 import { isUnauthorizedError } from '../shared/api/errors'
 import { queryClient } from '../shared/api/queryClient'
 import type { Theme } from '../shared/types/theme'
 import { AppFooter } from '../shared/ui/AppFooter'
 import { AppHeader } from '../shared/ui/AppHeader'
 import { AppNavigation, SectionNavigation } from '../shared/ui/AppNavigation'
+import { PullToRefreshIndicator } from '../shared/ui/PullToRefreshIndicator'
+import { usePullToRefresh } from '../shared/ui/usePullToRefresh'
 import { appPaths, getAppView, photoViews } from './routes'
 import { RequireAdmin } from './routeGuards'
 
@@ -51,10 +55,17 @@ interface AuthenticatedAppProps {
   currentUser: AuthUser
   theme: Theme
   onSessionEnded: () => void
+  onCurrentUserChanged: (user: AuthUser) => void
   onToggleTheme: () => void
 }
 
-export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
+export function AuthenticatedApp({
+  currentUser,
+  theme,
+  onSessionEnded,
+  onCurrentUserChanged,
+  onToggleTheme,
+}: AuthenticatedAppProps) {
   if (currentUser.must_change_password) {
     return (
       <RequiredPasswordChangeScreen
@@ -67,17 +78,26 @@ export function AuthenticatedApp({ currentUser, theme, onSessionEnded, onToggleT
   }
 
   return (
-    <AuthenticatedAppShell
-      currentUser={currentUser}
-      theme={theme}
-      onSessionEnded={onSessionEnded}
-      onToggleTheme={onToggleTheme}
-    />
+    <PhotoMediaCacheProvider>
+      <AuthenticatedAppShell
+        currentUser={currentUser}
+        theme={theme}
+        onSessionEnded={onSessionEnded}
+        onCurrentUserChanged={onCurrentUserChanged}
+        onToggleTheme={onToggleTheme}
+      />
+    </PhotoMediaCacheProvider>
   )
 }
 
-function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleTheme }: AuthenticatedAppProps) {
-  const { t } = useTranslation()
+function AuthenticatedAppShell({
+  currentUser,
+  theme,
+  onSessionEnded,
+  onCurrentUserChanged,
+  onToggleTheme,
+}: AuthenticatedAppProps) {
+  const { t, i18n } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const activeView = getAppView(location.pathname)
@@ -91,11 +111,16 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
     onSessionEnded()
     navigate(appPaths.home, { replace: true })
   }, [navigate, onSessionEnded])
+  useNotificationLocaleSync({
+    locale: i18n.resolvedLanguage === 'ja' ? 'ja' : 'en',
+    onUnauthorized: handleUnauthorized,
+  })
 
   const photoDashboard = usePhotoDashboard({
     enabled: true,
     libraryEnabled: activeView === 'photos',
     storageEnabled: activeView !== null && ['home', ...photoViews].includes(activeView),
+    groupsEnabled: activeView === 'home' || activeView === 'photos' || activeView === 'albums',
     onUnauthorized: handleUnauthorized,
   })
   const photoActivity = usePhotoActivity({
@@ -105,6 +130,12 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
     onUnauthorized: handleUnauthorized,
   })
   const pwaInstall = usePwaInstallGuide()
+  const pullToRefresh = usePullToRefresh({
+    onRefresh: () => {
+      if (queryClient.isMutating() > 0) return
+      return queryClient.invalidateQueries()
+    },
+  })
 
   useEffect(() => {
     resetPhotoDashboardRef.current = photoDashboard.reset
@@ -136,6 +167,7 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
 
   const privateShell = (
     <div className="app-shell">
+      <PullToRefreshIndicator {...pullToRefresh} />
       <AppHeader
         username={currentUser.username}
         theme={theme}
@@ -222,7 +254,11 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
               path={appPaths.system}
               element={
                 <RequireAdmin role={currentUser.system_role}>
-                  <SystemStatusPage onUnauthorized={handleUnauthorized} />
+                  <SystemStatusPage
+                    currentUserId={currentUser.id}
+                    onUnauthorized={handleUnauthorized}
+                    onCurrentUserChanged={onCurrentUserChanged}
+                  />
                 </RequireAdmin>
               }
             />
@@ -236,6 +272,8 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
         <PhotoModal
           key={photoDashboard.selectedPhoto.id}
           photo={photoDashboard.selectedPhoto}
+          photoDetailLoading={photoDashboard.photoDetailLoading}
+          photoDetailError={photoDashboard.photoDetailError}
           currentUserId={currentUser.id}
           updatingMetadata={photoDashboard.updatingMetadata}
           error={photoDashboard.metadataError}
@@ -248,6 +286,7 @@ function AuthenticatedAppShell({ currentUser, theme, onSessionEnded, onToggleThe
             void photoDashboard.savePhotoMetadata({ captured_at_override: capturedAt })
           }
           onTrash={() => void photoDashboard.moveSelectedPhotoToTrash()}
+          onRetryPhotoDetail={() => void photoDashboard.retryPhotoDetail()}
           onModerateGroupShare={(groupId, password) => void photoDashboard.moderateGroupShare(groupId, password)}
           onPreviousPhoto={
             photoDashboard.previousPhoto

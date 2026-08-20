@@ -36,6 +36,15 @@ router = APIRouter(
     dependencies=[Depends(require_system_admin), Depends(require_password_change_complete)],
 )
 
+_ADMINISTRATIVE_ERRORS = (
+    AdministrativeUserNotFoundError,
+    AdministrativeReauthenticationError,
+    LastSystemAdministratorError,
+    UserOwnsGroupsWithoutAnotherAdminError,
+    AdministrativePersistenceError,
+    AdministrativeGroupMemberError,
+)
+
 
 def _raise_admin_error(error: Exception) -> None:
     if isinstance(error, AdministrativeUserNotFoundError):
@@ -87,7 +96,7 @@ def update_user_status(
             administrator.username,
             body.current_password,
         )
-    except Exception as error:
+    except _ADMINISTRATIVE_ERRORS as error:
         _raise_admin_error(error)
 
 
@@ -110,7 +119,7 @@ def update_user_role(
             administrator.username,
             body.current_password,
         )
-    except Exception as error:
+    except _ADMINISTRATIVE_ERRORS as error:
         _raise_admin_error(error)
 
 
@@ -145,7 +154,7 @@ def assign_group_administrator(
             administrator.username,
             body.current_password,
         )
-    except Exception as error:
+    except _ADMINISTRATIVE_ERRORS as error:
         _raise_admin_error(error)
 
 

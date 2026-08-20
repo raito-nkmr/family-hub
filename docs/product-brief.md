@@ -19,11 +19,16 @@ per-user favorites; group albums with cover selection; a new-photo activity view
 owned photos; group membership management; group-scoped cleaning; and group-scoped shopping lists.
 
 Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, and next-due display.
+Cleaning and shopping remember the last selected family group in browser storage and use it when a page opens without an
+explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
 state kept for 24 hours, and partial success. JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V are supported. A WebP
 thumbnail with a longest edge of at most 480 px is generated synchronously from the image or the first video frame when an
 upload is finalized. Lists and albums serve thumbnails; the enlarged modal serves images or playable video originals. Resume from React is
 limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
+
+Original image previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
+photo does not download it again. The cache is released when the authenticated session ends; API responses remain non-cacheable.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
 group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
@@ -32,8 +37,8 @@ the unpurchased state.
 The home screen aggregates recent photos, unread photo updates, active cleaning tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
 content mismatches, and orphaned files using the database as the reference. Original SHA-256 recalculation is optional.
-Photo details can download an accessible original by its original filename. The library can stream up to 100 owned photos
-as one ZIP for manual backup.
+Photo details can download an accessible original by its original filename. The library can select up to 100 visible photos
+and stream them as one ZIP for manual backup.
 
 The Account screen supports password changes after checking the current password, active-session listing, individual
 session revocation, and logout from all devices. A password change revokes every existing session and requires login again.
@@ -50,8 +55,10 @@ purposes, group visibility, retention, deletion, backup, external services, cook
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Cleaning, Shopping, and Other appear in bottom
-navigation. New, Library, and Albums are tabs inside Photos; Groups, invitation administration, and Account are under Other.
-Screens wider than 900 px switch to a left sidebar and expand the photo area and other features.
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Groups, invitation administration, Account, and the
+administrator-only System screen are under Other. Screens wider than 900 px switch to a left sidebar and expand the photo
+area and other features. On mobile, pulling down from the top of an authenticated page far enough and releasing refreshes
+the currently active data queries.
 
 The photo list uses 50-item cursor pagination with infinite scrolling, a year/month timeline, date range, uploader, shared
 group, favorite, capture-time presence, and memo/original-filename search. The album photo picker uses the same pagination,
@@ -60,31 +67,34 @@ infinite scrolling, and search controls. Failed automatic loading can be retried
 
 On mobile, the photo list shows thumbnails with month headings, favorite state, and sharing state. Users can choose 2, 3,
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
-in photo details. Horizontal swipes in the enlarged photo view move between adjacent photos already loaded in the library.
-Search conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and
-the upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
+in photo details. On desktop, clicking the left or right edge of the enlarged photo view moves to the adjacent photo;
+horizontal swipes provide the same navigation on mobile. Both operate on photos already loaded in the library.
+Photo details fit the complete image or video inside a bounded media stage without cropping. If the device cannot display or
+play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
+conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
+upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
 
 The New view shows photos uploaded by other users to the user's groups and photos newly shared with those groups, ordered
 by operation time. A batch upload or bulk share is represented as one operation. Events before group membership, the user's
 own operations, and photos no longer shared with the user are excluded. Opening New stores the latest event as the user's
 read position. Existing photos are not backfilled as activity events during migration.
 
-The library can select up to 100 owned photos and add groups as sharing targets without removing existing targets. Photos
-already shared with a selected group are unchanged. After a successful upload, the upload panel can pass saved photos to
-the same bulk-sharing flow.
+The library can select up to 100 visible photos for export. Adding groups as sharing targets remains limited to selected
+photos uploaded by the current user; photos already shared with a selected group are unchanged. After a successful upload,
+the upload panel can pass saved photos to the same bulk-sharing flow.
 
-The implemented scope also includes an owner trash, restore, retryable permanent deletion after retention, administrator
+The implemented scope also includes an owner trash, restore, retryable permanent deletion after a 30-day retention period, administrator
 storage and maintenance status, database backup, versioned snapshots to a disconnected external HDD, a PWA app shell, iPhone Home Screen
 instructions, and the Web Push backend foundation. The install prompt appears only in a normal browser tab, persists its
 dismissed state in the browser, can be shown again from Account, and is hidden in standalone mode. Trash uses the same 2/3/4
 thumbnail density choices as the library. Album details and trash also use 50-item cursor pagination and infinite scrolling.
 
-Cloudflare Tunnel and Caddy provide a fixed HTTPS public-test path, and custom-domain application use has been verified.
-Production operation has not started. Production database separation, database-backup, photo-integrity, and trash-purge
-timers, the first manual runs, and a temporary-database restore test are complete. Device-specific Web Push subscriptions,
-unsubscriptions, and preference UI are implemented. The next automatic timer runs, real-device acceptance after the fiber
-connection is available, real-device Web Push delivery validation, person detection, automatic repair and full recovery from
-analysis results, and tags remain incomplete. Video upload and playback are implemented for the supported formats above. See [`web-push.md`](./web-push.md) and
+Cloudflare Tunnel and Caddy provide the fixed HTTPS production path. Family Hub is currently operated through a custom
+domain on the Cloudflare Free plan using one Named Tunnel. Cloudflare Access is not used. Production database separation,
+database-backup, photo-integrity, and trash-purge timers, the first manual runs, and a temporary-database restore test are
+complete. Device-specific Web Push subscriptions, unsubscriptions, and preference UI are implemented. Some operational
+validation may remain. Person detection, automatic repair and full recovery from analysis results, and tags are not part
+of the completed scope. Video upload and playback are implemented for the supported formats above. See [`web-push.md`](./web-push.md) and
 [`deployment.md`](./deployment.md) for the current documented operational prerequisites. Update this section when
 implementation status changes.
 
@@ -143,8 +153,9 @@ be absent or not yet parsed.
 
 Each original has a JSON sidecar with the same UUID. It records the schema version, ID, upload user ID and username,
 filename, storage path, MIME type, file size, SHA-256 hash, media dimensions, capture and upload times, derivatives, shared
-memo and its last editor and timestamp, and share targets. If PostgreSQL is lost, originals and sidecars can be scanned to
-re-register photo metadata and regenerate missing thumbnails.
+memo and its last editor and timestamp, share targets, and lifecycle state. The current integrity command uses PostgreSQL as
+the reference, and sidecar-to-database re-registration or automatic thumbnail repair is not implemented; restore the database
+from a backup after database loss.
 
 ```text
 photo-storage/                       # Internal HDD
@@ -179,14 +190,13 @@ manual for the time being.
 
 In production, Cloudflare is the public Internet entry point, Caddy is the only HTTP entry point on the origin, and
 Cloudflare Tunnel serves the React frontend and API on one origin. Family Hub authentication remains primary; Cloudflare
-Access is not added initially. Caddy, FastAPI, PostgreSQL, the internal photo-storage HDD, and the disconnected external
+Access is not used. Caddy, FastAPI, PostgreSQL, the internal photo-storage HDD, and the disconnected external
 backup HDD are not exposed directly to the Internet or LAN.
 
 Listening ports, trusted proxies, cache, upload limits, ZIP-export acceptance, and LAN access are defined in
-[`deployment.md`](./deployment.md). A fixed HTTPS public test is running, but production operation has not begun. The
-production-like environment is separated from the development Compose database, and database-backup, photo-integrity, and
-trash-purge timers are enabled. Before production starts, verify the first automatic runs, host reboot, and acceptance after
-the fiber connection is available. Local development continues to start Vite and Uvicorn separately.
+[`deployment.md`](./deployment.md). The fixed HTTPS production path is active. The production environment is separated
+from the development Compose database, and database-backup, photo-integrity, and trash-purge timers are configured. Local
+development continues to start Vite and Uvicorn separately.
 
 ## First completion goal
 
@@ -321,8 +331,9 @@ requires one selection and removal requires at least one.
 - Deleting an album or removing a photo from it never deletes the photo, original, or JSON sidecar.
 - Manual photo reordering is not part of the initial implementation.
 
-Album relationships are editable organization data stored only in PostgreSQL and not in photo JSON sidecars. Recovering photo
-metadata from originals and sidecars after database loss is possible, but restoring album structure requires a database backup.
+Album relationships are editable organization data stored only in PostgreSQL and not in photo JSON sidecars. Restoring photo
+metadata and album structure after database loss therefore requires a database backup; sidecar-to-database re-registration is
+not currently implemented.
 
 ## Metadata
 
@@ -330,9 +341,10 @@ PostgreSQL stores metadata rather than image content. At minimum it stores ID, u
 HDD path, MIME type, file size, SHA-256 hash, capture time, upload time, and media dimensions. See
 [`database-design.md`](./database-design.md) for tables, constraints, and indexes.
 
-Photo metadata can be re-registered by scanning originals and JSON sidecars after database loss. Thumbnail locations are
-recorded in JSON for integrity checks, and owner-entered capture-time overrides are recorded for recovery. The original EXIF
-capture time is retained separately; lists, search, timelines, and album ordering use the owner override when present.
+Thumbnail locations are recorded in JSON for integrity checks, and owner-entered capture-time overrides are recorded for
+recovery. A command to re-register photo metadata by scanning originals and JSON sidecars is not currently implemented. The
+original EXIF capture time is retained separately; lists, search, timelines, and album ordering use the owner override when
+present.
 Person-analysis results and future tags are not recorded in sidecars; restore or regenerate those from database backups when
 necessary.
 
@@ -396,8 +408,6 @@ configured on the browser or server operating system.
 
 - Maximum file size
 - Derivative-cache storage limit and deletion/regeneration policy
-- Trash retention period
-- Production hostname and Cloudflare plan
 - Whether to provide independent LAN access when Cloudflare is unavailable
 
 日本語版: [product-brief.ja.md](./product-brief.ja.md)

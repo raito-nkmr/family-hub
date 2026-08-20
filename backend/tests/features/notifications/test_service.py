@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.features.auth.public import AuthContext
-from app.features.notifications.schemas import PushSubscriptionCreate
+from app.features.notifications.schemas import PushSubscriptionCreate, PushSubscriptionLocaleUpdate
 from app.features.notifications.service import (
     NotificationEndpointNotAllowedError,
     NotificationService,
@@ -59,3 +60,18 @@ def test_subscribe_enforces_per_user_limit() -> None:
         service.subscribe(context, make_body())
 
     session.add.assert_not_called()
+
+
+def test_update_subscription_locale_updates_current_session_subscriptions() -> None:
+    session = MagicMock(spec=Session)
+    context = make_context()
+    service = make_service(session)
+
+    service.update_subscription_locale(context, PushSubscriptionLocaleUpdate(locale="ja"))
+
+    statement = session.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+    assert "UPDATE push_subscriptions SET locale='ja'" in sql
+    assert "push_subscriptions.user_id" in sql
+    assert "push_subscriptions.user_session_id" in sql
+    session.commit.assert_called_once_with()

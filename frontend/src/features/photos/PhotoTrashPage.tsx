@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { isUnauthorizedError } from '../../shared/api/errors'
+import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatDateTime } from '../../shared/lib/format'
@@ -74,8 +74,10 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
       await deleteMutation.mutateAsync(photo.id)
       removePhotoFromTrashCache(queryClient, photo.id)
       setSelectedPhoto(null)
+      onLibraryChanged()
     } catch (caught) {
       if (isUnauthorizedError(caught)) onUnauthorized()
+      else if (isApiErrorWithStatus(caught, 409)) setError(t('photoTrash.deleteNotDue'))
       else setError(t('photoTrash.deleteFailed'))
     }
   }
@@ -164,7 +166,7 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
                 <button
                   className="danger-button icon-button"
                   type="button"
-                  disabled={pendingId === selectedPhoto.id}
+                  disabled={pendingId === selectedPhoto.id || !isPurgeDue(selectedPhoto)}
                   onClick={() => void deletePermanently(selectedPhoto)}
                 >
                   <DeleteIcon />
@@ -177,6 +179,10 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
       )}
     </main>
   )
+}
+
+function isPurgeDue(photo: Photo): boolean {
+  return photo.purge_after !== null && Date.parse(photo.purge_after) <= Date.now()
 }
 
 function removePhotoFromTrashCache(queryClient: ReturnType<typeof useQueryClient>, photoId: string) {

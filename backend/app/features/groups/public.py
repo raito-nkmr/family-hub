@@ -10,6 +10,7 @@ __all__ = [
     "FamilyGroup",
     "FamilyGroupMember",
     "GroupRole",
+    "lock_group_ids",
     "lock_administrator_mutations",
     "get_user_group_ids",
     "lock_group_admin",
@@ -30,6 +31,19 @@ def get_user_group_ids(session: Session, user_id: UUID, requested_ids: Collectio
     statement = select(FamilyGroupMember.group_id).where(
         FamilyGroupMember.user_id == user_id,
         FamilyGroupMember.group_id.in_(requested_ids),
+    )
+    return set(session.scalars(statement).all())
+
+
+def lock_group_ids(session: Session, requested_ids: Collection[UUID]) -> set[UUID]:
+    """Lock requested groups in a stable order before reading group-scoped state."""
+    if not requested_ids:
+        return set()
+    statement = (
+        select(FamilyGroup.id)
+        .where(FamilyGroup.id.in_(requested_ids))
+        .order_by(FamilyGroup.id)
+        .with_for_update(of=FamilyGroup)
     )
     return set(session.scalars(statement).all())
 

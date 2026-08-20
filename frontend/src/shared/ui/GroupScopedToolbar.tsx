@@ -27,6 +27,7 @@ export function GroupScopedToolbar({
         <label htmlFor={selectId}>{label}</label>
         <select
           id={selectId}
+          className="form-control"
           value={selectedGroupId ?? ''}
           disabled={selectDisabled}
           onChange={(event) => void onSelectGroup(event.target.value)}

@@ -50,3 +50,16 @@ def test_photo_catalog_filters_share_groups_by_current_membership() -> None:
     statement = session.execute.call_args.args[0]
     sql = str(statement.compile(dialect=postgresql.dialect()))
     assert "family_group_members.user_id" in sql
+
+
+def test_photo_catalog_lists_favorite_ids_in_one_query() -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    session.scalars.return_value.all.return_value = [photo.id]
+    catalog = PhotoCatalog(session)
+
+    assert catalog.favorite_photo_ids([photo.id], photo.uploaded_by_user_id) == {photo.id}
+
+    statement = session.scalars.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "photo_favorites.user_id" in sql

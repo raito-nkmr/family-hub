@@ -4,7 +4,7 @@ from pathlib import Path
 from warnings import catch_warnings, simplefilter
 from zoneinfo import ZoneInfo
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from PIL.ExifTags import Base
 from pillow_heif import get_file_mimetype, open_heif
 
@@ -55,8 +55,8 @@ def _inspect_with_pillow(path: Path, declared_content_type: str, default_timezon
             raise InvalidImageError("Declared content type does not match uploaded image")
 
         image.load()
-        width, height = image.size
         captured_at = _get_captured_at(image, default_timezone)
+        width, height = _get_display_dimensions(image)
     return ImageMetadata(content_type, extension, width, height, captured_at)
 
 
@@ -73,9 +73,18 @@ def _inspect_heif(path: Path, declared_content_type: str, default_timezone: str)
         raise InvalidImageError("Uploaded image dimensions exceed the safety limit")
     with heif_file.to_pillow() as image:
         image.load()
-        width, height = image.size
         captured_at = _get_captured_at(image, default_timezone)
+        width, height = _get_display_dimensions(image)
     return ImageMetadata(content_type, extension, width, height, captured_at)
+
+
+def _get_display_dimensions(image: Image.Image) -> tuple[int, int]:
+    oriented = ImageOps.exif_transpose(image)
+    try:
+        return oriented.size
+    finally:
+        if oriented is not image:
+            oriented.close()
 
 
 def _get_captured_at(image: Image.Image, default_timezone: str) -> datetime | None:

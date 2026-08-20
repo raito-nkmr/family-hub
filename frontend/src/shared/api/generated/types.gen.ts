@@ -401,20 +401,6 @@ export type AuthSessionResponse = {
 }
 
 /**
- * Body_upload_photo_api_v1_photos_post
- */
-export type BodyUploadPhotoApiV1PhotosPost = {
-  /**
-   * File
-   */
-  file: Blob | File
-  /**
-   * Group Ids
-   */
-  group_ids?: Array<string> | null
-}
-
-/**
  * BulkPhotoSharingAdd
  */
 export type BulkPhotoSharingAdd = {
@@ -679,17 +665,6 @@ export type GroupListResponse = {
    * Items
    */
   items: Array<GroupResponse>
-}
-
-/**
- * GroupMemberAdd
- */
-export type GroupMemberAdd = {
-  role?: GroupRole
-  /**
-   * User Id
-   */
-  user_id: string
 }
 
 /**
@@ -1232,7 +1207,7 @@ export type PhotoListItemResponse = {
   /**
    * Height
    */
-  height: number | null
+  height: number
   /**
    * Id
    */
@@ -1261,7 +1236,7 @@ export type PhotoListItemResponse = {
   /**
    * Width
    */
-  width: number | null
+  width: number
 }
 
 /**
@@ -1305,7 +1280,7 @@ export type PhotoResponse = {
   /**
    * Height
    */
-  height: number | null
+  height: number
   /**
    * Id
    */
@@ -1380,7 +1355,7 @@ export type PhotoResponse = {
   /**
    * Width
    */
-  width: number | null
+  width: number
 }
 
 /**
@@ -1512,6 +1487,16 @@ export type PushSubscriptionKeys = {
    * P256Dh
    */
   p256dh: string
+}
+
+/**
+ * PushSubscriptionLocaleUpdate
+ */
+export type PushSubscriptionLocaleUpdate = {
+  /**
+   * Locale
+   */
+  locale: 'en' | 'ja'
 }
 
 /**
@@ -3155,44 +3140,6 @@ export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetRespon
 export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponse =
   ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses[keyof ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses]
 
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostData = {
-  body: GroupMemberAdd
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path: {
-    /**
-     * Group Id
-     */
-    group_id: string
-  }
-  query?: never
-  url: '/api/v1/groups/{group_id}/members'
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostError =
-  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostErrors]
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponses = {
-  /**
-   * Successful Response
-   */
-  200: GroupDetailResponse
-}
-
-export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponse =
-  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostResponses]
-
 export type RemoveGroupMemberApiV1GroupsGroupIdMembersUserIdDeleteData = {
   body?: never
   headers?: {
@@ -3452,6 +3399,39 @@ export type CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses =
 export type CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponse =
   CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses[keyof CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses]
 
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutData = {
+  body: PushSubscriptionLocaleUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path?: never
+  query?: never
+  url: '/api/v1/notifications/subscriptions/locale'
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutError =
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors[keyof UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors]
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponse =
+  UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses[keyof UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses]
+
 export type DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData = {
   body?: never
   headers?: {
@@ -3569,38 +3549,6 @@ export type ListPhotoMetadataApiV1PhotosGetResponses = {
 
 export type ListPhotoMetadataApiV1PhotosGetResponse =
   ListPhotoMetadataApiV1PhotosGetResponses[keyof ListPhotoMetadataApiV1PhotosGetResponses]
-
-export type UploadPhotoApiV1PhotosPostData = {
-  body: BodyUploadPhotoApiV1PhotosPost
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path?: never
-  query?: never
-  url: '/api/v1/photos'
-}
-
-export type UploadPhotoApiV1PhotosPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type UploadPhotoApiV1PhotosPostError = UploadPhotoApiV1PhotosPostErrors[keyof UploadPhotoApiV1PhotosPostErrors]
-
-export type UploadPhotoApiV1PhotosPostResponses = {
-  /**
-   * Successful Response
-   */
-  201: PhotoResponse
-}
-
-export type UploadPhotoApiV1PhotosPostResponse =
-  UploadPhotoApiV1PhotosPostResponses[keyof UploadPhotoApiV1PhotosPostResponses]
 
 export type ListPhotoActivityApiV1PhotosActivityGetData = {
   body?: never

@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
+import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { formatDateTime } from '../../shared/lib/format'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -52,13 +54,15 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
     queryFn: ({ signal }) => getGroupAuditEvents(selectedGroup!.id, signal),
     enabled: selectedGroup?.current_user_role === 'admin',
   })
+  useUnauthorizedError(administrationQuery.error, onUnauthorized)
+  useUnauthorizedError(auditQuery.error, onUnauthorized)
+  useUnauthorizedError([invitationsQuery.error, invitationMutation.error].find(isUnauthorizedError), onUnauthorized)
 
   const submitRename = async (event: FormEvent) => {
     event.preventDefault()
     const name = renameValue.trim()
     if (!name) return
-    await state.rename(name)
-    setRenameValue('')
+    if (await state.rename(name)) setRenameValue('')
   }
 
   if (selectedGroup) {
@@ -91,6 +95,7 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 <label>
                   {t('groups.rename')}
                   <input
+                    className="form-control form-control--subtle"
                     value={renameValue}
                     maxLength={100}
                     placeholder={selectedGroup.name}
@@ -106,6 +111,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                   {t('common.save')}
                 </button>
               </form>
+              {administrationQuery.error && !isUnauthorizedError(administrationQuery.error) && (
+                <PageMessage>{t('groups.administrationLoadFailed')}</PageMessage>
+              )}
               {administrationQuery.data && (
                 <dl className="metadata-list">
                   <div>
@@ -127,6 +135,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 </dl>
               )}
               <h3>{t('groups.auditLog')}</h3>
+              {auditQuery.error && !isUnauthorizedError(auditQuery.error) && (
+                <PageMessage>{t('groups.auditLoadFailed')}</PageMessage>
+              )}
               <ul className="maintenance-runs">
                 {auditQuery.data?.slice(0, 20).map((event) => (
                   <li key={event.id}>
@@ -233,6 +244,12 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             {t('groups.create')}
           </button>
         </section>
+        {invitationsQuery.error && !isUnauthorizedError(invitationsQuery.error) && (
+          <PageMessage>{t('errors.invitationLoad')}</PageMessage>
+        )}
+        {invitationMutation.error && !isUnauthorizedError(invitationMutation.error) && (
+          <PageMessage>{t('errors.invitationDecision')}</PageMessage>
+        )}
         {(invitationsQuery.data?.length ?? 0) > 0 && (
           <section className="group-library">
             <h2>{t('groups.pendingInvitations')}</h2>

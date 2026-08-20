@@ -7,6 +7,7 @@ interface DialogProps {
   children: ReactNode
   className?: string
   overlayClassName?: string
+  overlayContent?: ReactNode
   closeClassName?: string
   closeLabel?: string
   size?: 'compact' | 'default' | 'medium' | 'large' | 'extra-large'
@@ -18,11 +19,14 @@ interface DialogProps {
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+let openDialogCount = 0
+
 export function Dialog({
   titleId,
   children,
   className = '',
   overlayClassName = '',
+  overlayContent,
   closeClassName = '',
   closeLabel,
   size = 'default',
@@ -41,8 +45,10 @@ export function Dialog({
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const panel = panelRef.current
+    const dialog = panel?.closest<HTMLElement>('[role="dialog"]') ?? null
+    const focusScope = dialog ?? panel
     const backgroundElements: Array<{ element: HTMLElement; wasInert: boolean }> = []
-    let current: HTMLElement | null = panel?.closest<HTMLElement>('[role="dialog"]') ?? null
+    let current: HTMLElement | null = dialog
     while (current?.parentElement && current.parentElement !== document.body) {
       for (const sibling of current.parentElement.children) {
         if (sibling !== current && sibling instanceof HTMLElement) {
@@ -58,7 +64,7 @@ export function Dialog({
         return
       }
       if (event.key !== 'Tab') return
-      const focusable = [...(panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])]
+      const focusable = [...(focusScope?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])]
       if (focusable.length === 0) {
         event.preventDefault()
         panel?.focus()
@@ -66,25 +72,30 @@ export function Dialog({
       }
       const first = focusable[0]
       const last = focusable.at(-1)
-      if (event.shiftKey && (document.activeElement === first || !panel?.contains(document.activeElement))) {
+      if (event.shiftKey && (document.activeElement === first || !focusScope?.contains(document.activeElement))) {
         event.preventDefault()
         last?.focus()
-      } else if (!event.shiftKey && (document.activeElement === last || !panel?.contains(document.activeElement))) {
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || !focusScope?.contains(document.activeElement))
+      ) {
         event.preventDefault()
         first.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
+    openDialogCount += 1
     document.body.classList.add('modal-open')
     const initialFocus =
-      panel?.querySelector<HTMLElement>('[data-dialog-autofocus="true"]') ??
-      panel?.querySelector<HTMLElement>('[autofocus]') ??
-      panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      focusScope?.querySelector<HTMLElement>('[data-dialog-autofocus="true"]') ??
+      focusScope?.querySelector<HTMLElement>('[autofocus]') ??
+      focusScope?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
     initialFocus?.focus()
     if (!initialFocus) panel?.focus()
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.classList.remove('modal-open')
+      openDialogCount = Math.max(0, openDialogCount - 1)
+      if (openDialogCount === 0) document.body.classList.remove('modal-open')
       for (const { element, wasInert } of backgroundElements) element.inert = wasInert
       previouslyFocused?.focus()
     }
@@ -117,6 +128,7 @@ export function Dialog({
         </button>
         {children}
       </div>
+      {overlayContent}
     </div>
   )
 }

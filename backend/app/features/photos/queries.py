@@ -49,8 +49,8 @@ class PhotoListItem:
     visibility: PhotoVisibility
     original_filename: str
     content_type: str
-    width: int | None
-    height: int | None
+    width: int
+    height: int
     captured_at: datetime | None
     uploaded_at: datetime
     is_favorite: bool

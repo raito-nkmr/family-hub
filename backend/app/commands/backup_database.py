@@ -54,8 +54,7 @@ def main() -> None:
             maintenance = MaintenanceService(session, storage)
             run = maintenance.start_run(MaintenanceJobType.DATABASE_BACKUP)
             timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-            directory = settings.photo_storage_root / "database-backups" / timestamp[:4] / timestamp[4:6]
-            directory.mkdir(parents=True, exist_ok=True)
+            directory = storage.get_database_backup_directory(timestamp)
             final_path = directory / f"family-hub-{timestamp}.dump"
             part_path = final_path.with_suffix(".dump.part")
             manifest_path = final_path.with_suffix(".json")

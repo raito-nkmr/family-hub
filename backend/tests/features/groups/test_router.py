@@ -9,21 +9,21 @@ from app.features.auth.dependencies import AuthenticatedUser, require_authentica
 from app.features.auth.public import PublicUser
 from app.features.groups.models import GroupRole
 from app.features.groups.router import (
-    add_group_member,
     create_group,
     get_group,
     list_group_member_candidates,
     list_groups,
     remove_group_member,
+    rename_group,
     update_group_member_role,
 )
-from app.features.groups.schemas import GroupCreate, GroupMemberAdd, GroupMemberRoleUpdate
+from app.features.groups.schemas import GroupCreate, GroupMemberRoleUpdate, GroupUpdate
 from app.features.groups.service import (
     GroupDetail,
-    GroupForbiddenError,
     GroupMemberSummary,
     GroupNameAlreadyExistsError,
     GroupNotFoundError,
+    GroupPersistenceError,
     GroupSummary,
     LastGroupAdminError,
 )
@@ -83,19 +83,11 @@ class GroupServiceStub:
         assert self.detail is not None
         return self.detail
 
-    def add_member(
-        self,
-        group_id: UUID,
-        actor_user_id: UUID,
-        user_id: UUID,
-        role: GroupRole,
-        actor_username: str,
-    ) -> GroupDetail:
+    def rename_group(self, group_id: UUID, actor_user_id: UUID, actor_username: str, name: str) -> GroupDetail:
         if self.error:
             raise self.error
         assert actor_user_id == TEST_USER.id
-        assert user_id == TEST_TARGET_USER_ID
-        assert role is GroupRole.MEMBER
+        assert name == "新しい名前"
         assert self.detail is not None
         return self.detail
 
@@ -171,31 +163,16 @@ def test_get_group_maps_non_member_to_404() -> None:
     assert error.value.detail == "Group not found"
 
 
-def test_add_group_member_returns_updated_group() -> None:
-    detail = make_detail()
-
-    response = add_group_member(
-        detail.group.id,
-        GroupMemberAdd(user_id=TEST_TARGET_USER_ID),
-        TEST_USER,
-        GroupServiceStub(detail),
-    )
-
-    assert response.id == detail.group.id
-
-
-def test_member_management_requires_group_admin() -> None:
-    detail = make_detail()
-
+def test_rename_group_maps_persistence_error_to_500() -> None:
     with pytest.raises(HTTPException) as error:
-        add_group_member(
-            detail.group.id,
-            GroupMemberAdd(user_id=TEST_TARGET_USER_ID),
+        rename_group(
+            uuid4(),
+            GroupUpdate(name="新しい名前"),
             TEST_USER,
-            GroupServiceStub(error=GroupForbiddenError()),
+            GroupServiceStub(error=GroupPersistenceError()),
         )
 
-    assert error.value.status_code == 403
+    assert error.value.status_code == 500
 
 
 def test_list_group_member_candidates_returns_selectable_users() -> None:
@@ -232,7 +209,7 @@ def test_group_routes_are_registered_and_mutations_require_csrf() -> None:
     assert {"get", "post"} <= set(paths["/api/v1/groups"])
     assert "get" in paths["/api/v1/groups/{group_id}"]
     assert "get" in paths["/api/v1/groups/{group_id}/member-candidates"]
-    assert "post" in paths["/api/v1/groups/{group_id}/members"]
+    assert "/api/v1/groups/{group_id}/members" not in paths
     assert {"patch", "delete"} <= set(paths["/api/v1/groups/{group_id}/members/{user_id}"])
 
     from app.features.groups.router import router

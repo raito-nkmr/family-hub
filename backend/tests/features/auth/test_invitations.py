@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -57,6 +58,51 @@ def test_create_invitation_rejects_existing_user() -> None:
         make_service(session).create_invitation("family-member", uuid4(), "owner")
 
     session.add.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("invitation_status", "expected_sql"),
+    [
+        ("used", "user_invitations.used_at IS NOT NULL"),
+        ("revoked", "user_invitations.used_at IS NULL AND user_invitations.revoked_at IS NOT NULL"),
+        ("expired", "user_invitations.used_at IS NULL AND user_invitations.revoked_at IS NULL"),
+        ("pending", "user_invitations.used_at IS NULL AND user_invitations.revoked_at IS NULL"),
+    ],
+)
+def test_list_invitations_applies_status_in_sql(invitation_status: str, expected_sql: str) -> None:
+    session = MagicMock(spec=Session)
+    invitation = make_invitation(expired=invitation_status == "expired")
+    if invitation_status == "used":
+        invitation.used_at = datetime.now(UTC)
+    elif invitation_status == "revoked":
+        invitation.revoked_at = datetime.now(UTC)
+    session.execute.return_value = [(invitation, "owner")]
+
+    result = make_service(session).list_invitations(invitation_status=invitation_status)
+
+    assert result[0].status == invitation_status
+    statement = session.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert expected_sql in sql
+
+
+def test_list_invitations_applies_username_search_in_sql() -> None:
+    session = MagicMock(spec=Session)
+    session.execute.return_value = []
+
+    assert make_service(session).list_invitations(query="Family-Member") == []
+
+    statement = session.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "lower(user_invitations.username) LIKE" in sql
+
+
+def test_list_invitations_returns_no_rows_for_unknown_status() -> None:
+    session = MagicMock(spec=Session)
+
+    assert make_service(session).list_invitations(invitation_status="unknown") == []
+
+    session.execute.assert_not_called()
 
 
 def test_remove_invitation_history_deletes_record_and_commits() -> None:

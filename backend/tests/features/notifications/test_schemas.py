@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.features.notifications.schemas import PushSubscriptionCreate
+from app.features.notifications.schemas import PushSubscriptionCreate, PushSubscriptionLocaleUpdate
 
 
 def make_subscription(endpoint: str) -> PushSubscriptionCreate:
@@ -28,3 +28,13 @@ def test_push_endpoint_requires_https() -> None:
 def test_push_endpoint_rejects_unsupported_url_components(endpoint: str) -> None:
     with pytest.raises(ValidationError, match="unsupported URL components"):
         make_subscription(endpoint)
+
+
+@pytest.mark.parametrize("locale", ["en", "ja"])
+def test_push_subscription_locale_update_accepts_supported_locale(locale: str) -> None:
+    assert PushSubscriptionLocaleUpdate(locale=locale).locale == locale
+
+
+def test_push_subscription_locale_update_rejects_unknown_locale() -> None:
+    with pytest.raises(ValidationError):
+        PushSubscriptionLocaleUpdate(locale="fr")

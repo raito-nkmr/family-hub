@@ -11,7 +11,6 @@ from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.queries import PhotoQueryService
 from app.features.photos.storage import PhotoStorage
 from app.features.photos.trash_service import PhotoTrashService
-from app.features.photos.upload_service import PhotoUploadService
 from app.features.photos.uploads import UploadBatchService
 
 
@@ -31,14 +30,6 @@ def get_photo_metadata_service(
     storage: Annotated[PhotoStorage, Depends(get_photo_storage)],
 ) -> PhotoMetadataService:
     return PhotoMetadataService(session, storage)
-
-
-def get_photo_upload_service(
-    request: Request,
-    session: Annotated[Session, Depends(get_session)],
-    storage: Annotated[PhotoStorage, Depends(get_photo_storage)],
-) -> PhotoUploadService:
-    return PhotoUploadService(session, storage, request.app.state.settings.photo_default_timezone)
 
 
 def get_photo_trash_service(

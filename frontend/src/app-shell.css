@@ -297,7 +297,7 @@
 
 .logout-button {
   display: inline-flex;
-  inline-size: 5.25rem;
+  inline-size: 5.75rem;
   height: var(--control-height-compact);
   padding: 0;
   color: var(--color-action-primary);

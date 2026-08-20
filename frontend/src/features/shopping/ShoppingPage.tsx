@@ -51,6 +51,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
             <label htmlFor="shopping-item-name">{t('shopping.itemName')}</label>
             <div>
               <input
+                className="form-control"
                 id="shopping-item-name"
                 value={name}
                 maxLength={120}

@@ -397,17 +397,10 @@
   font-size: 0.7rem;
 }
 
-.photo-search__form input[type='search'],
-.photo-search__form input[type='date'],
-.photo-search__form select {
-  min-width: 0;
+.photo-search__form .form-control {
+  min-height: 0;
   height: 42px;
   padding: 0.55rem 0.65rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-page);
-  border: 1px solid var(--color-border-default);
-  border-radius: 7px;
-  font: inherit;
   font-size: 0.78rem;
 }
 

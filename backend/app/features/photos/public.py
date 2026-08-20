@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.features.groups.public import FamilyGroupMember
 from app.features.photos.access import photo_is_in_library
-from app.features.photos.models import Photo, PhotoLifecycleState, PhotoMetadata, PhotoShare
+from app.features.photos.models import Photo, PhotoFavorite, PhotoLifecycleState, PhotoMetadata, PhotoShare
 from app.features.photos.schemas import PhotoResponse, photo_response_from_model
 from app.features.photos.storage import PhotoStorage, StorageStatusCode
 
@@ -19,7 +19,29 @@ __all__ = [
     "PhotoStorage",
     "StorageStatusCode",
     "photo_response_from_model",
+    "visible_share_group_ids",
 ]
+
+
+def visible_share_group_ids(
+    session: Session,
+    photo_ids: Collection[UUID],
+    viewer_user_id: UUID,
+) -> dict[UUID, set[UUID]]:
+    if not photo_ids:
+        return {}
+    rows = session.execute(
+        select(PhotoShare.photo_id, PhotoShare.group_id)
+        .join(FamilyGroupMember, FamilyGroupMember.group_id == PhotoShare.group_id)
+        .where(
+            PhotoShare.photo_id.in_(photo_ids),
+            FamilyGroupMember.user_id == viewer_user_id,
+        )
+    ).all()
+    visible: dict[UUID, set[UUID]] = {photo_id: set() for photo_id in photo_ids}
+    for photo_id, group_id in rows:
+        visible[photo_id].add(group_id)
+    return visible
 
 
 class PhotoCatalog:
@@ -58,18 +80,14 @@ class PhotoCatalog:
         )
         return list(self._session.scalars(statement).all())
 
-    def visible_share_group_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> dict[UUID, set[UUID]]:
+    def favorite_photo_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> set[UUID]:
         if not photo_ids:
-            return {}
-        rows = self._session.execute(
-            select(PhotoShare.photo_id, PhotoShare.group_id)
-            .join(FamilyGroupMember, FamilyGroupMember.group_id == PhotoShare.group_id)
-            .where(
-                PhotoShare.photo_id.in_(photo_ids),
-                FamilyGroupMember.user_id == viewer_user_id,
-            )
-        ).all()
-        visible: dict[UUID, set[UUID]] = {photo_id: set() for photo_id in photo_ids}
-        for photo_id, group_id in rows:
-            visible[photo_id].add(group_id)
-        return visible
+            return set()
+        statement = select(PhotoFavorite.photo_id).where(
+            PhotoFavorite.user_id == viewer_user_id,
+            PhotoFavorite.photo_id.in_(photo_ids),
+        )
+        return set(self._session.scalars(statement).all())
+
+    def visible_share_group_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> dict[UUID, set[UUID]]:
+        return visible_share_group_ids(self._session, photo_ids, viewer_user_id)

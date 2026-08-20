@@ -62,6 +62,7 @@ class AlbumDetail:
     photos: list[Photo]
     next_cursor: str | None = None
     visible_group_ids: dict[UUID, set[UUID]] = field(default_factory=dict)
+    favorite_photo_ids: set[UUID] = field(default_factory=set)
 
 
 class AlbumService:
@@ -169,6 +170,7 @@ class AlbumService:
             photos=photos,
             next_cursor=next_cursor,
             visible_group_ids=self._photo_catalog.visible_share_group_ids(photo_ids, viewer_user_id),
+            favorite_photo_ids=self._photo_catalog.favorite_photo_ids(photo_ids, viewer_user_id),
         )
 
     def create_album(

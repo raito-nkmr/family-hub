@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef, useState } from 'react'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
@@ -32,16 +32,24 @@ const currentTimelineYear = Number(
 interface PhotoLibraryOptions {
   libraryEnabled: boolean
   storageEnabled: boolean
+  groupsEnabled: boolean
   onUnauthorized: () => void
 }
 
-export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized }: PhotoLibraryOptions) {
+export function usePhotoLibrary({
+  libraryEnabled,
+  storageEnabled,
+  groupsEnabled,
+  onUnauthorized,
+}: PhotoLibraryOptions) {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null)
   const [pageMutationError, setPageMutationError] = useState<string | null>(null)
   const [metadataError, setMetadataError] = useState<string | null>(null)
+  const [photoDetailError, setPhotoDetailError] = useState<string | null>(null)
   const [updatingMetadata, setUpdatingMetadata] = useState(false)
+  const photoDetailRequestIdRef = useRef(0)
   const photoFilters = readPhotoSearchParams(searchParams)
   const timelineYear = readTimelineYear(searchParams, currentTimelineYear)
 
@@ -50,7 +58,11 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     queryFn: ({ signal }) => getStorageStatus(signal),
     enabled: storageEnabled,
   })
-  const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
+  const groupsQuery = useQuery({
+    queryKey: queryKeys.groups,
+    queryFn: ({ signal }) => getGroups(signal),
+    enabled: groupsEnabled,
+  })
   const searchOptionsQuery = useQuery({
     queryKey: queryKeys.photoSearchOptions,
     queryFn: ({ signal }) => getPhotoSearchOptions(signal),
@@ -66,6 +78,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     queryKey: queryKeys.photo(selectedPhotoId ?? ''),
     queryFn: ({ signal }) => getPhoto(selectedPhotoId!, signal),
     enabled: selectedPhotoId !== null,
+    placeholderData: keepPreviousData,
   })
   const unauthorizedCandidate = [
     storageQuery.error,
@@ -77,17 +90,19 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
-  const selectedPhoto = detailQuery.data ?? null
+  const selectedPhoto = selectedPhotoId === null ? null : (detailQuery.data ?? null)
   const selectedPhotoIndex = photoList.photos.findIndex((photo) => photo.id === selectedPhotoId)
   const previousPhoto = selectedPhotoIndex > 0 ? photoList.photos[selectedPhotoIndex - 1] : null
   const nextPhoto = selectedPhotoIndex >= 0 ? (photoList.photos[selectedPhotoIndex + 1] ?? null) : null
-  const invalidateLibrary = async () => {
+  const invalidateLibrary = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix }),
       queryClient.invalidateQueries({ queryKey: queryKeys.photoStorage }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.recentPhotos }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.photoSearchOptions }),
     ])
-  }
+  }, [queryClient])
   const search = async (filters: PhotoFilters) => {
     setPageMutationError(null)
     setSearchParams((current) => writePhotoSearchParams(current, filters), { replace: true })
@@ -104,18 +119,41 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       { replace: true },
     )
   }
+  const loadPhotoDetail = useCallback(
+    async (photoId: string, showPageError: boolean, requestId: number) => {
+      try {
+        await queryClient.fetchQuery({
+          queryKey: queryKeys.photo(photoId),
+          queryFn: ({ signal }) => getPhoto(photoId, signal),
+        })
+        if (requestId !== photoDetailRequestIdRef.current) return
+        setPhotoDetailError(null)
+      } catch (error) {
+        if (requestId !== photoDetailRequestIdRef.current) return
+        if (isUnauthorizedError(error)) {
+          setPhotoDetailError(null)
+          onUnauthorized()
+        } else {
+          setPhotoDetailError(i18n.t('photos.detailFailed'))
+          if (showPageError) setPageMutationError(i18n.t('photos.detailFailed'))
+        }
+      }
+    },
+    [onUnauthorized, queryClient],
+  )
   const selectPhoto = async (photo: Photo | PhotoListItem) => {
+    const requestId = ++photoDetailRequestIdRef.current
+    const hadSelectedPhoto = selectedPhotoId !== null
     setSelectedPhotoId(photo.id)
+    setPageMutationError(null)
     setMetadataError(null)
-    try {
-      await queryClient.fetchQuery({
-        queryKey: queryKeys.photo(photo.id),
-        queryFn: ({ signal }) => getPhoto(photo.id, signal),
-      })
-    } catch (error) {
-      if (isUnauthorizedError(error)) onUnauthorized()
-      else setPageMutationError(i18n.t('photos.detailFailed'))
-    }
+    setPhotoDetailError(null)
+    await loadPhotoDetail(photo.id, !hadSelectedPhoto, requestId)
+  }
+  const retryPhotoDetail = async () => {
+    if (selectedPhotoId === null) return
+    const requestId = ++photoDetailRequestIdRef.current
+    await loadPhotoDetail(selectedPhotoId, false, requestId)
   }
   const savePhotoMetadata = async (changes: {
     memo?: string | null
@@ -152,7 +190,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     try {
       const updated = await setPhotoFavorite(selectedPhoto.id, !selectedPhoto.is_favorite)
       queryClient.setQueryData(queryKeys.photo(updated.id), updated)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix })
+      await invalidateLibrary()
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setMetadataError(i18n.t('photos.updateFailed'))
@@ -178,7 +216,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
   const bulkAddSharing = async (photoIds: string[], groupIds: string[]): Promise<BulkSharingResult> => {
     try {
       const result = await addBulkPhotoSharing(photoIds, groupIds)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.photosPrefix })
+      await invalidateLibrary()
       return result
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
@@ -193,7 +231,7 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       await trashPhoto(selectedPhoto.id)
       removePhotoFromPages(queryClient, photoFilters, selectedPhoto.id)
       setSelectedPhotoId(null)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.photoTimelinePrefix })
+      await invalidateLibrary()
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setMetadataError(i18n.t('photoTrash.trashFailed'))
@@ -201,7 +239,13 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
       setUpdatingMetadata(false)
     }
   }
-  const queryError = [storageQuery.error, groupsQuery.error, timelineQuery.error, photoList.error].some(Boolean)
+  const queryError = [
+    storageQuery.error,
+    groupsQuery.error,
+    timelineQuery.error,
+    photoList.error,
+    searchOptionsQuery.error,
+  ].some(Boolean)
     ? i18n.t('photos.loadFailed')
     : null
 
@@ -215,10 +259,13 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     searchOptions: searchOptionsQuery.data ?? null,
     searchOptionsLoading: searchOptionsQuery.isPending,
     selectedPhoto,
+    photoDetailLoading: detailQuery.isFetching,
+    photoDetailError,
+    retryPhotoDetail,
     previousPhoto,
     nextPhoto,
     loading:
-      groupsQuery.isPending ||
+      (groupsEnabled && groupsQuery.isPending) ||
       (storageEnabled && storageQuery.isPending) ||
       (libraryEnabled && (timelineQuery.isPending || photoList.loading)),
     loadingMore: photoList.loadingMore,
@@ -239,17 +286,19 @@ export function usePhotoLibrary({ libraryEnabled, storageEnabled, onUnauthorized
     bulkAddSharing,
     moveSelectedPhotoToTrash,
     selectPhoto,
-    closePhoto: () => {
+    closePhoto: useCallback(() => {
       setMetadataError(null)
+      setPhotoDetailError(null)
       setSelectedPhotoId(null)
-    },
+    }, []),
     reportError: setPageMutationError,
-    reset: () => {
+    reset: useCallback(() => {
       setSelectedPhotoId(null)
       setPageMutationError(null)
       setMetadataError(null)
+      setPhotoDetailError(null)
       setUpdatingMetadata(false)
-    },
+    }, []),
     invalidateLibrary,
   }
 }

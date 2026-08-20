@@ -24,7 +24,12 @@ VIDEO_CONTENT_TYPES = {
     "video/quicktime": ".mov",
     "video/x-m4v": ".m4v",
 }
-_SUPPORTED_FORMATS = {"3g2", "3gp", "m4a", "mj2", "mov", "mp4"}
+_SUPPORTED_FORMATS_BY_CONTENT_TYPE = {
+    "video/mp4": {"mp4"},
+    "video/quicktime": {"mov"},
+    # ffprobe identifies M4V files through the ISO-BMFF mp4 demuxer.
+    "video/x-m4v": {"mov", "mp4"},
+}
 _FFPROBE_TIMEOUT_SECONDS = 30
 
 
@@ -41,7 +46,8 @@ def inspect_video(path: Path, declared_content_type: str, default_timezone: str)
                 "error",
                 "-show_entries",
                 "format=format_name:format_tags=creation_time,com.apple.quicktime.creationdate:"
-                "stream=codec_type,width,height:stream_tags=creation_time,com.apple.quicktime.creationdate",
+                "stream=codec_type,width,height:stream_tags=creation_time,com.apple.quicktime.creationdate,rotate:"
+                "stream_side_data=rotation",
                 "-of",
                 "json",
                 str(path),
@@ -66,8 +72,11 @@ def inspect_video(path: Path, declared_content_type: str, default_timezone: str)
     except (KeyError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as error:
         raise InvalidVideoError("Uploaded file does not contain a usable video stream") from error
 
-    if not format_names & _SUPPORTED_FORMATS or width <= 0 or height <= 0:
+    allowed_formats = _SUPPORTED_FORMATS_BY_CONTENT_TYPE[declared_content_type]
+    if not format_names & allowed_formats or width <= 0 or height <= 0:
         raise InvalidVideoError("Uploaded video format is not supported")
+    if _get_rotation(stream) % 180 == 90:
+        width, height = height, width
 
     captured_at = _get_creation_time(probe, default_timezone)
     return VideoMetadata(
@@ -77,6 +86,25 @@ def inspect_video(path: Path, declared_content_type: str, default_timezone: str)
         height=height,
         captured_at=captured_at,
     )
+
+
+def _get_rotation(stream: dict[str, object]) -> int:
+    side_data_list = stream.get("side_data_list")
+    if isinstance(side_data_list, list):
+        for side_data in side_data_list:
+            if isinstance(side_data, dict) and "rotation" in side_data:
+                try:
+                    return round(float(side_data["rotation"])) % 360
+                except (TypeError, ValueError):
+                    continue
+
+    tags = stream.get("tags")
+    if isinstance(tags, dict) and "rotate" in tags:
+        try:
+            return round(float(tags["rotate"])) % 360
+        except (TypeError, ValueError):
+            pass
+    return 0
 
 
 def _get_creation_time(probe: dict[str, object], default_timezone: str) -> datetime | None:

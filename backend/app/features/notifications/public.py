@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.features.groups.public import FamilyGroupMember
+from app.features.groups.public import FamilyGroupMember, lock_group_ids
 from app.features.notifications.models import NotificationOutbox, NotificationOutboxStatus, NotificationType
 
 __all__ = ["NotificationType", "enqueue_group_notification"]
@@ -22,6 +22,7 @@ def enqueue_group_notification(
 ) -> int:
     if not group_ids:
         return 0
+    lock_group_ids(session, group_ids)
     statement = select(FamilyGroupMember.user_id).where(FamilyGroupMember.group_id.in_(group_ids)).distinct()
     if exclude_user_id is not None:
         statement = statement.where(FamilyGroupMember.user_id != exclude_user_id)

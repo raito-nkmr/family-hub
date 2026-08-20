@@ -104,6 +104,8 @@ photo shares, activity-group relations, and upload-batch shares. Photos remain; 
 Membership removal and photo, upload, album, cleaning, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
 albums, cleaning tasks, and shopping items in that order.
+Upload batch creation locks the requested groups before checking membership. Notification fan-out locks all target groups in
+stable ID order before reading members, preventing membership removal from racing the read-and-enqueue operation.
 
 Mutations that can change the last active system or group administrator use one PostgreSQL transaction advisory lock. The
 lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
@@ -128,13 +130,13 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`storage.py` validates HDD state, streams chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
+`storage.py` validates HDD state, receives resumable chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
 thumbnails from images or the first video frame, and `video_validation.py` validates supported video containers with
 `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
 catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
-content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `upload_service.py`
-handles single-photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
+content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `registration.py` handles
+finalized photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
 `export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
@@ -254,8 +256,9 @@ must point at a separate mounted external HDD and is used only by maintenance co
 
 Never use client filenames or extensions to construct paths. The server chooses extensions after content validation. Accept
 JPEG, primary-image MPO, PNG, and HEIF/HEIC without recompression. Also accept MP4, QuickTime MOV, and M4V video files;
-`ffprobe` must find a supported container and a usable video stream. Use the first MPO image or first video frame for
-validation and thumbnails while preserving the original file.
+`ffprobe` must find a supported container and a usable video stream. Registration requires positive display-oriented width
+and height from every accepted image or video, applying EXIF image orientation and video rotation metadata before storing
+dimensions. Use the first MPO image or first video frame for validation and thumbnails while preserving the original file.
 
 At finalization, create a WebP thumbnail with a longest edge of at most 480 px, quality 80, and method 4 on the internal SSD.
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
@@ -273,7 +276,8 @@ transaction-level advisory lock, then include unreceived bytes from existing act
 Browsers send 8 MiB chunks; the server accepts at most 8 MiB and validates `Upload-Offset`. Each browser request has a
 timeout; after a transient failure, the client reconciles the server offset and retries the chunk up to three times.
 Reconcile the database position with `.part` size after interruption and resume only within the same open page. Expired
-batches are canceled and temporary files removed on access or new-batch creation.
+batches are canceled and temporary files removed on access or new-batch creation. Expiration cleanup locks the batch and all
+its items in batch-then-item order before deleting resumable files, so it cannot race a chunk write.
 
 The current five-second request timeout is intentionally short for development diagnostics on the LAN. It makes a stalled
 request and its retries observable quickly; it is not the production timeout target and increasing it does not fix a
@@ -338,9 +342,11 @@ rebuild are not implemented.
 
 ## Storage availability
 
-Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals` and `incoming`
-are writable, free space meets the safety threshold, and path resolution cannot escape the allowed root. A directory merely
-existing is not sufficient; this prevents writing to an identically named internal-SSD directory when the HDD is detached.
+Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals`, `incoming`, and
+`database-backups` are writable, free space meets the safety threshold, and path resolution cannot escape the allowed root.
+Integrity checks and database backups use the same validated storage-path derivation and reject absolute paths, `..`, and
+symlinks without reading outside the root. A directory merely existing is not sufficient; this prevents writing to an
+identically named internal-SSD directory when the HDD is detached.
 
 ## Database access and settings
 
@@ -349,7 +355,9 @@ rollback boundaries explicit at service use-case boundaries. Manage all schema c
 production schema implicitly with `create_all()`. Start with synchronous file and database I/O; measure before introducing
 async database access.
 
-Use typed settings and never hard-code environment paths or credentials. Key settings include `DATABASE_URL`, trusted origins,
+Use typed settings and never hard-code environment paths or credentials. Both the web application and management commands use
+the same settings loader: process environment variables take precedence, and `backend/.env` is the fallback for local direct
+invocation. Key settings include `DATABASE_URL`, trusted origins,
 session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
 `PHOTO_STORAGE_ROOT`, `PHOTO_DERIVATIVE_ROOT`, `BACKUP_STORAGE_ROOT`, storage markers, upload and free-space limits,
 default timezone, Push provider allowlist and
@@ -357,6 +365,42 @@ subscription limit, and optional `MONITORING_PING_URL_*` values. Development def
 1 MiB chunks, and 10 GiB minimum free space. Never place real `.env` values in code or documentation.
 
 ## Testing strategy
+
+### PostgreSQL test databases
+
+Unit tests use mocked sessions or temporary resources, so the normal test run does not need a database connection. The
+PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` is set. The migration round-trip test additionally
+requires `MIGRATION_TEST_DATABASE_URL`.
+
+For local testing, use two disposable databases on the development PostgreSQL instance at `127.0.0.1:15432`. Reuse the
+existing local PostgreSQL role, but use database names such as `family_hub_test` and `family_hub_migration_test`; the role
+must exist, while the databases must be created before running the tests. Never use the production PostgreSQL endpoint at
+`127.0.0.1:5433` or a production database for tests.
+
+Set the URLs in the current shell rather than committing credentials or adding them to repository files:
+
+```bash
+read -rsp 'TEST_DATABASE_URL: ' TEST_DATABASE_URL
+echo
+export TEST_DATABASE_URL
+read -rsp 'MIGRATION_TEST_DATABASE_URL: ' MIGRATION_TEST_DATABASE_URL
+echo
+export MIGRATION_TEST_DATABASE_URL
+```
+
+Apply the latest schema to the ordinary integration-test database, then run the complete backend suite. The migration test
+uses its separate empty database and applies and rolls back the full Alembic history itself:
+
+```bash
+DATABASE_URL="$TEST_DATABASE_URL" uv run --locked alembic upgrade head
+uv run --locked pytest
+```
+
+Unset the variables when finished if the shell will be reused for another database:
+
+```bash
+unset TEST_DATABASE_URL MIGRATION_TEST_DATABASE_URL
+```
 
 ### Storage
 
@@ -379,7 +423,7 @@ recovery, deduplication, per-device retries, and maintenance terminal states.
 
 ### Routers and migrations
 
-Replace FastAPI dependencies with test Session and Storage implementations. Test multipart upload, response schemas, and
+Replace FastAPI dependencies with test Session and Storage implementations. Test resumable chunk upload, response schemas, and
 domain-exception-to-HTTP conversion. CI must apply the latest migrations to an empty PostgreSQL database, while integration
 and unit tests remain separately runnable.
 
@@ -387,8 +431,8 @@ and unit tests remain separately runnable.
 
 Candidates include a home aggregation API if existing calls become a problem, repair commands for integrity findings,
 background derivative regeneration, and non-iPhone or non-Safari support. Open decisions include exact HDD mount and
-marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, production hostname
-and Cloudflare plan, and independent LAN HTTPS when Cloudflare is unavailable.
+marker values, upload and free-space limits, derivative-cache policy, original range requests and caching, and independent
+LAN HTTPS when Cloudflare is unavailable.
 
 Person detection is excluded from the current backend contract; see [`proposals/person-detection.md`](./proposals/person-detection.md).
 
@@ -400,8 +444,10 @@ favorite data remain for restoration. Album counts, pages, and covers consider a
 relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
 sidecar schema 7.
 
-Permanent deletion first commits `purge_pending`, then clears album covers for the photo in the same database transaction,
-idempotently deletes original, sidecar, and derivatives, and finally deletes database rows. `python -m
+Permanent deletion requests for `trashed` photos are accepted only after `purge_after`; an early request is rejected with `409`.
+The request first commits `purge_pending`, then clears album covers for the photo in the same database transaction, idempotently
+deletes original, sidecar, and derivatives, and finally deletes database rows. A photo already in `purge_pending` can be retried
+regardless of its retention timestamp so interrupted work remains recoverable. `python -m
 app.commands.purge_trashed_photos` retries interrupted work. The default retention period is 30 days.
 
 日本語版: [backend-design.ja.md](./backend-design.ja.md)

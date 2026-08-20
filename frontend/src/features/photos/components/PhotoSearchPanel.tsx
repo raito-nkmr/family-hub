@@ -141,6 +141,7 @@ export function PhotoSearchPanel({
           <label className="photo-search__keyword">
             <span>{t('photoSearch.keyword')}</span>
             <input
+              className="form-control form-control--page"
               type="search"
               value={keyword}
               maxLength={100}
@@ -150,11 +151,17 @@ export function PhotoSearchPanel({
           </label>
           <label>
             <span>{t('photoSearch.startDate')}</span>
-            <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+            <input
+              className="form-control form-control--page"
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
           </label>
           <label>
             <span>{t('photoSearch.uploader')}</span>
             <select
+              className="form-control form-control--page"
               value={uploaderId}
               disabled={disabled || searchOptionsLoading || mineOnly}
               onChange={(event) => {
@@ -174,6 +181,7 @@ export function PhotoSearchPanel({
             <label>
               <span>{t('photoSearch.sharedGroup')}</span>
               <select
+                className="form-control form-control--page"
                 value={sharingGroupId}
                 disabled={disabled || searchOptionsLoading}
                 onChange={(event) => setSharingGroupId(event.target.value)}
@@ -190,6 +198,7 @@ export function PhotoSearchPanel({
           <label>
             <span>{t('photoSearch.endDate')}</span>
             <input
+              className="form-control form-control--page"
               type="date"
               value={dateTo}
               min={dateFrom || undefined}
@@ -198,7 +207,11 @@ export function PhotoSearchPanel({
           </label>
           <label>
             <span>{t('photoSearch.visibility')}</span>
-            <select value={visibility} onChange={(event) => setVisibility(event.target.value as PhotoVisibility | '')}>
+            <select
+              className="form-control form-control--page"
+              value={visibility}
+              onChange={(event) => setVisibility(event.target.value as PhotoVisibility | '')}
+            >
               <option value="">{t('photoSearch.all')}</option>
               <option value="private">{t('photoSearch.private')}</option>
               <option value="shared">{t('photoSearch.family')}</option>
@@ -207,6 +220,7 @@ export function PhotoSearchPanel({
           <label>
             <span>{t('photoSearch.capturedAt')}</span>
             <select
+              className="form-control form-control--page"
               value={capturedStatus}
               onChange={(event) => setCapturedStatus(event.target.value as typeof capturedStatus)}
             >

@@ -14,6 +14,7 @@ from app.features.photos.service import (
     PhotoDeletePersistenceError,
     PhotoDeleteStorageError,
     PhotoNotFoundError,
+    PhotoPurgeNotDueError,
 )
 from app.features.photos.trash_service import PhotoTrashService
 
@@ -136,6 +137,11 @@ def permanently_delete_photo(
 ) -> None:
     try:
         service.permanently_delete_photo(photo_id, authenticated_user.id)
+    except PhotoPurgeNotDueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Photo retention period has not elapsed",
+        ) from error
     except PhotoNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found") from error
     except PhotoDeleteStorageError as error:

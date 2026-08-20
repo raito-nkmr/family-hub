@@ -24,6 +24,17 @@ def test_inspect_jpeg_extracts_dimensions_and_utc_capture_time(tmp_path: Path) -
     assert result.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
 
 
+def test_inspect_jpeg_uses_exif_orientation_for_display_dimensions(tmp_path: Path) -> None:
+    path = tmp_path / "portrait.jpg"
+    exif = Image.Exif()
+    exif[Base.Orientation] = 6
+    Image.new("RGB", (8, 6), "red").save(path, format="JPEG", exif=exif)
+
+    result = inspect_image(path, "image/jpeg", "Asia/Tokyo")
+
+    assert (result.width, result.height) == (6, 8)
+
+
 def test_inspect_mpo_accepts_primary_jpeg_image(tmp_path: Path) -> None:
     path = tmp_path / "iphone.jpeg"
     primary = Image.new("RGB", (8, 6), "red")

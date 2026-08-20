@@ -11,6 +11,7 @@ from app.features.notifications.schemas import (
     NotificationPreferenceItem,
     NotificationPreferenceUpdate,
     PushSubscriptionCreate,
+    PushSubscriptionLocaleUpdate,
     PushSubscriptionResponse,
 )
 from app.features.notifications.service import (
@@ -69,6 +70,24 @@ def delete_push_subscription(
 ) -> None:
     try:
         service.unsubscribe(context, subscription_id)
+    except NotificationPersistenceError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Web Push is unavailable"
+        ) from error
+
+
+@router.put(
+    "/subscriptions/locale",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_csrf_token)],
+)
+def update_push_subscription_locale(
+    body: PushSubscriptionLocaleUpdate,
+    context: Annotated[AuthContext, Depends(get_auth_context)],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> None:
+    try:
+        service.update_subscription_locale(context, body)
     except NotificationPersistenceError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Web Push is unavailable"

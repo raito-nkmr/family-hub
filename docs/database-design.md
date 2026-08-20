@@ -7,9 +7,10 @@ and shopping. Image files are stored on the internal photo-storage HDD; PostgreS
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema is consolidated into one baseline because the development database is reset when the
-baseline changes. Future approved schema changes should be added as new migrations. Tables for future features such as
-person detection are not created until the feature is approved and its requirements are known.
+The current application schema is represented by a short linear baseline chain because the development and pre-production
+databases are reset when the baseline is rebuilt. The chain is divided by feature and dependency boundaries so each
+revision remains readable. Future approved schema changes should be added as new migrations. Tables for future features
+such as person detection are not created until the feature is approved and its requirements are known.
 
 ```text
 family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
@@ -147,10 +148,11 @@ purchase time must both be null or both be set. Index `(group_id, purchased_at, 
 Stores one metadata row per original. Important fields are uploader and username snapshot, display filename, relative
 `storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, capture and upload timestamps, lifecycle
 state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner. The same row represents either an
-image or a supported video; `content_type` distinguishes them and dimensions describe the video stream when applicable.
+image or a supported video; `content_type` distinguishes them. Dimensions describe the displayed orientation after applying
+EXIF image orientation or video rotation metadata.
 
 Constraints include unique `storage_key`, required existing owner, unique `(uploaded_by_user_id, sha256)`, positive size,
-lowercase 64-character SHA-256, paired dimensions or both null, and valid lifecycle/timestamp combinations. Do not include
+lowercase 64-character SHA-256, required positive width and height, and valid lifecycle/timestamp combinations. Do not include
 allowed media formats in a database `CHECK`; validate MIME type and file content during upload and recovery. Supported media
 includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V.
 
@@ -275,7 +277,7 @@ optimization are not part of this implementation.
 ## JSON sidecars
 
 Store one same-UUID JSON file beside every original. The sidecar is recovery information, not the source for ordinary lists or
-search. Schema version 6 separates the original and derivative asset data, editable metadata, and sharing:
+search. Schema version 7 separates the original and derivative asset data, editable metadata, sharing, and lifecycle state:
 
 | Field | Purpose |
 | --- | --- |
@@ -284,12 +286,14 @@ search. Schema version 6 separates the original and derivative asset data, edita
 | `metadata_version` | Matches `photo_metadata.version` |
 | `asset` | Uploader, original details, dimensions, timestamps, and derivatives |
 | `metadata` | Shared memo and its last editor and timestamp |
-| `sharing` | Array of family-group IDs |
+| `sharing` | Sharing audiences, currently family-group IDs with their audience type |
+| `lifecycle` | Current trash and permanent-deletion state |
 
-During recovery, verify UUID/path correspondence and recalculate size, hash, MIME type, and dimensions from the original.
-Use a corrected sidecar value for `captured_at`, falling back to EXIF only when absent or invalid. Write a replacement JSON to
-`.part` and rename it before updating DB and sidecar metadata. Include thumbnail locations for integrity checks, but not
-other regenerable derived data such as person-analysis results.
+The current integrity command uses PostgreSQL as the reference and is read-only. It verifies UUID/path correspondence,
+original size, optional hashes, sidecar contents, and derivative files. `sync_photo_sidecars` rewrites sidecars from current
+database records. Automatic repair and sidecar-to-database rebuilding are not implemented; restore the database from a backup
+if PostgreSQL is lost. Thumbnail locations are recorded for integrity checks, but not other regenerable derived data such as
+person-analysis results.
 
 ## Maintenance and notification tables
 
@@ -310,12 +314,17 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The initial development history was reset and consolidated into baseline `20260715_01`, which creates the implemented auth,
-photo, album, group, invitation, resumable-upload, and cleaning schema. All later changes are independent migrations; never
-rewrite the baseline. The project has since added derivatives, `pg_trgm` filename and memo search, shopping, memo editor
-metadata, favorites and album groups, activity events and read states, trash lifecycle, maintenance history, Push subscriptions
-and outbox, per-device delivery state, unique group names, audit events, and group membership invitations through subsequent
-migrations up to `20260723_13` and the current revisions, including the forced-password-change flag for operator resets.
+The development and pre-production history was reset and rebuilt as the following immutable baseline chain:
+
+- `20260820_01` — extensions, identity, and family groups
+- `20260820_02` — photos, activity, and uploads
+- `20260820_03` — albums
+- `20260820_04` — cleaning and shopping
+- `20260820_05` — notifications, maintenance, and audit
+
+The final constraints and indexes, including forced password changes, lifecycle invariants, and required positive photo
+dimensions, are included in the baseline chain. Never rewrite these revisions after the rebuild; future approved schema
+changes must be added as new migrations.
 
 Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
 with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with

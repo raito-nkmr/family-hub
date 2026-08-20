@@ -44,6 +44,7 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
       <form className="album-form" onSubmit={(event) => void handleSubmit(event)}>
         <label htmlFor={titleId}>{t('albums.name')}</label>
         <input
+          className="form-control form-control--subtle"
           id={titleId}
           value={title}
           maxLength={120}
@@ -56,6 +57,7 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
           <>
             <label htmlFor={`${titleId}-group`}>{t('albums.group')}</label>
             <select
+              className="form-control form-control--subtle"
               id={`${titleId}-group`}
               value={groupId}
               required
@@ -71,6 +73,7 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
         )}
         <label htmlFor={descriptionId}>{t('albums.optionalDescription')}</label>
         <textarea
+          className="form-control form-control--subtle"
           id={descriptionId}
           value={description}
           maxLength={2000}

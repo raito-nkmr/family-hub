@@ -24,6 +24,11 @@ export const en = {
     reject: 'Decline',
     footerPrivacy: 'Privacy',
   },
+  pullToRefresh: {
+    pull: 'Pull down to refresh',
+    release: 'Release to refresh',
+    refreshing: 'Refreshing…',
+  },
   language: { label: 'Language', en: 'EN', ja: 'JA', switchTo: 'Switch language to {{language}}' },
   navigation: {
     label: 'Applications',
@@ -135,7 +140,7 @@ export const en = {
     logoutFailed: 'Could not log out. Check your connection.',
     eyebrow: 'FAMILY HUB',
     title: 'Welcome back',
-    description: 'Sign in to your private Family Hub.',
+    description: 'Sign in to Family Hub.',
     username: 'Username',
     password: 'Password',
     signingIn: 'Signing in…',
@@ -190,7 +195,7 @@ export const en = {
       'Cloudflare is used to deliver the HTTPS service, so network requests pass through Cloudflare. If a user enables Web Push, the browser or device push service also processes the subscription and delivery information needed to send notifications.',
     browserTitle: 'Cookies and browser storage',
     browserBody:
-      'Family Hub uses an essential login cookie. The browser also stores preferences such as language, theme, and photo grid density. The app does not include advertising or analytics trackers.',
+      'Family Hub uses an essential login cookie. The browser also stores preferences such as language, theme, photo grid density, and the last selected family group. The app does not include advertising or analytics trackers.',
     requestsTitle: 'Access, correction, and deletion requests',
     requestsBody:
       'Ask the Family Hub administrator if you need to review or correct account information, change group access, remove content, or stop using the service. Some older copies may remain in backups until rotation.',
@@ -232,6 +237,7 @@ export const en = {
     moreFailed: 'Could not load more photos.',
     timelineFailed: 'Could not load the monthly timeline.',
     detailFailed: 'Could not load photo details.',
+    retryDetail: 'Retry loading details',
     updateConflict: 'This photo was updated elsewhere. Refresh and try again.',
     updateFailed: 'Could not update the photo information.',
     uploadCanceled: 'Upload canceled.',
@@ -255,6 +261,9 @@ export const en = {
   },
   photoDetails: {
     close: 'Close photo preview',
+    navigationLabel: 'Photo navigation',
+    previousPhoto: 'Show previous photo',
+    nextPhoto: 'Show next photo',
     eyebrow: 'Photo details',
     capturedAt: 'Captured',
     captureDateEdit: 'Capture date and time',
@@ -390,6 +399,7 @@ export const en = {
     select: 'Select photos',
     selectedCount: '{{count}} / {{max}} selected',
     openDialog: 'Add sharing',
+    ownerOnly: 'Only photos you uploaded can have sharing groups added.',
     selectPhoto: 'Select {{filename}}',
     deselectPhoto: 'Deselect {{filename}}',
     submit: 'Add to groups',
@@ -433,6 +443,7 @@ export const en = {
     loadFailed: 'Could not load the trash.',
     trashFailed: 'Could not move the photo to trash.',
     restoreFailed: 'Could not restore the photo.',
+    deleteNotDue: 'This photo must remain in the trash until the retention period ends.',
     deleteFailed: 'Could not permanently delete the photo. The server will retry if deletion started.',
   },
   systemStatus: {
@@ -657,6 +668,8 @@ export const en = {
     administration: 'Group administration',
     rename: 'Rename group',
     auditLog: 'Recent administrative actions',
+    administrationLoadFailed: 'Could not load the group administration information.',
+    auditLoadFailed: 'Could not load the group audit log.',
     pendingInvitations: 'Group invitations',
     removalImpact: {
       summary: 'Affected records: {{items}}',
@@ -761,6 +774,7 @@ export const en = {
     shoppingRestore: 'Could not put the item back. Refresh the list and try again.',
     groupLoad: 'Could not load groups.',
     groupCreate: 'Could not create the group.',
+    groupRename: 'Could not rename the group.',
     groupAlreadyExists: 'A group with this name already exists.',
     groupAlreadyMember: 'This user is already in the group.',
     groupUserNotFound: 'No active user was found.',
@@ -775,6 +789,7 @@ export const en = {
     groupCandidates: 'Could not load available users.',
     invitationLoad: 'Could not load invitations.',
     invitationReserved: 'That username is already used or reserved by another invitation.',
+    invitationDecision: 'Could not accept or decline the group invitation.',
     invitationCreate: 'Could not create the invitation.',
     invitationRevokeConfirm: 'Revoke the invitation for {{username}}?',
     invitationRevoke: 'Could not revoke the invitation.',

@@ -54,13 +54,13 @@ export function createGroup(name: string): Promise<GroupDetail> {
   return sdkData(createGroupApiV1GroupsPost({ body: { name } }))
 }
 
-export function addGroupMember(groupId: string, userId: string, role: GroupRole): Promise<GroupDetail> {
+export function addGroupMember(groupId: string, userId: string, role: GroupRole): Promise<GroupMembershipInvitation> {
   return sdkData(
     inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost({
       path: { group_id: groupId },
       body: { user_id: userId, role },
     }),
-  ).then(() => getGroup(groupId))
+  )
 }
 
 export function renameGroup(groupId: string, name: string): Promise<GroupDetail> {

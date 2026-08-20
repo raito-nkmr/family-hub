@@ -138,8 +138,7 @@
   align-items: center;
 }
 
-.group-member-card__actions select,
-.group-form select {
+.group-member-card__actions select {
   min-height: 40px;
   padding: 0.5rem 0.65rem;
   color: var(--color-text-primary);
@@ -185,12 +184,6 @@
   color: var(--color-accent);
   font-size: 0.72rem;
   font-weight: 700;
-}
-
-.group-form select {
-  width: 100%;
-  min-height: 48px;
-  font-size: 0.85rem;
 }
 
 @media (max-width: 640px) {
