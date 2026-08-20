@@ -556,6 +556,7 @@
 
 .album-form input,
 .album-form textarea,
+.album-form select,
 .group-form input {
   width: 100%;
   padding: 0.75rem 0.8rem;
@@ -569,12 +570,14 @@
 }
 
 .album-form input,
+.album-form select,
 .group-form input {
   min-height: 48px;
 }
 
 .album-form input:focus,
 .album-form textarea:focus,
+.album-form select:focus,
 .group-form input:focus {
   border-color: var(--color-action-accent);
   outline: 2px solid color-mix(in srgb, var(--color-action-accent) 35%, transparent);

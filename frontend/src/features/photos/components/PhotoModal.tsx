@@ -275,7 +275,7 @@ export function PhotoModal({
                   ) : (
                     <div>
                       {moderatedGroups.length > 0 && onModerateGroupShare && (
-                        <label>
+                        <label className="photo-sharing__password">
                           {t('photoDetails.currentPassword')}
                           <input
                             type="password"
