@@ -270,6 +270,7 @@ function AuthenticatedAppShell({
 
       {photoDashboard.selectedPhoto && (
         <PhotoModal
+          key={photoDashboard.selectedPhoto.id}
           photo={photoDashboard.selectedPhoto}
           photoDetailLoading={photoDashboard.photoDetailLoading}
           photoDetailError={photoDashboard.photoDetailError}
