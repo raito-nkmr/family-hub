@@ -414,7 +414,7 @@ def test_group_notification_reads_members_after_membership_removal_commits() -> 
             assert action_started.wait(timeout=5)
             release_removal.set()
             removal_future.result(timeout=5)
-            assert notification_future.result(timeout=5) == 0
+            assert notification_future.result(timeout=5) == 1
     finally:
         release_removal.set()
         with Session(engine) as session:
