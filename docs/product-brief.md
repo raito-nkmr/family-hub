@@ -149,8 +149,9 @@ be absent or not yet parsed.
 
 Each original has a JSON sidecar with the same UUID. It records the schema version, ID, upload user ID and username,
 filename, storage path, MIME type, file size, SHA-256 hash, media dimensions, capture and upload times, derivatives, shared
-memo and its last editor and timestamp, and share targets. If PostgreSQL is lost, originals and sidecars can be scanned to
-re-register photo metadata and regenerate missing thumbnails.
+memo and its last editor and timestamp, share targets, and lifecycle state. The current integrity command uses PostgreSQL as
+the reference, and sidecar-to-database re-registration or automatic thumbnail repair is not implemented; restore the database
+from a backup after database loss.
 
 ```text
 photo-storage/                       # Internal HDD
@@ -326,8 +327,9 @@ requires one selection and removal requires at least one.
 - Deleting an album or removing a photo from it never deletes the photo, original, or JSON sidecar.
 - Manual photo reordering is not part of the initial implementation.
 
-Album relationships are editable organization data stored only in PostgreSQL and not in photo JSON sidecars. Recovering photo
-metadata from originals and sidecars after database loss is possible, but restoring album structure requires a database backup.
+Album relationships are editable organization data stored only in PostgreSQL and not in photo JSON sidecars. Restoring photo
+metadata and album structure after database loss therefore requires a database backup; sidecar-to-database re-registration is
+not currently implemented.
 
 ## Metadata
 
@@ -335,9 +337,10 @@ PostgreSQL stores metadata rather than image content. At minimum it stores ID, u
 HDD path, MIME type, file size, SHA-256 hash, capture time, upload time, and media dimensions. See
 [`database-design.md`](./database-design.md) for tables, constraints, and indexes.
 
-Photo metadata can be re-registered by scanning originals and JSON sidecars after database loss. Thumbnail locations are
-recorded in JSON for integrity checks, and owner-entered capture-time overrides are recorded for recovery. The original EXIF
-capture time is retained separately; lists, search, timelines, and album ordering use the owner override when present.
+Thumbnail locations are recorded in JSON for integrity checks, and owner-entered capture-time overrides are recorded for
+recovery. A command to re-register photo metadata by scanning originals and JSON sidecars is not currently implemented. The
+original EXIF capture time is retained separately; lists, search, timelines, and album ordering use the owner override when
+present.
 Person-analysis results and future tags are not recorded in sidecars; restore or regenerate those from database backups when
 necessary.
 
