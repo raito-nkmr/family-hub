@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PhotoIcon } from '../../../shared/ui/icons'
 import { getPhotoContentUrl, getPhotoThumbnailUrl } from '../api'
 import { isVideoContentType } from '../contentType'
+import { useCachedPhotoMediaUrl } from './usePhotoMediaCache'
 
 interface PreviewPhoto {
   id: string
@@ -23,8 +24,11 @@ export function PhotoPreview({
 }) {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
+  const contentUrl = getPhotoContentUrl(photo.id)
+  const isOriginalImage = source === 'original' && !isVideoContentType(photo.content_type)
+  const cachedMedia = useCachedPhotoMediaUrl(contentUrl, isOriginalImage)
 
-  if (failed) {
+  if (failed || cachedMedia.failed) {
     return (
       <div className={`image-fallback ${className}`}>
         <PhotoIcon />
@@ -53,12 +57,20 @@ export function PhotoPreview({
     )
   }
 
+  if (cachedMedia.loading) {
+    return (
+      <div className={`image-fallback ${className}`} aria-busy="true">
+        <span className="spinner" />
+      </div>
+    )
+  }
+
   return (
     <img
       className={className}
-      src={source === 'thumbnail' ? getPhotoThumbnailUrl(photo.id) : getPhotoContentUrl(photo.id)}
+      src={source === 'thumbnail' ? getPhotoThumbnailUrl(photo.id) : (cachedMedia.url ?? contentUrl)}
       alt={photo.original_filename}
-      loading="lazy"
+      loading={source === 'original' ? 'eager' : 'lazy'}
       onLoad={(event) => {
         const { naturalWidth, naturalHeight } = event.currentTarget
         if (naturalWidth > 0 && naturalHeight > 0) onDisplayDimensions?.(naturalWidth, naturalHeight)

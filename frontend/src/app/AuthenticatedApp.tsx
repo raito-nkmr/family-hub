@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { logout, type AuthUser } from '../features/auth/api'
 import { RequiredPasswordChangeScreen } from '../features/auth/RequiredPasswordChangeScreen'
 import { PhotoModal } from '../features/photos/components/PhotoModal'
+import { PhotoMediaCacheProvider } from '../features/photos/components/PhotoMediaCacheProvider'
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
 import { usePhotoActivity } from '../features/photos/usePhotoActivity'
 import { usePhotoDashboard } from '../features/photos/usePhotoDashboard'
@@ -77,13 +78,15 @@ export function AuthenticatedApp({
   }
 
   return (
-    <AuthenticatedAppShell
-      currentUser={currentUser}
-      theme={theme}
-      onSessionEnded={onSessionEnded}
-      onCurrentUserChanged={onCurrentUserChanged}
-      onToggleTheme={onToggleTheme}
-    />
+    <PhotoMediaCacheProvider>
+      <AuthenticatedAppShell
+        currentUser={currentUser}
+        theme={theme}
+        onSessionEnded={onSessionEnded}
+        onCurrentUserChanged={onCurrentUserChanged}
+        onToggleTheme={onToggleTheme}
+      />
+    </PhotoMediaCacheProvider>
   )
 }
 
