@@ -15,7 +15,7 @@ layout.
   - Desktop edge clicks and mobile detail-view swipes between adjacent photos in the library
   - Group albums with selectable cover photos
   - Bulk sharing to multiple family groups
-  - Individual downloads and streamed ZIP exports for owned photos
+  - Individual downloads and streamed ZIP exports for photos the user can view
   - Trash, restore, permanent deletion, and storage integrity checks
 - **Household coordination**
   - Cleaning tasks with configurable intervals, completion history, pause, and resume

@@ -255,15 +255,32 @@ def test_get_photo_export_entries_preserves_requested_order(tmp_path: Path) -> N
     assert [entry.original_filename for entry in entries] == [photo.original_filename for photo in photos]
 
 
-def test_get_photo_export_entries_rejects_photos_not_owned_by_user() -> None:
+def test_get_photo_export_entries_allows_a_shared_photo_selected_by_a_viewer(tmp_path: Path) -> None:
     session = MagicMock(spec=Session)
-    owner_id = uuid4()
+    viewer_id = uuid4()
+    photo = make_photo(visibility=PhotoVisibility.SHARED)
+    session.scalars.return_value.all.return_value = [photo]
+    service, storage = make_export_service(session)
+    storage.get_original_path.side_effect = lambda storage_key: tmp_path / Path(storage_key).name
+
+    entries = service.get_photo_export_entries([photo.id], viewer_id)
+
+    assert [entry.photo_id for entry in entries] == [photo.id]
+    statement = session.scalars.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "photos.uploaded_by_user_id" in sql
+    assert "family_group_members" in sql
+
+
+def test_get_photo_export_entries_rejects_photos_missing_from_the_visible_selection() -> None:
+    session = MagicMock(spec=Session)
+    viewer_id = uuid4()
     requested_ids = [uuid4(), uuid4()]
-    session.scalars.return_value.all.return_value = [make_photo(requested_ids[0], uploaded_by_user_id=owner_id)]
+    session.scalars.return_value.all.return_value = [make_photo(requested_ids[0], uploaded_by_user_id=viewer_id)]
     service, storage = make_export_service(session)
 
     with pytest.raises(PhotoExportSelectionError):
-        service.get_photo_export_entries(requested_ids, owner_id)
+        service.get_photo_export_entries(requested_ids, viewer_id)
 
     storage.get_original_path.assert_not_called()
 

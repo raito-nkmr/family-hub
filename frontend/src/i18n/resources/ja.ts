@@ -388,6 +388,7 @@ export const ja: TranslationShape = {
     select: '写真を選択',
     selectedCount: '{{count}} / {{max}}枚を選択中',
     openDialog: '共有先を追加',
+    ownerOnly: '共有先を追加できるのは自分がアップロードした写真だけです。',
     selectPhoto: '{{filename}}を選択',
     deselectPhoto: '{{filename}}の選択を解除',
     submit: 'グループに追加',

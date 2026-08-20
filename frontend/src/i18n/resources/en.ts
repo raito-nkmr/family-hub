@@ -394,6 +394,7 @@ export const en = {
     select: 'Select photos',
     selectedCount: '{{count}} / {{max}} selected',
     openDialog: 'Add sharing',
+    ownerOnly: 'Only photos you uploaded can have sharing groups added.',
     selectPhoto: 'Select {{filename}}',
     deselectPhoto: 'Deselect {{filename}}',
     submit: 'Add to groups',

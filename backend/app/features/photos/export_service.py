@@ -3,25 +3,25 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.features.photos.models import Photo, PhotoLifecycleState
+from app.features.photos.access import photo_is_in_library
+from app.features.photos.models import Photo
 from app.features.photos.service import PhotoContentUnavailableError, PhotoExportEntry, PhotoExportSelectionError
 from app.features.photos.storage import PhotoStorage, PhotoStorageError
 
 
 class PhotoExportService:
-    """Validates owner-selected originals for ZIP export."""
+    """Validates originals selected from the viewer's accessible photo library."""
 
     def __init__(self, session: Session, storage: PhotoStorage) -> None:
         self._session = session
         self._storage = storage
 
-    def get_photo_export_entries(self, photo_ids: list[UUID], owner_user_id: UUID) -> list[PhotoExportEntry]:
+    def get_photo_export_entries(self, photo_ids: list[UUID], viewer_user_id: UUID) -> list[PhotoExportEntry]:
         photos = list(
             self._session.scalars(
                 select(Photo).where(
                     Photo.id.in_(photo_ids),
-                    Photo.uploaded_by_user_id == owner_user_id,
-                    Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+                    photo_is_in_library(viewer_user_id),
                 )
             ).all()
         )

@@ -104,9 +104,10 @@ describe('PhotoLibrary', () => {
     expect(localStorage.getItem('family-hub-photo-grid-columns')).toBe('4')
   })
 
-  it('selects only owned photos for bulk sharing', async () => {
+  it('selects all visible photos while keeping bulk sharing owner-only', async () => {
     const user = userEvent.setup()
     const onRequestBulkSharing = vi.fn()
+    const onRequestExport = vi.fn()
     const sharedByAnotherUser = {
       ...photo,
       id: 'photo-2',
@@ -125,6 +126,7 @@ describe('PhotoLibrary', () => {
         pageError={null}
         {...callbacks}
         onRequestBulkSharing={onRequestBulkSharing}
+        onRequestExport={onRequestExport}
       />,
     )
 
@@ -136,14 +138,41 @@ describe('PhotoLibrary', () => {
     expect(cancelButton).toHaveClass('danger-button--filled')
     expect(cancelButton.querySelector('svg')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'summer.jpgを選択' }))
+    await user.click(screen.getByRole('button', { name: 'shared.jpgを選択' }))
 
-    expect(screen.getByRole('button', { name: 'shared.jpgを選択' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'shared.jpgの選択を解除' })).not.toBeDisabled()
     const exportButton = screen.getByRole('button', { name: '原本を書き出す' })
     const addSharingButton = screen.getByRole('button', { name: '共有先を追加' })
     expect(exportButton.querySelector('svg')).toBeInTheDocument()
     expect(addSharingButton.querySelector('svg')).toBeInTheDocument()
+    expect(addSharingButton).toBeDisabled()
 
-    await user.click(addSharingButton)
+    await user.click(exportButton)
+    expect(onRequestExport).toHaveBeenCalledWith(['photo-1', 'photo-2'])
+  })
+
+  it('opens bulk sharing for selected photos owned by the current user', async () => {
+    const user = userEvent.setup()
+    const onRequestBulkSharing = vi.fn()
+    render(
+      <PhotoLibrary
+        photos={[photo]}
+        filters={{}}
+        timeline={timeline}
+        totalCount={1}
+        loading={false}
+        loadingMore={false}
+        hasMore={false}
+        pageError={null}
+        {...callbacks}
+        onRequestBulkSharing={onRequestBulkSharing}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '写真を選択' }))
+    await user.click(screen.getByRole('button', { name: 'summer.jpgを選択' }))
+    await user.click(screen.getByRole('button', { name: '共有先を追加' }))
+
     expect(onRequestBulkSharing).toHaveBeenCalledWith(['photo-1'])
   })
 

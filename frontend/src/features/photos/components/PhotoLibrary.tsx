@@ -95,6 +95,11 @@ export function PhotoLibrary({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const groups = groupPhotos(photos, i18n.resolvedLanguage ?? 'en', t)
   const initialLoading = loading && timeline === null
+  const selectedPhotos = photos.filter((photo) => selectedIds.has(photo.id))
+  const canBulkShareSelected =
+    selectedIds.size > 0 &&
+    selectedPhotos.length === selectedIds.size &&
+    selectedPhotos.every((photo) => photo.uploaded_by_user_id === currentUserId)
 
   const stopSelecting = () => {
     setSelecting(false)
@@ -102,7 +107,6 @@ export function PhotoLibrary({
   }
 
   const toggleSelection = (photo: PhotoListItem) => {
-    if (photo.uploaded_by_user_id !== currentUserId) return
     setSelectedIds((current) => {
       const next = new Set(current)
       if (next.has(photo.id)) next.delete(photo.id)
@@ -129,7 +133,7 @@ export function PhotoLibrary({
             }
             type="button"
             onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
-            disabled={loading || photos.every((photo) => photo.uploaded_by_user_id !== currentUserId)}
+            disabled={loading || photos.length === 0}
           >
             <span
               className={
@@ -177,7 +181,8 @@ export function PhotoLibrary({
             <button
               type="button"
               className="primary-button icon-button"
-              disabled={selectedIds.size === 0}
+              disabled={!canBulkShareSelected}
+              title={!canBulkShareSelected && selectedIds.size > 0 ? t('bulkPhotoSharing.ownerOnly') : undefined}
               onClick={() => {
                 onRequestBulkSharing([...selectedIds])
                 stopSelecting()
@@ -226,11 +231,7 @@ export function PhotoLibrary({
                       photo={photo}
                       selecting={selecting}
                       selected={selectedIds.has(photo.id)}
-                      selectionDisabled={
-                        selecting &&
-                        (photo.uploaded_by_user_id !== currentUserId ||
-                          (selectedIds.size >= 100 && !selectedIds.has(photo.id)))
-                      }
+                      selectionDisabled={selecting && selectedIds.size >= 100 && !selectedIds.has(photo.id)}
                       onSelect={onSelectPhoto}
                       onToggleSelection={toggleSelection}
                     />

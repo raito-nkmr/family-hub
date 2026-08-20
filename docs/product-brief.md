@@ -34,8 +34,8 @@ the unpurchased state.
 The home screen aggregates recent photos, unread photo updates, active cleaning tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
 content mismatches, and orphaned files using the database as the reference. Original SHA-256 recalculation is optional.
-Photo details can download an accessible original by its original filename. The library can stream up to 100 owned photos
-as one ZIP for manual backup.
+Photo details can download an accessible original by its original filename. The library can select up to 100 visible photos
+and stream them as one ZIP for manual backup.
 
 The Account screen supports password changes after checking the current password, active-session listing, individual
 session revocation, and logout from all devices. A password change revokes every existing session and requires login again.
@@ -75,9 +75,9 @@ by operation time. A batch upload or bulk share is represented as one operation.
 own operations, and photos no longer shared with the user are excluded. Opening New stores the latest event as the user's
 read position. Existing photos are not backfilled as activity events during migration.
 
-The library can select up to 100 owned photos and add groups as sharing targets without removing existing targets. Photos
-already shared with a selected group are unchanged. After a successful upload, the upload panel can pass saved photos to
-the same bulk-sharing flow.
+The library can select up to 100 visible photos for export. Adding groups as sharing targets remains limited to selected
+photos uploaded by the current user; photos already shared with a selected group are unchanged. After a successful upload,
+the upload panel can pass saved photos to the same bulk-sharing flow.
 
 The implemented scope also includes an owner trash, restore, retryable permanent deletion after a 30-day retention period, administrator
 storage and maintenance status, database backup, versioned snapshots to a disconnected external HDD, a PWA app shell, iPhone Home Screen
