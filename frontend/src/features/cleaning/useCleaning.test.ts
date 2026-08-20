@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LAST_SELECTED_GROUP_STORAGE_KEY } from '../../shared/routing/useGroupSelection'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { getGroups, type FamilyGroup } from '../groups/api'
 import { getCleaningTasks, type CleaningTask } from './api'
@@ -37,6 +38,7 @@ function makeTask(groupId: string): CleaningTask {
 describe('useCleaning', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(LAST_SELECTED_GROUP_STORAGE_KEY)
     vi.mocked(getGroups).mockResolvedValue(groups)
     vi.mocked(getCleaningTasks).mockResolvedValue([])
   })

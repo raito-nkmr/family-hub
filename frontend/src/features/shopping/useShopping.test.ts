@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LAST_SELECTED_GROUP_STORAGE_KEY } from '../../shared/routing/useGroupSelection'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { getGroups, type FamilyGroup } from '../groups/api'
 import { createShoppingItem, getShoppingItems, purchaseShoppingItem, type ShoppingItem } from './api'
@@ -35,8 +36,27 @@ function makeItem(groupId: string): ShoppingItem {
 describe('useShopping', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(LAST_SELECTED_GROUP_STORAGE_KEY)
     vi.mocked(getGroups).mockResolvedValue(groups)
     vi.mocked(getShoppingItems).mockResolvedValue([])
+  })
+
+  it('uses the last selected group when the URL does not specify one', async () => {
+    localStorage.setItem(LAST_SELECTED_GROUP_STORAGE_KEY, groups[1].id)
+    const { result } = renderHook(() => useShopping({ onUnauthorized: vi.fn() }), { wrapper: createAppWrapper() })
+
+    await waitFor(() => expect(result.current.selectedGroupId).toBe(groups[1].id))
+
+    expect(getShoppingItems).toHaveBeenCalledWith(groups[1].id, expect.any(AbortSignal))
+  })
+
+  it('remembers a group selected from the shopping list', async () => {
+    const { result } = renderHook(() => useShopping({ onUnauthorized: vi.fn() }), { wrapper: createAppWrapper() })
+    await waitFor(() => expect(result.current.selectedGroupId).toBe(groups[0].id))
+
+    await act(() => result.current.selectGroup(groups[1].id))
+
+    expect(localStorage.getItem(LAST_SELECTED_GROUP_STORAGE_KEY)).toBe(groups[1].id)
   })
 
   it('keeps items for the latest group when responses arrive out of order', async () => {

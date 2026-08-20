@@ -190,7 +190,7 @@ export const en = {
       'Cloudflare is used to deliver the HTTPS service, so network requests pass through Cloudflare. If a user enables Web Push, the browser or device push service also processes the subscription and delivery information needed to send notifications.',
     browserTitle: 'Cookies and browser storage',
     browserBody:
-      'Family Hub uses an essential login cookie. The browser also stores preferences such as language, theme, and photo grid density. The app does not include advertising or analytics trackers.',
+      'Family Hub uses an essential login cookie. The browser also stores preferences such as language, theme, photo grid density, and the last selected family group. The app does not include advertising or analytics trackers.',
     requestsTitle: 'Access, correction, and deletion requests',
     requestsBody:
       'Ask the Family Hub administrator if you need to review or correct account information, change group access, remove content, or stop using the service. Some older copies may remain in backups until rotation.',
