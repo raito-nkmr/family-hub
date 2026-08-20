@@ -24,6 +24,11 @@ export const en = {
     reject: 'Decline',
     footerPrivacy: 'Privacy',
   },
+  pullToRefresh: {
+    pull: 'Pull down to refresh',
+    release: 'Release to refresh',
+    refreshing: 'Refreshing…',
+  },
   language: { label: 'Language', en: 'EN', ja: 'JA', switchTo: 'Switch language to {{language}}' },
   navigation: {
     label: 'Applications',

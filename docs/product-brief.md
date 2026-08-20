@@ -54,7 +54,8 @@ administrator. The footer displays the application version from `frontend/packag
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Cleaning, Shopping, and Other appear in bottom
 navigation. New, Library, Albums, and Trash are tabs inside Photos; Groups, invitation administration, Account, and the
 administrator-only System screen are under Other. Screens wider than 900 px switch to a left sidebar and expand the photo
-area and other features.
+area and other features. On mobile, pulling down from the top of an authenticated page far enough and releasing refreshes
+the currently active data queries.
 
 The photo list uses 50-item cursor pagination with infinite scrolling, a year/month timeline, date range, uploader, shared
 group, favorite, capture-time presence, and memo/original-filename search. The album photo picker uses the same pagination,

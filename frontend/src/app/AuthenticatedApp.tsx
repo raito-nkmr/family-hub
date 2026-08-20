@@ -17,6 +17,8 @@ import type { Theme } from '../shared/types/theme'
 import { AppFooter } from '../shared/ui/AppFooter'
 import { AppHeader } from '../shared/ui/AppHeader'
 import { AppNavigation, SectionNavigation } from '../shared/ui/AppNavigation'
+import { PullToRefreshIndicator } from '../shared/ui/PullToRefreshIndicator'
+import { usePullToRefresh } from '../shared/ui/usePullToRefresh'
 import { appPaths, getAppView, photoViews } from './routes'
 import { RequireAdmin } from './routeGuards'
 
@@ -125,6 +127,12 @@ function AuthenticatedAppShell({
     onUnauthorized: handleUnauthorized,
   })
   const pwaInstall = usePwaInstallGuide()
+  const pullToRefresh = usePullToRefresh({
+    onRefresh: () => {
+      if (queryClient.isMutating() > 0) return
+      return queryClient.invalidateQueries()
+    },
+  })
 
   useEffect(() => {
     resetPhotoDashboardRef.current = photoDashboard.reset
@@ -156,6 +164,7 @@ function AuthenticatedAppShell({
 
   const privateShell = (
     <div className="app-shell">
+      <PullToRefreshIndicator {...pullToRefresh} />
       <AppHeader
         username={currentUser.username}
         theme={theme}

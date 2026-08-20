@@ -28,6 +28,11 @@ export const ja: TranslationShape = {
     reject: '辞退',
     footerPrivacy: 'プライバシー',
   },
+  pullToRefresh: {
+    pull: '下に引っ張って更新',
+    release: '離して更新',
+    refreshing: '更新しています…',
+  },
   language: { label: '言語', en: 'EN', ja: 'JA', switchTo: '表示言語を{{language}}に切り替える' },
   navigation: {
     label: 'アプリケーション',
