@@ -7,9 +7,10 @@ and shopping. Image files are stored on the internal photo-storage HDD; PostgreS
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema is consolidated into one baseline because the development database is reset when the
-baseline changes. Future approved schema changes should be added as new migrations. Tables for future features such as
-person detection are not created until the feature is approved and its requirements are known.
+The current application schema is represented by a short linear baseline chain because the development and pre-production
+databases are reset when the baseline is rebuilt. The chain is divided by feature and dependency boundaries so each
+revision remains readable. Future approved schema changes should be added as new migrations. Tables for future features
+such as person detection are not created until the feature is approved and its requirements are known.
 
 ```text
 family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
@@ -313,10 +314,17 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The initial development history was reset and consolidated into baseline `20260715_01`, which creates the current application
-schema. All later changes are independent migrations; never rewrite the baseline. The currently present later revisions are
-`20260818_01` for forced password changes, `20260818_02` for database invariants, and `20260820_01` for required positive
-photo dimensions.
+The development and pre-production history was reset and rebuilt as the following immutable baseline chain:
+
+- `20260820_01` — extensions, identity, and family groups
+- `20260820_02` — photos, activity, and uploads
+- `20260820_03` — albums
+- `20260820_04` — cleaning and shopping
+- `20260820_05` — notifications, maintenance, and audit
+
+The final constraints and indexes, including forced password changes, lifecycle invariants, and required positive photo
+dimensions, are included in the baseline chain. Never rewrite these revisions after the rebuild; future approved schema
+changes must be added as new migrations.
 
 Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
 with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with

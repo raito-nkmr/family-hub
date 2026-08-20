@@ -330,9 +330,31 @@ sudo systemctl enable --now family-hub-notifications.timer family-hub-cleaning-n
 sudo systemctl list-timers 'family-hub-*notifications*' --all --no-pager
 ```
 
-## Intentional production-like database reset
+## One-time full data reset and migration rebuild
 
-Only during pre-production rehearsal may resettable test data be removed. Verify the exact volume name before acting:
+The following procedure is a one-time rebuild for environments that contain only disposable dummy data. It resets the
+development and production-like databases and all primary, derivative, and backup data so the new five-revision Alembic
+baseline can be created consistently. Do not use it after real family data is stored; use database and storage restoration
+instead.
+
+Before deleting anything:
+
+- Stop the development backend, production backend, workers, and maintenance timers.
+- Verify development PostgreSQL is `127.0.0.1:15432` and production PostgreSQL is `127.0.0.1:5433`.
+- Verify the development Compose volume and `family-hub-production-postgres-data` are separate volumes.
+- Verify each `PHOTO_STORAGE_ROOT`, its `.photo-storage-marker`, each derivative root, and the separate backup marker.
+- Confirm that only dummy data exists and that no command targets a mounted backup path accidentally used as primary storage.
+
+Reset the development database only after confirming the current Compose project and volume:
+
+```bash
+docker compose ps --all
+docker compose config --volumes
+docker compose down --volumes
+docker compose up --detach --wait db
+```
+
+Reset the production-like database only after confirming the named external volume:
 
 ```bash
 sudo systemctl stop family-hub-backend.service
@@ -343,7 +365,14 @@ sudo docker volume create family-hub-production-postgres-data
 sudo systemctl start family-hub-database.service
 ```
 
-Reapply Alembic and recreate the initial administrator. After production starts, use backup restoration instead of this reset procedure.
+For each primary photo root, remove only the contents of `originals/`, `incoming/`, and `database-backups/`. For each
+derivative root, remove only the contents of `thumbnails/` and `incoming/`. For the separate backup root, remove only its
+snapshot and database-backup contents. Preserve each root directory, storage marker, and backup marker. Resolve and review
+the absolute paths before deletion; never use an unset or broad environment variable as a deletion target.
+
+Recreate the empty directories, apply the new migrations to both databases, and recreate the initial administrator in each
+environment. Run the photo-integrity command against the empty primary storage and verify that the first test upload creates
+one original, one sidecar, and one thumbnail. After this rebuild, use backup restoration instead of this reset procedure.
 
 ## Release update
 
