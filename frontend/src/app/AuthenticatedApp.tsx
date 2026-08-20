@@ -8,7 +8,6 @@ import { PhotoMediaCacheProvider } from '../features/photos/components/PhotoMedi
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
 import { usePhotoActivity } from '../features/photos/usePhotoActivity'
 import { usePhotoDashboard } from '../features/photos/usePhotoDashboard'
-import { PrivacyPage } from '../features/privacy/PrivacyPage'
 import { PwaInstallGuide } from '../features/pwa/PwaInstallGuide'
 import { usePwaInstallGuide } from '../features/pwa/usePwaInstallGuide'
 import { useNotificationLocaleSync } from '../features/notifications/useNotificationLocaleSync'
@@ -117,14 +116,12 @@ function AuthenticatedAppShell({
   })
 
   const photoDashboard = usePhotoDashboard({
-    enabled: true,
     libraryEnabled: activeView === 'photos',
     storageEnabled: activeView !== null && ['home', ...photoViews].includes(activeView),
     groupsEnabled: activeView === 'home' || activeView === 'photos' || activeView === 'albums',
     onUnauthorized: handleUnauthorized,
   })
   const photoActivity = usePhotoActivity({
-    enabled: true,
     userId: currentUser.id,
     active: activeView === 'photo-activity',
     onUnauthorized: handleUnauthorized,
@@ -264,7 +261,7 @@ function AuthenticatedAppShell({
             />
             <Route path="*" element={<Navigate to={appPaths.home} replace />} />
           </Routes>
-          <AppFooter privacyReturnTo={location.pathname} />
+          <AppFooter privacyReturnTo={`${location.pathname}${location.search}`} />
         </div>
       </div>
 
@@ -310,18 +307,7 @@ function AuthenticatedAppShell({
         </main>
       }
     >
-      <Routes>
-        <Route
-          path="/privacy"
-          element={
-            <div className="public-shell">
-              <PrivacyPage theme={theme} onToggleTheme={onToggleTheme} />
-              <AppFooter privacyCurrent />
-            </div>
-          }
-        />
-        <Route path="*" element={privateShell} />
-      </Routes>
+      {privateShell}
     </Suspense>
   )
 }

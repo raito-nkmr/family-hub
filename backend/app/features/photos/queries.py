@@ -94,7 +94,7 @@ class PhotoQueryService:
 
     def list_photos(self, viewer_user_id: UUID, filters: PhotoListFilters) -> PhotoListPage:
         self._validate_album_filter(viewer_user_id, filters)
-        sort_at = func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at, Photo.uploaded_at)
+        sort_at = Photo.effective_captured_at
         shared_condition = photo_is_shared()
         favorite = exists(
             select(PhotoFavorite.photo_id).where(
@@ -191,7 +191,7 @@ class PhotoQueryService:
     def timeline(self, viewer_user_id: UUID, year: int) -> list[PhotoTimelineMonth]:
         start = datetime.combine(date(year, 1, 1), time.min, self._timezone).astimezone(UTC)
         end = datetime.combine(date(year + 1, 1, 1), time.min, self._timezone).astimezone(UTC)
-        sort_at = func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at, Photo.uploaded_at)
+        sort_at = Photo.effective_captured_at
         local_month = func.date_trunc("month", func.timezone(str(self._timezone), sort_at))
         statement = (
             select(local_month.label("month"), func.count().label("count"))

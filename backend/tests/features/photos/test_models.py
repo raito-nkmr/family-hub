@@ -31,6 +31,7 @@ def test_photo_table_has_expected_constraints() -> None:
     assert str(constraints["ck_photos_dimensions"].sqltext) == "width > 0 AND height > 0"
     assert Photo.__table__.c.width.nullable is False
     assert Photo.__table__.c.height.nullable is False
+    assert Photo.__table__.c.effective_captured_at.nullable is False
     assert isinstance(constraints["fk_photos_uploaded_by_user_id_users"], ForeignKeyConstraint)
     duplicate_constraint = constraints["uq_photos_uploaded_by_user_id_sha256"]
     assert isinstance(duplicate_constraint, UniqueConstraint)
@@ -48,6 +49,7 @@ def test_photo_table_has_sort_index() -> None:
         "ix_photos_trashed_by_user_id",
     }
     assert len(indexes["ix_photos_sort_date_id"].expressions) == 2
+    assert str(indexes["ix_photos_sort_date_id"].expressions[0]) == "photos.effective_captured_at DESC"
 
 
 def test_photo_metadata_and_sharing_tables_have_expected_constraints() -> None:

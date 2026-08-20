@@ -7,8 +7,7 @@ from fastapi.responses import FileResponse
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.dependencies import get_photo_access_service, get_photo_trash_service
-from app.features.photos.schemas import PhotoResponse, TrashedPhotoListResponse, photo_response_from_model
-from app.features.photos.service import (
+from app.features.photos.errors import (
     InvalidTrashCursorError,
     PhotoContentUnavailableError,
     PhotoDeletePersistenceError,
@@ -16,6 +15,7 @@ from app.features.photos.service import (
     PhotoNotFoundError,
     PhotoPurgeNotDueError,
 )
+from app.features.photos.schemas import PhotoResponse, TrashedPhotoListResponse, photo_response_from_model
 from app.features.photos.trash_service import PhotoTrashService
 
 router = APIRouter()

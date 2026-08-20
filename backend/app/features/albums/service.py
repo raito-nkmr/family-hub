@@ -115,22 +115,22 @@ class AlbumService:
         cursor: str | None = None,
     ) -> AlbumDetail:
         album = self._get_album_model(album_id, viewer_user_id)
-        cursor_added_at, cursor_photo_id = self._decode_photo_cursor(cursor) if cursor else (None, None)
+        cursor_sort_at, cursor_photo_id = self._decode_photo_cursor(cursor) if cursor else (None, None)
         page_statement = (
-            select(AlbumPhoto.photo_id, AlbumPhoto.added_at)
+            select(AlbumPhoto.photo_id, Photo.effective_captured_at)
             .join(Photo, Photo.id == AlbumPhoto.photo_id)
             .where(
                 AlbumPhoto.album_id == album_id,
                 Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
             )
         )
-        if cursor_added_at is not None and cursor_photo_id is not None:
+        if cursor_sort_at is not None and cursor_photo_id is not None:
             page_statement = page_statement.where(
-                (AlbumPhoto.added_at > cursor_added_at)
-                | ((AlbumPhoto.added_at == cursor_added_at) & (AlbumPhoto.photo_id > cursor_photo_id))
+                (Photo.effective_captured_at > cursor_sort_at)
+                | ((Photo.effective_captured_at == cursor_sort_at) & (Photo.id > cursor_photo_id))
             )
         page_rows = self._session.execute(
-            page_statement.order_by(AlbumPhoto.added_at, AlbumPhoto.photo_id).limit(limit + 1)
+            page_statement.order_by(Photo.effective_captured_at, Photo.id).limit(limit + 1)
         ).all()
         has_more = len(page_rows) > limit
         visible_rows = page_rows[:limit]
@@ -164,7 +164,7 @@ class AlbumService:
         next_cursor = None
         if has_more and visible_rows:
             last = visible_rows[-1]
-            next_cursor = self._encode_photo_cursor(last.added_at, last.photo_id)
+            next_cursor = self._encode_photo_cursor(last.effective_captured_at, last.photo_id)
         return AlbumDetail(
             album=self._summary(album, photo_count or 0, group_name, fallback_cover_id),
             photos=photos,
@@ -344,9 +344,9 @@ class AlbumService:
         return Album.group_id.in_(select(FamilyGroupMember.group_id).where(FamilyGroupMember.user_id == viewer_user_id))
 
     @staticmethod
-    def _encode_photo_cursor(added_at: datetime, photo_id: UUID) -> str:
+    def _encode_photo_cursor(sort_at: datetime, photo_id: UUID) -> str:
         payload = json.dumps(
-            {"added_at": added_at.astimezone(UTC).isoformat(), "photo_id": str(photo_id)},
+            {"sort_at": sort_at.astimezone(UTC).isoformat(), "photo_id": str(photo_id)},
             separators=(",", ":"),
         ).encode()
         return base64.urlsafe_b64encode(payload).decode().rstrip("=")
@@ -356,10 +356,10 @@ class AlbumService:
         try:
             padding = "=" * (-len(value) % 4)
             payload = json.loads(base64.urlsafe_b64decode(value + padding))
-            added_at = datetime.fromisoformat(payload["added_at"])
+            sort_at = datetime.fromisoformat(payload["sort_at"])
             photo_id = UUID(payload["photo_id"])
-            if added_at.tzinfo is None or added_at.utcoffset() is None:
+            if sort_at.tzinfo is None or sort_at.utcoffset() is None:
                 raise ValueError
         except (binascii.Error, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
             raise InvalidAlbumPhotoCursorError("Invalid album photo cursor") from error
-        return added_at.astimezone(UTC), photo_id
+        return sort_at.astimezone(UTC), photo_id

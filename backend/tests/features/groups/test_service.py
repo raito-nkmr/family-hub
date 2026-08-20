@@ -80,7 +80,7 @@ def test_create_group_adds_creator_as_admin() -> None:
         creator_id: PublicUser(id=creator_id, username="owner", is_active=True),
     }
 
-    result = service.create_group("同居家族", creator_id)
+    result = service.create_group("同居家族", creator_id, "owner")
 
     group, membership = session.add_all.call_args.args[0]
     assert isinstance(group, FamilyGroup)
@@ -99,7 +99,7 @@ def test_create_group_rejects_existing_name() -> None:
     service, _ = make_service(session)
 
     with pytest.raises(GroupNameAlreadyExistsError):
-        service.create_group("同居家族", uuid4())
+        service.create_group("同居家族", uuid4(), "owner")
 
     session.add_all.assert_not_called()
     session.commit.assert_not_called()
@@ -118,7 +118,7 @@ def test_create_group_maps_unique_constraint_race_to_existing_name() -> None:
     service, _ = make_service(session)
 
     with pytest.raises(GroupNameAlreadyExistsError):
-        service.create_group("同居家族", uuid4())
+        service.create_group("同居家族", uuid4(), "owner")
 
     session.rollback.assert_called_once_with()
 
@@ -130,7 +130,7 @@ def test_create_group_rolls_back_on_persistence_failure() -> None:
     service, _ = make_service(session)
 
     with pytest.raises(GroupPersistenceError):
-        service.create_group("同居家族", uuid4())
+        service.create_group("同居家族", uuid4(), "owner")
 
     session.rollback.assert_called_once_with()
 
@@ -271,7 +271,7 @@ def test_member_cannot_manage_group_memberships() -> None:
     service, _ = make_service(session)
 
     with pytest.raises(GroupForbiddenError):
-        service.remove_member(group.id, actor_id, actor_id)
+        service.remove_member(group.id, actor_id, actor_id, "owner")
 
     session.delete.assert_not_called()
 
@@ -290,7 +290,7 @@ def test_update_role_prevents_demoting_last_active_admin() -> None:
     }
 
     with pytest.raises(LastGroupAdminError):
-        service.update_member_role(group.id, actor_id, actor_id, GroupRole.MEMBER)
+        service.update_member_role(group.id, actor_id, actor_id, GroupRole.MEMBER, "owner")
 
     session.commit.assert_not_called()
 
@@ -312,7 +312,7 @@ def test_inactive_admin_does_not_satisfy_last_active_admin_rule() -> None:
     }
 
     with pytest.raises(LastGroupAdminError):
-        service.update_member_role(group.id, actor_id, actor_id, GroupRole.MEMBER)
+        service.update_member_role(group.id, actor_id, actor_id, GroupRole.MEMBER, "owner")
 
     session.commit.assert_not_called()
 
@@ -335,7 +335,7 @@ def test_update_role_allows_demoting_admin_when_another_active_admin_exists() ->
     expected = object()
     service.get_group = MagicMock(return_value=expected)
 
-    result = service.update_member_role(group.id, target_id, actor_id, GroupRole.MEMBER)
+    result = service.update_member_role(group.id, target_id, actor_id, GroupRole.MEMBER, "owner")
 
     assert target_membership.role is GroupRole.MEMBER
     assert result is expected
@@ -356,6 +356,6 @@ def test_remove_member_prevents_removing_last_active_admin() -> None:
     }
 
     with pytest.raises(LastGroupAdminError):
-        service.remove_member(group.id, actor_id, actor_id)
+        service.remove_member(group.id, actor_id, actor_id, "owner")
 
     session.delete.assert_not_called()

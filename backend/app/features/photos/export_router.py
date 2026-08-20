@@ -5,13 +5,13 @@ from fastapi.responses import StreamingResponse
 
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user
 from app.features.photos.dependencies import get_photo_export_service
-from app.features.photos.export import stream_photo_export
-from app.features.photos.export_service import PhotoExportService
-from app.features.photos.schemas import PhotoExportRequest
-from app.features.photos.service import (
+from app.features.photos.errors import (
     PhotoContentUnavailableError,
     PhotoExportSelectionError,
 )
+from app.features.photos.export import stream_photo_export
+from app.features.photos.export_service import PhotoExportService
+from app.features.photos.schemas import PhotoExportRequest
 
 router = APIRouter()
 

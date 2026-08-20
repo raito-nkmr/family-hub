@@ -10,10 +10,7 @@ from app.features.albums.public import remove_photo_from_group_albums
 from app.features.audit.public import record_administrative_event
 from app.features.groups.public import FamilyGroupMember, lock_group_admin, lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
-from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
-from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
-from app.features.photos.service import (
-    BulkPhotoSharingResult,
+from app.features.photos.errors import (
     InvalidPhotoSharingError,
     PhotoBulkSelectionError,
     PhotoNotFoundError,
@@ -22,7 +19,10 @@ from app.features.photos.service import (
     PhotoUpdatePersistenceError,
     PhotoUpdateStorageError,
 )
+from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
+from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
 from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.types import BulkPhotoSharingResult
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +80,9 @@ class PhotoMetadataService:
                 captured_at_override.tzinfo is None or captured_at_override.utcoffset() is None
             ):
                 raise PhotoUpdatePersistenceError("Capture time override must be timezone-aware")
-            photo.metadata_record.captured_at_override = (
-                captured_at_override.astimezone(UTC) if captured_at_override is not None else None
-            )
+            normalized_override = captured_at_override.astimezone(UTC) if captured_at_override is not None else None
+            photo.metadata_record.captured_at_override = normalized_override
+            photo.effective_captured_at = normalized_override or photo.captured_at or photo.uploaded_at
         if sharing_group_ids is not None:
             visible_existing_group_ids = set(
                 self._session.scalars(

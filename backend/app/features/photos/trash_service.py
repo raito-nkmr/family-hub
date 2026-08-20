@@ -10,19 +10,18 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.features.albums.public import clear_photo_as_cover
-from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite, PhotoLifecycleState
-from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.service import (
+from app.features.photos.errors import (
     InvalidTrashCursorError,
-    PhotoContent,
     PhotoContentUnavailableError,
     PhotoDeletePersistenceError,
     PhotoDeleteStorageError,
     PhotoNotFoundError,
     PhotoPurgeNotDueError,
-    TrashedPhotoPage,
 )
+from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite, PhotoLifecycleState
+from app.features.photos.registration import build_sidecar_metadata
 from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.types import PhotoContent, TrashedPhotoPage
 
 logger = logging.getLogger(__name__)
 

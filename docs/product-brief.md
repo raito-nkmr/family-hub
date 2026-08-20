@@ -400,7 +400,6 @@ configured on the browser or server operating system.
 - Tags
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
-- Scheduled or operator-triggered snapshots to a disconnected external HDD
 - Calendar cleaning schedules, assignees, notifications, and completion undo
 - Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
 

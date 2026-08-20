@@ -7,13 +7,12 @@ import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { getPhotoActivity, markPhotoActivitySeen, type PhotoActivity } from './api'
 
 interface PhotoActivityOptions {
-  enabled: boolean
   userId: string | null
   active: boolean
   onUnauthorized: () => void
 }
 
-export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: PhotoActivityOptions) {
+export function usePhotoActivity({ userId, active, onUnauthorized }: PhotoActivityOptions) {
   const queryClient = useQueryClient()
   const queryKey = queryKeys.photoActivity(userId ?? '')
   const activityQuery = useInfiniteQuery({
@@ -21,7 +20,7 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
     queryFn: ({ pageParam, signal }) => getPhotoActivity(pageParam, signal),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.next_cursor ?? undefined,
-    enabled: enabled && Boolean(userId),
+    enabled: Boolean(userId),
   })
   const markSeenMutation = useMutation({
     mutationFn: markPhotoActivitySeen,
@@ -44,7 +43,6 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
 
   useEffect(() => {
     if (
-      !enabled ||
       !active ||
       !latestId ||
       unseenCount === 0 ||
@@ -56,7 +54,7 @@ export function usePhotoActivity({ enabled, userId, active, onUnauthorized }: Ph
     }
     lastSeenAttemptedId.current = latestId
     markSeen(latestId)
-  }, [active, enabled, latestId, markSeen, markSeenMutation.isError, markSeenMutation.isPending, unseenCount])
+  }, [active, latestId, markSeen, markSeenMutation.isError, markSeenMutation.isPending, unseenCount])
 
   const retryMarkSeen = () => {
     if (!latestId) return

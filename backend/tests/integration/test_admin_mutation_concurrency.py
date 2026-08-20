@@ -164,6 +164,7 @@ def test_admin_mutations_serialize_without_removing_the_last_active_group_admin(
                 group_id,
                 second_user_id,
                 first_user_id,
+                f"admin-race-first-{first_user_id.hex}",
             )
 
     try:

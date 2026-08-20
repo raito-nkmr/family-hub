@@ -99,6 +99,7 @@ class Photo(Base):
     height: Mapped[int] = mapped_column(Integer, nullable=False)
     captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+    effective_captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     lifecycle_state: Mapped[str] = mapped_column(
         String(16), default=PhotoLifecycleState.ACTIVE, server_default=PhotoLifecycleState.ACTIVE.value
     )
@@ -147,32 +148,16 @@ class Photo(Base):
         return self.metadata_record.memo_updated_at
 
     @property
-    def is_favorite(self) -> bool:
-        """Default for contexts that do not have a viewer-specific favorite lookup."""
-        return False
-
-    @property
     def visibility(self) -> PhotoVisibility:
         if self.shares:
             return PhotoVisibility.SHARED
         return PhotoVisibility.PRIVATE
 
-    @property
-    def sharing(self) -> dict[str, object]:
-        return {
-            "type": self.visibility,
-            "group_ids": sorted((share.group_id for share in self.shares), key=str),
-        }
-
     def get_derivative(self, kind: PhotoDerivativeKind) -> "PhotoDerivative | None":
         return next((derivative for derivative in self.derivatives if derivative.kind == kind), None)
 
 
-Index(
-    "ix_photos_sort_date_id",
-    func.coalesce(Photo.captured_at, Photo.uploaded_at).desc(),
-    Photo.id.desc(),
-)
+Index("ix_photos_sort_date_id", Photo.effective_captured_at.desc(), Photo.id.desc())
 Index("ix_photos_uploaded_by_user_id", Photo.uploaded_by_user_id)
 Index("ix_photos_trashed_by_user_id", Photo.trashed_by_user_id)
 Index("ix_photos_lifecycle_purge_after", Photo.lifecycle_state, Photo.purge_after)

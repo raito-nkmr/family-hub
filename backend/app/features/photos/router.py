@@ -26,6 +26,16 @@ from app.features.photos.dependencies import (
     get_photo_query_service,
     get_photo_storage,
 )
+from app.features.photos.errors import (
+    InvalidPhotoSharingError,
+    PhotoBulkSelectionError,
+    PhotoContentUnavailableError,
+    PhotoNotFoundError,
+    PhotoUpdateConflictError,
+    PhotoUpdateForbiddenError,
+    PhotoUpdatePersistenceError,
+    PhotoUpdateStorageError,
+)
 from app.features.photos.export_router import router as export_router
 from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.models import Photo
@@ -53,16 +63,6 @@ from app.features.photos.schemas import (
     PhotoUpdate,
     StorageStatusResponse,
     photo_response_from_model,
-)
-from app.features.photos.service import (
-    InvalidPhotoSharingError,
-    PhotoBulkSelectionError,
-    PhotoContentUnavailableError,
-    PhotoNotFoundError,
-    PhotoUpdateConflictError,
-    PhotoUpdateForbiddenError,
-    PhotoUpdatePersistenceError,
-    PhotoUpdateStorageError,
 )
 from app.features.photos.storage import PhotoStorage
 from app.features.photos.trash_router import router as trash_router

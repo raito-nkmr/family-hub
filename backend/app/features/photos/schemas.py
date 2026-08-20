@@ -121,17 +121,37 @@ class PhotoResponse(BaseModel):
 
 
 def photo_response_from_model(photo, *, visible_group_ids: Collection[UUID], is_favorite: bool) -> PhotoResponse:
-    return PhotoResponse.model_validate(photo).model_copy(
-        update={
-            "is_favorite": is_favorite,
-            "sharing": PhotoResponseSharing(
-                type=photo.visibility,
-                group_ids=sorted(visible_group_ids, key=str),
-            ),
-            "captured_at": photo.metadata_record.captured_at_override or photo.captured_at,
-            "captured_at_original": photo.captured_at,
-            "captured_at_override": photo.metadata_record.captured_at_override,
-        }
+    metadata = photo.metadata_record
+    return PhotoResponse(
+        id=photo.id,
+        uploaded_by_user_id=photo.uploaded_by_user_id,
+        uploaded_by_username=photo.uploaded_by_username,
+        visibility=photo.visibility,
+        sharing=PhotoResponseSharing(
+            type=photo.visibility,
+            group_ids=sorted(visible_group_ids, key=str),
+        ),
+        memo=metadata.memo,
+        memo_updated_by_user_id=metadata.memo_updated_by_user_id,
+        memo_updated_by_username=metadata.memo_updated_by_username,
+        memo_updated_at=metadata.memo_updated_at,
+        metadata_version=metadata.version,
+        is_favorite=is_favorite,
+        original_filename=photo.original_filename,
+        storage_key=photo.storage_key,
+        content_type=photo.content_type,
+        size_bytes=photo.size_bytes,
+        sha256=photo.sha256,
+        width=photo.width,
+        height=photo.height,
+        captured_at=metadata.captured_at_override or photo.captured_at,
+        uploaded_at=photo.uploaded_at,
+        lifecycle_state=photo.lifecycle_state,
+        trashed_at=photo.trashed_at,
+        purge_after=photo.purge_after,
+        purge_requested_at=photo.purge_requested_at,
+        captured_at_original=photo.captured_at,
+        captured_at_override=metadata.captured_at_override,
     )
 
 

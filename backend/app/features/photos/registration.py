@@ -138,6 +138,7 @@ def register_staged_photo(
             height=image.height,
             captured_at=image.captured_at,
             uploaded_at=uploaded_at,
+            effective_captured_at=image.captured_at or uploaded_at,
             lifecycle_state=PhotoLifecycleState.ACTIVE,
             trashed_at=None,
             trashed_by_user_id=None,

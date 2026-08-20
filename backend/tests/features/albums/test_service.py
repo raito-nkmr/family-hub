@@ -1,3 +1,5 @@
+import base64
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -49,7 +51,7 @@ def test_get_album_returns_photos_from_public_catalog() -> None:
     photo = make_photo()
     session.scalar.side_effect = [album, 1, "同居家族", photo.id]
     session.execute.return_value.all.return_value = [
-        SimpleNamespace(photo_id=photo.id, added_at=datetime(2026, 7, 14, tzinfo=UTC))
+        SimpleNamespace(photo_id=photo.id, effective_captured_at=datetime(2026, 7, 14, tzinfo=UTC))
     ]
     service, catalog = make_service(session)
     catalog.list_by_ids.return_value = [photo]
@@ -81,8 +83,8 @@ def test_get_album_returns_bounded_photo_page_and_cursor() -> None:
     second = make_photo()
     session.scalar.side_effect = [album, 2, "同居家族", first.id]
     session.execute.return_value.all.return_value = [
-        SimpleNamespace(photo_id=first.id, added_at=datetime(2026, 7, 14, tzinfo=UTC)),
-        SimpleNamespace(photo_id=second.id, added_at=datetime(2026, 7, 15, tzinfo=UTC)),
+        SimpleNamespace(photo_id=first.id, effective_captured_at=datetime(2026, 7, 14, tzinfo=UTC)),
+        SimpleNamespace(photo_id=second.id, effective_captured_at=datetime(2026, 7, 15, tzinfo=UTC)),
     ]
     service, catalog = make_service(session)
     catalog.list_by_ids.return_value = [first]
@@ -105,6 +107,21 @@ def test_get_album_rejects_invalid_photo_cursor() -> None:
 
     with pytest.raises(InvalidAlbumPhotoCursorError):
         service.get_album(uuid4(), uuid4(), cursor="not-a-cursor")
+
+
+def test_album_photo_cursor_uses_effective_time_and_photo_id() -> None:
+    sort_at = datetime(2026, 7, 14, tzinfo=UTC)
+    photo_id = uuid4()
+
+    cursor = AlbumService._encode_photo_cursor(sort_at, photo_id)
+
+    assert AlbumService._decode_photo_cursor(cursor) == (sort_at, photo_id)
+    with pytest.raises(InvalidAlbumPhotoCursorError):
+        AlbumService._decode_photo_cursor(
+            base64.urlsafe_b64encode(json.dumps({"added_at": sort_at.isoformat(), "photo_id": str(photo_id)}).encode())
+            .decode()
+            .rstrip("=")
+        )
 
 
 def test_create_album_records_creator_and_commits() -> None:
@@ -223,8 +240,8 @@ def test_add_photos_only_registers_new_memberships() -> None:
         [existing_id],
     ]
     session.execute.return_value.all.return_value = [
-        SimpleNamespace(photo_id=existing_id, added_at=datetime(2026, 7, 14, tzinfo=UTC)),
-        SimpleNamespace(photo_id=new_id, added_at=datetime(2026, 7, 15, tzinfo=UTC)),
+        SimpleNamespace(photo_id=existing_id, effective_captured_at=datetime(2026, 7, 14, tzinfo=UTC)),
+        SimpleNamespace(photo_id=new_id, effective_captured_at=datetime(2026, 7, 15, tzinfo=UTC)),
     ]
     service, catalog = make_service(session)
     catalog.get_addable_to_group_ids.return_value = {existing_id, new_id}

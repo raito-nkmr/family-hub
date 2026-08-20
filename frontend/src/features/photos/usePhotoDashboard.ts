@@ -3,7 +3,6 @@ import { usePhotoLibrary } from './usePhotoLibrary'
 import { usePhotoUpload } from './usePhotoUpload'
 
 interface PhotoDashboardOptions {
-  enabled: boolean
   libraryEnabled?: boolean
   storageEnabled?: boolean
   groupsEnabled?: boolean
@@ -11,9 +10,8 @@ interface PhotoDashboardOptions {
 }
 
 export function usePhotoDashboard({
-  enabled,
-  libraryEnabled = enabled,
-  storageEnabled = enabled,
+  libraryEnabled = true,
+  storageEnabled = true,
   groupsEnabled = libraryEnabled || storageEnabled,
   onUnauthorized,
 }: PhotoDashboardOptions) {

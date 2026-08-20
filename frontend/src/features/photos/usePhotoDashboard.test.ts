@@ -4,21 +4,23 @@ import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { ApiError } from '../../shared/api/client'
 import {
   addBulkPhotoSharing,
-  cancelUploadBatch,
-  completeUploadItem,
-  createUploadBatch,
   getPhoto,
   getPhotos,
   getPhotoTimeline,
   getStorageStatus,
-  getUploadBatch,
   updatePhoto,
-  uploadItemContent,
   type Photo,
   type StorageStatus,
+} from './api'
+import {
+  cancelUploadBatch,
+  completeUploadItem,
+  createUploadBatch,
+  getUploadBatch,
+  uploadItemContent,
   type UploadBatch,
   type UploadItem,
-} from './api'
+} from './uploadApi'
 import { usePhotoDashboard } from './usePhotoDashboard'
 import { getGroups } from '../groups/api'
 import { useHome } from '../home/useHome'
@@ -30,12 +32,14 @@ vi.mock('./api', () => ({
   getPhotoTimeline: vi.fn(),
   getStorageStatus: vi.fn(),
   updatePhoto: vi.fn(),
+  setPhotoFavorite: vi.fn(),
+}))
+vi.mock('./uploadApi', () => ({
   createUploadBatch: vi.fn(),
   getUploadBatch: vi.fn(),
   completeUploadItem: vi.fn(),
   uploadItemContent: vi.fn(),
   cancelUploadBatch: vi.fn(),
-  setPhotoFavorite: vi.fn(),
 }))
 vi.mock('../groups/api', () => ({ getGroups: vi.fn() }))
 
@@ -113,7 +117,7 @@ describe('usePhotoDashboard', () => {
 
   it('loads storage and photos when a session becomes available', async () => {
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
 
@@ -128,7 +132,6 @@ describe('usePhotoDashboard', () => {
     const { result } = renderHook(
       () =>
         usePhotoDashboard({
-          enabled: true,
           libraryEnabled: false,
           storageEnabled: true,
           groupsEnabled: false,
@@ -149,7 +152,7 @@ describe('usePhotoDashboard', () => {
       .mockResolvedValueOnce({ items: [photo], next_cursor: 'page-2', total_count: 2 })
       .mockResolvedValueOnce({ items: [secondPhoto], next_cursor: null, total_count: 2 })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -174,7 +177,7 @@ describe('usePhotoDashboard', () => {
       async (photoId) => [photo, secondPhoto, thirdPhoto].find(({ id }) => id === photoId) ?? photo,
     )
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -197,7 +200,7 @@ describe('usePhotoDashboard', () => {
       return photo
     })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -223,7 +226,7 @@ describe('usePhotoDashboard', () => {
       return photoId === secondPhoto.id ? secondPhoto : photo
     })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -253,7 +256,7 @@ describe('usePhotoDashboard', () => {
         return { items: [photo], next_cursor: 'page-2', total_count: 2 }
       })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -271,7 +274,7 @@ describe('usePhotoDashboard', () => {
 
   it('keeps the selected timeline year when filtering photos', async () => {
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -285,7 +288,7 @@ describe('usePhotoDashboard', () => {
 
   it('clears transient dashboard state when the session is reset', async () => {
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -305,7 +308,7 @@ describe('usePhotoDashboard', () => {
 
   it('restores photo filters and timeline year from the URL', async () => {
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper('/photos?q=summer&favorite=1&year=2024'),
     })
 
@@ -324,7 +327,7 @@ describe('usePhotoDashboard', () => {
       return Promise.resolve(secondPhoto)
     })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -352,7 +355,7 @@ describe('usePhotoDashboard', () => {
       return Promise.resolve(secondPhoto)
     })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -385,7 +388,7 @@ describe('usePhotoDashboard', () => {
     }))
     vi.mocked(getUploadBatch).mockResolvedValue({ ...uploadBatch, status: 'completed' })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -426,7 +429,7 @@ describe('usePhotoDashboard', () => {
     )
     vi.mocked(cancelUploadBatch).mockResolvedValue()
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -453,7 +456,7 @@ describe('usePhotoDashboard', () => {
       unchanged_count: 0,
     })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -473,7 +476,7 @@ describe('usePhotoDashboard', () => {
     const onUnauthorized = vi.fn()
     const { result } = renderHook(
       () => ({
-        dashboard: usePhotoDashboard({ enabled: true, onUnauthorized }),
+        dashboard: usePhotoDashboard({ onUnauthorized }),
         home: useHome({ userId: 'user-1', active: true, onUnauthorized }),
       }),
       { wrapper: createAppWrapper() },
@@ -494,7 +497,7 @@ describe('usePhotoDashboard', () => {
   it('saves a photo memo with optimistic metadata versioning', async () => {
     vi.mocked(updatePhoto).mockResolvedValue({ ...photo, memo: '北海道旅行', metadata_version: 2 })
     const onUnauthorized = vi.fn()
-    const { result } = renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), {
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
       wrapper: createAppWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -511,7 +514,7 @@ describe('usePhotoDashboard', () => {
     vi.mocked(getPhotos).mockRejectedValue(new ApiError(401, 'expired'))
     const onUnauthorized = vi.fn()
 
-    renderHook(() => usePhotoDashboard({ enabled: true, onUnauthorized }), { wrapper: createAppWrapper() })
+    renderHook(() => usePhotoDashboard({ onUnauthorized }), { wrapper: createAppWrapper() })
 
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
     expect(updatePhoto).not.toHaveBeenCalled()

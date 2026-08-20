@@ -41,7 +41,7 @@ class InvitationServiceStub:
             raise self.error
         return CreatedInvitation(make_summary(), "token" * 8)
 
-    def revoke_invitation(self, invitation_id, actor_user_id=None, actor_username=None):
+    def revoke_invitation(self, invitation_id, actor_user_id, actor_username):
         if self.error:
             raise self.error
         self.revoked = True

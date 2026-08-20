@@ -371,7 +371,7 @@ def test_update_photo_preserves_share_from_group_the_owner_can_no_longer_see() -
         expected_version=1,
     )
 
-    assert result.sharing["group_ids"] == [hidden_group_id]
+    assert {share.group_id for share in result.shares} == {hidden_group_id}
     assert storage.update_sidecar.call_args.args[0].sharing_audiences == (
         {"type": "group", "id": str(hidden_group_id)},
     )
@@ -423,7 +423,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     assert result.unchanged_count == 0
     assert storage.update_sidecar.call_count == 2
     assert all(photo.metadata_version == 2 for photo in photos)
-    assert all(photo.sharing["group_ids"] == [group_id] for photo in photos)
+    assert all({share.group_id for share in photo.shares} == {group_id} for photo in photos)
     events = [call.args[0] for call in session.add.call_args_list]
     assert len(events) == 2
     assert {event.operation_id for event in events} == {result.operation_id}
@@ -538,8 +538,34 @@ def test_update_photo_allows_owner_to_override_capture_time() -> None:
     )
 
     assert result.metadata_record.captured_at_override == override
+    assert result.effective_captured_at == override
     storage.update_sidecar.assert_called_once()
     session.commit.assert_called_once()
+
+
+def test_update_photo_clearing_capture_override_restores_exif_sort_time() -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    photo.metadata_record.captured_at_override = datetime(2020, 1, 2, 3, tzinfo=UTC)
+    photo.effective_captured_at = photo.metadata_record.captured_at_override
+    session.scalar.return_value = photo
+    service, storage = make_metadata_service(session)
+
+    result = service.update_photo(
+        photo.id,
+        photo.uploaded_by_user_id,
+        photo.uploaded_by_username,
+        memo=None,
+        update_memo=False,
+        sharing_group_ids=None,
+        expected_version=1,
+        captured_at_override=None,
+        update_captured_at_override=True,
+    )
+
+    assert result.metadata_record.captured_at_override is None
+    assert result.effective_captured_at == photo.captured_at
+    storage.update_sidecar.assert_called_once()
 
 
 def test_update_photo_rejects_viewer_capture_time_override() -> None:
@@ -612,9 +638,11 @@ def configure_staged_upload(tmp_path: Path) -> StagedUpload:
     return staged
 
 
-def test_register_staged_photo_does_not_change_database_transaction(
+@pytest.mark.parametrize("captured_at", [None, datetime(2026, 7, 14, 3, tzinfo=UTC)])
+def test_register_staged_photo_sets_effective_capture_time_without_committing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    captured_at: datetime | None,
 ) -> None:
     session = MagicMock(spec=Session)
     session.scalar.return_value = None
@@ -622,7 +650,7 @@ def test_register_staged_photo_does_not_change_database_transaction(
     staged = configure_staged_upload(tmp_path)
     monkeypatch.setattr(
         "app.features.photos.registration.inspect_image",
-        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, None),
+        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, captured_at),
     )
 
     registered = register_staged_photo(
@@ -637,6 +665,7 @@ def test_register_staged_photo_does_not_change_database_transaction(
     )
 
     assert registered.photo.id == staged.photo_id
+    assert registered.photo.effective_captured_at == (captured_at or registered.photo.uploaded_at)
     session.add.assert_not_called()
     session.flush.assert_not_called()
     session.commit.assert_not_called()

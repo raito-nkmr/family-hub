@@ -38,7 +38,7 @@ def get_readiness_storage(request: Request) -> PhotoStorage:
 @root_router.get("/", response_model=RootResponse, include_in_schema=False)
 async def get_root() -> RootResponse:
     return RootResponse(
-        message="Photo storage API is running",
+        message="Family Hub API is running",
         health="/api/v1/health",
         docs="/docs",
     )

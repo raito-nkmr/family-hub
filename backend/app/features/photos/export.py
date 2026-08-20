@@ -5,7 +5,7 @@ from queue import Full, Queue
 from threading import Event, Thread
 from zipfile import ZIP_STORED, ZipFile
 
-from app.features.photos.service import PhotoExportEntry
+from app.features.photos.types import PhotoExportEntry
 
 _END = object()
 

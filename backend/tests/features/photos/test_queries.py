@@ -53,7 +53,7 @@ def test_list_photos_returns_bounded_page_and_cursor() -> None:
     assert page.next_cursor is not None
     statement = session.execute.call_args.args[0]
     sql = str(statement.compile(dialect=postgresql.dialect()))
-    assert "ORDER BY coalesce(photo_metadata.captured_at_override, photos.captured_at, photos.uploaded_at) DESC" in sql
+    assert "ORDER BY photos.effective_captured_at DESC" in sql
     assert "family_group_members" in sql
 
 
@@ -87,7 +87,7 @@ def test_list_photos_applies_cursor_and_search_filters() -> None:
     assert "photos.uploaded_by_user_id" in sql
     assert "coalesce(photo_metadata.captured_at_override, photos.captured_at) IS NOT NULL" in sql
     assert "album_photos" in sql
-    assert "coalesce(photo_metadata.captured_at_override, photos.captured_at, photos.uploaded_at) <" in sql
+    assert "photos.effective_captured_at <" in sql
 
 
 def test_list_photos_rejects_invalid_cursor() -> None:

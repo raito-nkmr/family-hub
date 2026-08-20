@@ -54,6 +54,7 @@ def test_concurrent_favorite_registration_is_idempotent() -> None:
                     height=1,
                     captured_at=None,
                     uploaded_at=now,
+                    effective_captured_at=now,
                     lifecycle_state=PhotoLifecycleState.ACTIVE,
                 ),
             ]

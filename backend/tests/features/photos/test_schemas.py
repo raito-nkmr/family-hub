@@ -8,7 +8,6 @@ from app.features.photos.schemas import (
     BulkPhotoSharingAdd,
     PhotoExportRequest,
     PhotoListQuery,
-    PhotoResponse,
     PhotoSharing,
     PhotoUpdate,
     photo_response_from_model,
@@ -20,7 +19,7 @@ def test_photo_response_normalizes_datetimes_to_utc() -> None:
     photo = make_photo()
     photo.captured_at = datetime(2026, 7, 14, 12, tzinfo=timezone(timedelta(hours=9)))
 
-    response = PhotoResponse.model_validate(photo)
+    response = photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
 
     assert response.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
     assert response.uploaded_by_user_id == photo.uploaded_by_user_id
@@ -39,7 +38,7 @@ def test_photo_response_rejects_naive_datetime() -> None:
     photo.uploaded_at = datetime(2026, 7, 14, 4)
 
     with pytest.raises(ValidationError, match="photo datetimes must be timezone-aware"):
-        PhotoResponse.model_validate(photo)
+        photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
 
 
 @pytest.mark.parametrize(("width", "height"), [(None, 480), (640, None), (0, 480), (640, 0), (-1, 480), (640, -1)])
@@ -49,7 +48,7 @@ def test_photo_response_requires_positive_dimensions(width: int | None, height: 
     photo.height = height  # type: ignore[assignment]
 
     with pytest.raises(ValidationError):
-        PhotoResponse.model_validate(photo)
+        photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
 
 
 def test_photo_response_only_contains_share_groups_visible_to_viewer() -> None:

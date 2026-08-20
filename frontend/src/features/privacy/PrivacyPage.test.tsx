@@ -5,7 +5,13 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { PrivacyPage } from './PrivacyPage'
 
 function LocationProbe() {
-  return <output aria-label="current path">{useLocation().pathname}</output>
+  const location = useLocation()
+  return (
+    <output aria-label="current path">
+      {location.pathname}
+      {location.search}
+    </output>
+  )
 }
 
 describe('PrivacyPage', () => {
@@ -37,5 +43,31 @@ describe('PrivacyPage', () => {
 
     await user.click(screen.getByRole('link', { name: /Family Hub/ }))
     expect(screen.getByLabelText('current path')).toHaveTextContent('/photos/library')
+  })
+
+  it('preserves safe application query parameters and rejects external return targets', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/privacy', state: { returnTo: '/photos/library?q=北海道&year=2026#unsafe' } }]}
+      >
+        <PrivacyPage theme="light" onToggleTheme={vi.fn()} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('link', { name: /Family Hub/ }))
+    expect(screen.getByLabelText('current path')).toHaveTextContent(
+      '/photos/library?q=%E5%8C%97%E6%B5%B7%E9%81%93&year=2026',
+    )
+
+    rerender(
+      <MemoryRouter initialEntries={[{ pathname: '/privacy', state: { returnTo: 'https://example.com/account' } }]}>
+        <PrivacyPage theme="light" onToggleTheme={vi.fn()} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('link', { name: /Family Hub/ }))
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/')
   })
 })
