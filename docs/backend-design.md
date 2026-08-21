@@ -65,7 +65,8 @@ for feature logic.
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
 function or registry for Alembic. The current Alembic chain starts with three explicit schema-only baseline revisions
-(`core`, `media`, and `household`) and adds later schema-only revisions such as `cleaning_categories`; migrations must not
+(`core`, `media`, and `household`) and adds later schema-only revisions such as `cleaning_categories` and
+`cleaning_reports`; migrations must not
 write application data, seed rows, or perform backfills.
 
 ### `features.health`
@@ -119,8 +120,11 @@ group-admin membership changes cannot leave an administrator invariant broken by
 Owns group-scoped cleaning categories, tasks, day intervals, and append-only completion history. Every group member may
 create, rename, and delete unused categories; members may list and complete active tasks; group administrators may create,
 edit, categorize, pause, and resume them. Mutations lock the group, recheck membership, then lock the category or task.
-Completion time always comes from the server's current UTC time. Use PostgreSQL `DISTINCT ON` to return the latest
-completion per task without loading all history. Non-members receive `404`.
+Completion time always comes from the server's current UTC time. Completion rows store task and category name snapshots,
+while their nullable category reference uses `ON DELETE SET NULL`. The monthly report endpoint aggregates completion rows
+in SQL after converting the UTC range to the group's IANA time zone. It returns daily, category, member, and task/member
+breakdowns without a report table; non-members receive `404`. Group administrators may update the group time zone, which
+defaults to `Asia/Tokyo`.
 
 ### `features.shopping`
 
@@ -429,8 +433,9 @@ serialization.
 ### Services
 
 Control Storage and Session boundaries to test success and cleanup after duplicate, commit, and finalization failures. Cover
-cleaning authorization, admin roles, due calculation, pause, completion user, shopping ordering, purchaser, restore, and
-concurrent conflicts. Use real PostgreSQL for group-lock serialization, all Alembic revisions, notification claim and stale
+cleaning authorization, admin roles, due calculation, pause, completion user, snapshots, monthly report aggregation,
+time-zone boundaries, shopping ordering, purchaser, restore, and concurrent conflicts. Use real PostgreSQL for group-lock
+serialization, all Alembic revisions, notification claim and stale
 recovery, deduplication, per-device retries, and maintenance terminal states.
 
 ### Routers and migrations

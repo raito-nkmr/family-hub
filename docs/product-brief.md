@@ -293,6 +293,11 @@ Cleaning data belongs to a family group and is independent of the photo `family`
 - All group members can view active tasks and record completion.
 - The cleaning screen provides an all-categories view and category filters.
 - Completion records the server time and user without overwriting history.
+- The cleaning report page shows a group-shared monthly report with summary counts, daily and category bars, member
+  rankings, and task-level member breakdowns. Month boundaries use the group's IANA time zone; group administrators can
+  change it and new groups default to `Asia/Tokyo`.
+- Report history stores the task and category names at completion time, so reports remain readable after a category is
+  renamed or removed.
 - The next due time adds the interval to the latest completion, or to task creation time when no completion exists.
 - React calculates countdown display from `next_due_at` and current time; countdowns are not stored in the database.
 - Pausing a task preserves history, and administrators can resume it later.

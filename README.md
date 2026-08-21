@@ -19,6 +19,7 @@ layout.
   - Trash, restore, permanent deletion, and storage integrity checks
 - **Household coordination**
   - Categorized cleaning tasks with configurable intervals, completion history, pause, and resume
+  - Monthly cleaning reports with daily, category, member, and task/member statistics
   - Shared shopping lists with purchased and unpurchased states
   - Home dashboard aggregating recent photos, due cleaning tasks, and shopping items
 - **Family and account management**

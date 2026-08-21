@@ -139,9 +139,23 @@ be deleted.
 
 ### `cleaning_completions`
 
-Append-only completion history with task, completing user, and server-generated UTC time. Index
-`(task_id, completed_at DESC, id DESC)` as `ix_cleaning_completions_task_id_completed_at`. Concurrent completions are both
-retained; the newest timestamp and UUID determine the next due time. Editing and deleting history are out of scope.
+Append-only completion history with task, completing user, and server-generated UTC time. `task_name_snapshot` and
+`category_name_snapshot` preserve the labels shown in historical reports. `category_id` is nullable and uses
+`ON DELETE SET NULL`, so deleting a category does not remove report history. Index `(completed_at, task_id)` as
+`ix_cleaning_completions_completed_at_task_id` for monthly ranges, in addition to
+`(task_id, completed_at DESC, id DESC)` as `ix_cleaning_completions_task_id_completed_at`. Concurrent completions are
+both retained; the newest timestamp and UUID determine the next due time. Editing and deleting history are out of scope.
+
+### `family_groups.timezone`
+
+Stores the group's IANA time-zone name for calendar boundaries in monthly cleaning reports. New groups use `Asia/Tokyo`.
+The API validates names with Python `zoneinfo`, and only group administrators may change the setting.
+
+### Cleaning monthly reports
+
+The monthly report is calculated directly from `cleaning_completions`; no report or cache table is stored. The API converts
+the requested local month to a UTC half-open range, then aggregates completion count, unique task count, daily counts,
+category counts, member rankings, and task/member counts. Empty months return the same response shape with zero counts.
 
 ### `shopping_items`
 
@@ -334,6 +348,7 @@ The development and pre-production history is reset and rebuilt as the following
 - `20260821_02_media` — photos, activity, uploads, and albums
 - `20260821_03_household` — cleaning, shopping, notifications, maintenance, and audit
 - `20260821_04_cleaning_categories` — group-owned cleaning categories and task category references
+- `20260821_05_cleaning_reports` — group time zones, completion label snapshots, and monthly report index
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, and required cleaning category references, are included in the current chain.
