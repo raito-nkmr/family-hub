@@ -75,7 +75,7 @@
   min-width: 5rem;
   height: var(--control-height-compact);
   padding: 0 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   cursor: pointer;
   background: transparent;
   border: 0;
