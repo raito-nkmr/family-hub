@@ -10,17 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.features.photos import trash_service as trash_service_module
 from app.features.photos.access_service import PhotoAccessService
-from app.features.photos.export_service import PhotoExportService
-from app.features.photos.image_validation import ImageMetadata
-from app.features.photos.metadata_service import PhotoMetadataService
-from app.features.photos.models import (
-    PhotoActivityEventType,
-    PhotoDerivativeKind,
-    PhotoLifecycleState,
-    PhotoVisibility,
-)
-from app.features.photos.registration import PhotoUploadStorageError, register_staged_photo
-from app.features.photos.service import (
+from app.features.photos.errors import (
     InvalidTrashCursorError,
     PhotoBulkSelectionError,
     PhotoContentUnavailableError,
@@ -32,6 +22,16 @@ from app.features.photos.service import (
     PhotoUpdateForbiddenError,
     PhotoUpdateStorageError,
 )
+from app.features.photos.export_service import PhotoExportService
+from app.features.photos.image_validation import ImageMetadata
+from app.features.photos.metadata_service import PhotoMetadataService
+from app.features.photos.models import (
+    PhotoActivityEventType,
+    PhotoDerivativeKind,
+    PhotoLifecycleState,
+    PhotoVisibility,
+)
+from app.features.photos.registration import PhotoUploadStorageError, register_staged_photo
 from app.features.photos.storage import (
     OriginalNotFoundError,
     PhotoStorage,

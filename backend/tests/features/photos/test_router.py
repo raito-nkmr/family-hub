@@ -9,6 +9,7 @@ from app.core.config import Settings
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.photos.activity import PhotoActivityItem, PhotoActivityPage
 from app.features.photos.dependencies import get_photo_access_service, get_photo_storage, get_photo_trash_service
+from app.features.photos.errors import PhotoContentUnavailableError, PhotoNotFoundError, PhotoUpdateForbiddenError
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoVisibility
 from app.features.photos.queries import PhotoListFilters, PhotoListItem, PhotoListPage, PhotoTimelineMonth
 from app.features.photos.router import (
@@ -30,15 +31,8 @@ from app.features.photos.schemas import (
     PhotoSharing,
     PhotoUpdate,
 )
-from app.features.photos.service import (
-    BulkPhotoSharingResult,
-    PhotoContent,
-    PhotoContentUnavailableError,
-    PhotoNotFoundError,
-    PhotoUpdateForbiddenError,
-    TrashedPhotoPage,
-)
 from app.features.photos.storage import PhotoStorage, StorageStatus, StorageStatusCode
+from app.features.photos.types import BulkPhotoSharingResult, PhotoContent, TrashedPhotoPage
 from app.main import create_app
 from tests.features.photos.factories import make_photo
 

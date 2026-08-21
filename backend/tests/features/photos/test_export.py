@@ -3,7 +3,7 @@ from uuid import uuid4
 from zipfile import ZipFile
 
 from app.features.photos.export import stream_photo_export
-from app.features.photos.service import PhotoExportEntry
+from app.features.photos.types import PhotoExportEntry
 
 
 def test_stream_photo_export_preserves_content_and_disambiguates_names(tmp_path) -> None:
