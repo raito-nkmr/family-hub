@@ -571,7 +571,7 @@ export const en = {
   cleaning: {
     title: 'Cleaning',
     description:
-      'Set each place and its cleaning frequency to manage when it is next due. When you finish cleaning, press the “Mark complete” button.',
+      'Set each place and its cleaning frequency to manage when it is next due. On desktop, press “Mark complete”; on mobile, swipe right on a task and tap “Complete”.',
     add: 'Add cleaning task',
     group: 'Family group',
     categoryFilter: 'Cleaning categories',
