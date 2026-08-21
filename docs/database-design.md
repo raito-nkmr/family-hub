@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, cleaning,
+This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, chores,
 and shopping. Image files are stored on the internal photo-storage HDD; PostgreSQL stores metadata required for search and
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
@@ -21,7 +21,7 @@ users 1 ───── 0..N photo_favorites N..1 ───── 1 photos
 photos 1 ───── 0..N photo_activity_events 1 ───── 1..N photo_activity_event_groups N..1 ───── 1 family_groups
 users 1 ───── 0..1 photo_activity_states
 users 1 ───── 0..N family_group_members N..1 ───── 1 family_groups
-family_groups 1 ───── 0..N cleaning_tasks 1 ───── 0..N cleaning_completions
+family_groups 1 ───── 0..N chore_tasks 1 ───── 0..N chore_completions
 family_groups 1 ───── 0..N shopping_items
 users 1 ───── 0..N upload_batches 1 ───── 1..N upload_items N..0 ───── 0..1 photos
 upload_batches 1 ───── 0..N upload_batch_group_shares N..1 ───── 1 family_groups
@@ -120,41 +120,41 @@ Stores group-admin invitations to existing active users, including group, invite
 `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and user is allowed.
 Acceptance creates membership in the same transaction; group deletion cascades.
 
-## Cleaning and shopping tables
+## Chore and shopping tables
 
-### `cleaning_tasks`
+### `chore_tasks`
 
-Stores group-scoped cleaning locations, a required reference to a group-owned cleaning category, and day intervals.
+Stores group-scoped chore locations, a required reference to a group-owned chore category, and day intervals.
 `interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index `(group_id,
-is_active)` as `ix_cleaning_tasks_group_id_is_active` and `category_id` as `ix_cleaning_tasks_category_id`. Do not store a
+is_active)` as `ix_chore_tasks_group_id_is_active` and `category_id` as `ix_chore_tasks_category_id`. Do not store a
 countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
 state change and preserves history. Category filtering is performed by the authenticated client after loading the group
 task and category lists.
 
-### `cleaning_categories`
+### `chore_categories`
 
 Stores group-shared category names and their non-negative `sort_order`. Names are trimmed, limited to 40 characters, and
 unique within a group without regard to case. Every group member may create, rename, reorder, and delete an unused category.
-Categories referenced by a cleaning task cannot be deleted. The `(group_id, sort_order, id)` index supports the shared
+Categories referenced by a chore task cannot be deleted. The `(group_id, sort_order, id)` index supports the shared
 display order; ties are resolved by normalized name and ID for legacy rows.
 
-### `cleaning_completions`
+### `chore_completions`
 
 Append-only completion history with task, completing user, and server-generated UTC time. `task_name_snapshot` and
 `category_name_snapshot` preserve the labels shown in historical reports. `category_id` is nullable and uses
 `ON DELETE SET NULL`, so deleting a category does not remove report history. Index `(completed_at, task_id)` as
-`ix_cleaning_completions_completed_at_task_id` for monthly ranges, in addition to
-`(task_id, completed_at DESC, id DESC)` as `ix_cleaning_completions_task_id_completed_at`. Concurrent completions are
+`ix_chore_completions_completed_at_task_id` for monthly ranges, in addition to
+`(task_id, completed_at DESC, id DESC)` as `ix_chore_completions_task_id_completed_at`. Concurrent completions are
 both retained; the newest timestamp and UUID determine the next due time. Editing and deleting history are out of scope.
 
 ### `family_groups.timezone`
 
-Stores the group's IANA time-zone name for calendar boundaries in monthly cleaning reports. New groups use `Asia/Tokyo`.
+Stores the group's IANA time-zone name for calendar boundaries in monthly chore reports. New groups use `Asia/Tokyo`.
 The API validates names with Python `zoneinfo`, and only group administrators may change the setting.
 
-### Cleaning monthly reports
+### Chore monthly reports
 
-The monthly report is calculated directly from `cleaning_completions`; no report or cache table is stored. The API converts
+The monthly report is calculated directly from `chore_completions`; no report or cache table is stored. The API converts
 the requested local month to a UTC half-open range, then aggregates completion count, unique task count, daily counts,
 category counts, member rankings, and task/member counts. Empty months return the same response shape with zero counts.
 
@@ -333,7 +333,7 @@ and time. It deliberately has no foreign keys to actors or groups so audit rows 
 `push_subscriptions` associates an endpoint and encryption keys with a user and login session. A composite foreign key to
 `(user_sessions.id, user_sessions.user_id)` prevents a subscription from pairing one user with another user's session.
 `notification_preferences`
-stores photo-sharing, cleaning-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
+stores photo-sharing, chore-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
 and deduplication key and is created in the same transaction as the business operation. `claimed_at` and `claim_token` track
 worker ownership. `notification_deliveries` uses the outbox/subscription pair as a composite key and stores per-device
 attempt count, status, completion time, and a non-secret error code.
@@ -347,13 +347,11 @@ The development and pre-production history is reset and rebuilt as the following
 
 - `20260821_01_core` — extensions, identity, and family groups
 - `20260821_02_media` — photos, activity, uploads, and albums
-- `20260821_03_household` — cleaning, shopping, notifications, maintenance, and audit
-- `20260821_04_cleaning_categories` — group-owned cleaning categories and task category references
-- `20260821_05_cleaning_reports` — group time zones, completion label snapshots, and monthly report index
-- `20260821_06_category_order` — persisted group-shared category ordering
+- `20260821_03_household` — complete chore, shopping, notifications, maintenance, and audit schema
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
-dimensions, effective photo capture time, and required cleaning category references, are included in the current chain.
+dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
+and category ordering, are included directly in the current chain.
 Never rewrite these revisions after the rebuild; future approved schema changes must be added as new migrations.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,

@@ -160,10 +160,11 @@ sudo systemd-run --wait --pipe --collect \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
 
-The current resettable schema chain has six revisions, ending at `20260821_06_category_order`. The upgrade contains
-schema DDL only; it does not create users, groups, categories, tasks, or completion history. Run `create_user` and any
-other bootstrap commands separately. Development reset and production-like reset are independent procedures: never run
-the development `docker compose down --volumes` command against the production-like service or volume.
+The current resettable schema chain has three revisions, ending at `20260821_03_household`. The household revision
+contains the complete current chore schema. The upgrade contains schema DDL only; it does not create users, groups,
+categories, tasks, or completion history. Run `create_user` and any other bootstrap commands separately. Development
+reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
+command against the production-like service or volume.
 
 Create the initial administrator with a PTY so password input is hidden:
 
@@ -237,7 +238,7 @@ URLs in `/etc/family-hub/backend.env` before starting units:
 | Photo integrity | `MONITORING_PING_URL_INTEGRITY` |
 | Trash purge | `MONITORING_PING_URL_TRASH_PURGE` |
 | Web Push delivery | `MONITORING_PING_URL_NOTIFICATIONS` |
-| Cleaning due | `MONITORING_PING_URL_CLEANING_NOTIFICATIONS` |
+| Chore due | `MONITORING_PING_URL_CHORE_NOTIFICATIONS` |
 | Secondary storage backup | `MONITORING_PING_URL_SECONDARY_BACKUP` |
 
 Units POST `/start`, the base URL on success, and `/fail` on failure. Unconfigured values are no-ops. Never record actual
@@ -325,13 +326,13 @@ sudo systemctl list-timers 'family-hub-*' --all --no-pager
 Do not enable notification timers before VAPID configuration and real-device validation. Verify that
 `PUSH_ALLOWED_ENDPOINT_HOSTS` contains only verified providers and that the per-user subscription limit is intended.
 Enable notifications from standalone iPhone Family Hub, trigger an event from another user, manually run the delivery
-service, and verify device display, click navigation, and non-secret journal output. After cleaning-due notification is also
+service, and verify device display, click navigation, and non-secret journal output. After chore-due notification is also
 verified manually, enable both timers:
 
 ```bash
 sudo systemctl start family-hub-notifications.service
-sudo systemctl start family-hub-cleaning-notifications.service
-sudo systemctl enable --now family-hub-notifications.timer family-hub-cleaning-notifications.timer
+sudo systemctl start family-hub-chore-notifications.service
+sudo systemctl enable --now family-hub-notifications.timer family-hub-chore-notifications.timer
 sudo systemctl list-timers 'family-hub-*notifications*' --all --no-pager
 ```
 

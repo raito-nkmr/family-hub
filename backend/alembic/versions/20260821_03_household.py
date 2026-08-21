@@ -22,12 +22,56 @@ depends_on: str | None = None
 
 
 def upgrade() -> None:
+    op.add_column(
+        "family_groups",
+        sa.Column("timezone", sa.String(length=64), server_default=sa.text("'Asia/Tokyo'"), nullable=False),
+    )
+    op.create_check_constraint(
+        "ck_family_groups_timezone_trimmed",
+        "family_groups",
+        "timezone = btrim(timezone)",
+    )
+    op.create_check_constraint(
+        "ck_family_groups_timezone_length",
+        "family_groups",
+        "char_length(timezone) BETWEEN 1 AND 64",
+    )
     op.create_table(
-        "cleaning_tasks",
+        "chore_categories",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("group_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=40), nullable=False),
+        sa.Column("sort_order", sa.Integer(), server_default=sa.text("0"), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
+        ),
+        sa.CheckConstraint("name = btrim(name)", name="ck_chore_categories_name_trimmed"),
+        sa.CheckConstraint("char_length(name) BETWEEN 1 AND 40", name="ck_chore_categories_name_length"),
+        sa.CheckConstraint("sort_order >= 0", name="ck_chore_categories_sort_order"),
+        sa.PrimaryKeyConstraint("id", name="pk_chore_categories"),
+    )
+    op.create_index("ix_chore_categories_group_id", "chore_categories", ["group_id"], unique=False)
+    op.create_index(
+        "uq_chore_categories_group_name_ci",
+        "chore_categories",
+        ["group_id", sa.literal_column("lower(name)")],
+        unique=True,
+    )
+    op.create_index(
+        "ix_chore_categories_group_sort_order",
+        "chore_categories",
+        ["group_id", "sort_order", "id"],
+        unique=False,
+    )
+    op.create_table(
+        "chore_tasks",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("group_id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(length=120), nullable=False),
-        sa.Column("category", sa.String(length=16), nullable=False),
+        sa.Column("category_id", sa.UUID(), nullable=False),
         sa.Column("interval_days", sa.Integer(), nullable=False),
         sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False),
         sa.Column("created_by_user_id", sa.UUID(), nullable=False),
@@ -37,36 +81,58 @@ def upgrade() -> None:
         sa.Column(
             "updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
-        sa.CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_cleaning_tasks_name_length"),
-        sa.CheckConstraint(
-            "category IN ('watering', 'cleaning', 'children')",
-            name="ck_cleaning_tasks_category",
-        ),
-        sa.CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_cleaning_tasks_interval_days"),
-        sa.CheckConstraint("name = btrim(name)", name="ck_cleaning_tasks_name_trimmed"),
-        sa.PrimaryKeyConstraint("id", name="pk_cleaning_tasks"),
+        sa.CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_chore_tasks_name_length"),
+        sa.CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_chore_tasks_interval_days"),
+        sa.CheckConstraint("name = btrim(name)", name="ck_chore_tasks_name_trimmed"),
+        sa.PrimaryKeyConstraint("id", name="pk_chore_tasks"),
     )
-    op.create_index("ix_cleaning_tasks_group_id_is_active", "cleaning_tasks", ["group_id", "is_active"], unique=False)
+    op.create_index("ix_chore_tasks_group_id_is_active", "chore_tasks", ["group_id", "is_active"], unique=False)
+    op.create_index("ix_chore_tasks_category_id", "chore_tasks", ["category_id"], unique=False)
     op.create_table(
-        "cleaning_completions",
+        "chore_completions",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("task_name_snapshot", sa.String(length=120), nullable=False),
+        sa.Column("category_id", sa.UUID(), nullable=True),
+        sa.Column("category_name_snapshot", sa.String(length=40), nullable=False),
         sa.Column("completed_by_user_id", sa.UUID(), nullable=False),
         sa.Column(
             "completed_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_cleaning_completions"),
+        sa.CheckConstraint(
+            "task_name_snapshot = btrim(task_name_snapshot)",
+            name="ck_chore_completions_task_name_trimmed",
+        ),
+        sa.CheckConstraint(
+            "char_length(task_name_snapshot) BETWEEN 1 AND 120",
+            name="ck_chore_completions_task_name_length",
+        ),
+        sa.CheckConstraint(
+            "category_name_snapshot = btrim(category_name_snapshot)",
+            name="ck_chore_completions_category_name_trimmed",
+        ),
+        sa.CheckConstraint(
+            "char_length(category_name_snapshot) BETWEEN 1 AND 40",
+            name="ck_chore_completions_category_name_length",
+        ),
+        sa.PrimaryKeyConstraint("id", name="pk_chore_completions"),
     )
     op.create_index(
-        "ix_cleaning_completions_task_id_completed_at",
-        "cleaning_completions",
+        "ix_chore_completions_task_id_completed_at",
+        "chore_completions",
         ["task_id", sa.literal_column("completed_at DESC"), sa.literal_column("id DESC")],
         unique=False,
     )
     op.create_index(
-        "ix_cleaning_completions_completed_by_user_id",
-        "cleaning_completions",
+        "ix_chore_completions_completed_by_user_id",
+        "chore_completions",
         ["completed_by_user_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_chore_completions_completed_at_task_id",
+        "chore_completions",
+        ["completed_at", "task_id"],
         unique=False,
     )
     op.create_table(
@@ -110,20 +176,36 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_foreign_key(
-        "fk_cleaning_tasks_created_by_user_id_users",
-        "cleaning_tasks",
+        "fk_chore_tasks_created_by_user_id_users",
+        "chore_tasks",
         "users",
         ["created_by_user_id"],
         ["id"],
         ondelete="RESTRICT",
     )
     op.create_foreign_key(
-        "fk_cleaning_tasks_group_id_family_groups",
-        "cleaning_tasks",
+        "fk_chore_tasks_group_id_family_groups",
+        "chore_tasks",
         "family_groups",
         ["group_id"],
         ["id"],
         ondelete="CASCADE",
+    )
+    op.create_foreign_key(
+        "fk_chore_categories_group_id_family_groups",
+        "chore_categories",
+        "family_groups",
+        ["group_id"],
+        ["id"],
+        ondelete="CASCADE",
+    )
+    op.create_foreign_key(
+        "fk_chore_tasks_category_id_chore_categories",
+        "chore_tasks",
+        "chore_categories",
+        ["category_id"],
+        ["id"],
+        ondelete="RESTRICT",
     )
     op.create_foreign_key(
         "fk_shopping_items_created_by_user_id_users",
@@ -150,20 +232,28 @@ def upgrade() -> None:
         ondelete="RESTRICT",
     )
     op.create_foreign_key(
-        "fk_cleaning_completions_completed_by_user_id_users",
-        "cleaning_completions",
+        "fk_chore_completions_completed_by_user_id_users",
+        "chore_completions",
         "users",
         ["completed_by_user_id"],
         ["id"],
         ondelete="RESTRICT",
     )
     op.create_foreign_key(
-        "fk_cleaning_completions_task_id_cleaning_tasks",
-        "cleaning_completions",
-        "cleaning_tasks",
+        "fk_chore_completions_task_id_chore_tasks",
+        "chore_completions",
+        "chore_tasks",
         ["task_id"],
         ["id"],
         ondelete="CASCADE",
+    )
+    op.create_foreign_key(
+        "fk_chore_completions_category_id_chore_categories",
+        "chore_completions",
+        "chore_categories",
+        ["category_id"],
+        ["id"],
+        ondelete="SET NULL",
     )
     op.create_table(
         "notification_outbox",
@@ -183,7 +273,7 @@ def upgrade() -> None:
         sa.Column("claim_token", sa.UUID(), nullable=True),
         sa.Column("last_error", sa.String(length=128), nullable=True),
         sa.CheckConstraint(
-            "notification_type IN ('photo_shared', 'cleaning_due', 'shopping_added')",
+            "notification_type IN ('photo_shared', 'chore_due', 'shopping_added')",
             name="ck_notification_outbox_type",
         ),
         sa.CheckConstraint(
@@ -215,7 +305,7 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
         sa.CheckConstraint(
-            "notification_type IN ('photo_shared', 'cleaning_due', 'shopping_added')",
+            "notification_type IN ('photo_shared', 'chore_due', 'shopping_added')",
             name="ck_notification_preferences_type",
         ),
         sa.PrimaryKeyConstraint("user_id", "notification_type", name="pk_notification_preferences"),
@@ -397,19 +487,31 @@ def downgrade() -> None:
     op.drop_index("ix_administrative_audit_events_group_id_created_at", table_name="administrative_audit_events")
     op.drop_index("ix_administrative_audit_events_created_at_id", table_name="administrative_audit_events")
     op.drop_table("administrative_audit_events")
-    op.drop_constraint("fk_cleaning_completions_task_id_cleaning_tasks", "cleaning_completions", type_="foreignkey")
-    op.drop_constraint("fk_cleaning_completions_completed_by_user_id_users", "cleaning_completions", type_="foreignkey")
+    op.drop_constraint("fk_chore_completions_category_id_chore_categories", "chore_completions", type_="foreignkey")
+    op.drop_constraint("fk_chore_completions_task_id_chore_tasks", "chore_completions", type_="foreignkey")
+    op.drop_constraint("fk_chore_completions_completed_by_user_id_users", "chore_completions", type_="foreignkey")
     op.drop_constraint("fk_shopping_items_purchased_by_user_id_users", "shopping_items", type_="foreignkey")
     op.drop_constraint("fk_shopping_items_group_id_family_groups", "shopping_items", type_="foreignkey")
     op.drop_constraint("fk_shopping_items_created_by_user_id_users", "shopping_items", type_="foreignkey")
-    op.drop_constraint("fk_cleaning_tasks_group_id_family_groups", "cleaning_tasks", type_="foreignkey")
-    op.drop_constraint("fk_cleaning_tasks_created_by_user_id_users", "cleaning_tasks", type_="foreignkey")
-    op.drop_index("ix_cleaning_completions_task_id_completed_at", table_name="cleaning_completions")
-    op.drop_index("ix_cleaning_completions_completed_by_user_id", table_name="cleaning_completions")
-    op.drop_table("cleaning_completions")
+    op.drop_constraint("fk_chore_tasks_group_id_family_groups", "chore_tasks", type_="foreignkey")
+    op.drop_constraint("fk_chore_tasks_created_by_user_id_users", "chore_tasks", type_="foreignkey")
+    op.drop_index("ix_chore_completions_task_id_completed_at", table_name="chore_completions")
+    op.drop_index("ix_chore_completions_completed_by_user_id", table_name="chore_completions")
+    op.drop_index("ix_chore_completions_completed_at_task_id", table_name="chore_completions")
+    op.drop_table("chore_completions")
     op.drop_index("ix_shopping_items_purchased_by_user_id", table_name="shopping_items")
     op.drop_index("ix_shopping_items_created_by_user_id", table_name="shopping_items")
     op.drop_index("ix_shopping_items_group_id_purchase_state", table_name="shopping_items")
     op.drop_table("shopping_items")
-    op.drop_index("ix_cleaning_tasks_group_id_is_active", table_name="cleaning_tasks")
-    op.drop_table("cleaning_tasks")
+    op.drop_constraint("fk_chore_tasks_category_id_chore_categories", "chore_tasks", type_="foreignkey")
+    op.drop_index("ix_chore_tasks_group_id_is_active", table_name="chore_tasks")
+    op.drop_index("ix_chore_tasks_category_id", table_name="chore_tasks")
+    op.drop_table("chore_tasks")
+    op.drop_constraint("fk_chore_categories_group_id_family_groups", "chore_categories", type_="foreignkey")
+    op.drop_index("ix_chore_categories_group_sort_order", table_name="chore_categories")
+    op.drop_index("uq_chore_categories_group_name_ci", table_name="chore_categories")
+    op.drop_index("ix_chore_categories_group_id", table_name="chore_categories")
+    op.drop_table("chore_categories")
+    op.drop_constraint("ck_family_groups_timezone_length", "family_groups", type_="check")
+    op.drop_constraint("ck_family_groups_timezone_trimmed", "family_groups", type_="check")
+    op.drop_column("family_groups", "timezone")

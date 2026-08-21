@@ -15,12 +15,9 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260821_06_category_order"]
+    assert scripts.get_heads() == ["20260821_03_household"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260821_06_category_order",
-        "20260821_05_cleaning_reports",
-        "20260821_04_cleaning_categories",
         "20260821_03_household",
         "20260821_02_media",
         "20260821_01_core",
@@ -49,16 +46,20 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "effective_captured_at TIMESTAMP WITH TIME ZONE" in sql
     assert "ix_photos_sort_date_id" in sql
     assert "effective_captured_at TIMESTAMP WITH TIME ZONE NOT NULL" in sql
-    assert "CREATE TABLE cleaning_categories" in sql
+    assert "CREATE TABLE chore_categories" in sql
+    assert "CREATE TABLE chore_tasks" in sql
+    assert "CREATE TABLE chore_completions" in sql
     assert "category_id UUID NOT NULL" in sql
-    assert "uq_cleaning_categories_group_name_ci" in sql
-    assert "fk_cleaning_tasks_category_id_cleaning_categories" in sql
+    assert "uq_chore_categories_group_name_ci" in sql
+    assert "fk_chore_tasks_category_id_chore_categories" in sql
     assert "timezone VARCHAR(64) DEFAULT 'Asia/Tokyo' NOT NULL" in sql
     assert "task_name_snapshot VARCHAR(120) NOT NULL" in sql
     assert "category_name_snapshot VARCHAR(40) NOT NULL" in sql
-    assert "ix_cleaning_completions_completed_at_task_id" in sql
+    assert "ix_chore_completions_completed_at_task_id" in sql
     assert "sort_order INTEGER DEFAULT 0 NOT NULL" in sql
-    assert "ix_cleaning_categories_group_sort_order" in sql
+    assert "ix_chore_categories_group_sort_order" in sql
+    assert "ck_chore_tasks_category" not in sql
+    assert "ALTER TABLE chore_completions ADD COLUMN task_name_snapshot" not in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
@@ -75,7 +76,7 @@ def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_pa
     assert "ALTER TABLE albums DROP CONSTRAINT fk_albums_cover_album_photos" in sql
     assert "DROP TABLE album_photos" in sql
     assert "DROP TABLE photos" in sql
-    assert "DROP TABLE cleaning_categories" in sql
+    assert "DROP TABLE chore_categories" in sql
     assert "DROP COLUMN timezone" in sql
 
 
