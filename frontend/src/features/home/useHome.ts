@@ -3,14 +3,14 @@ import i18n from '../../i18n'
 import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
-import { getCleaningTasks, type CleaningTask } from '../cleaning/api'
+import { getChoreTasks, type ChoreTask } from '../chores/api'
 import { getGroups, type FamilyGroup } from '../groups/api'
 import { getPhotos } from '../photos/api'
 import { getShoppingItems, type ShoppingItem } from '../shopping/api'
 
-export interface GroupCleaningTask {
+export interface GroupChoreTask {
   group: FamilyGroup
-  task: CleaningTask
+  task: ChoreTask
 }
 
 export interface GroupShoppingItem {
@@ -38,10 +38,10 @@ export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
     enabled,
   })
   const groups = groupsQuery.data ?? []
-  const cleaningQueries = useQueries({
+  const choreQueries = useQueries({
     queries: groups.map((group) => ({
-      queryKey: queryKeys.cleaningTasks(group.id),
-      queryFn: ({ signal }: { signal: AbortSignal }) => getCleaningTasks(group.id, signal),
+      queryKey: queryKeys.choreTasks(group.id),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getChoreTasks(group.id, signal),
       enabled,
     })),
   })
@@ -55,18 +55,18 @@ export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
   const unauthorizedCandidate = [
     groupsQuery.error,
     photosQuery.error,
-    ...cleaningQueries.map((query) => query.error),
+    ...choreQueries.map((query) => query.error),
     ...shoppingQueries.map((query) => query.error),
   ].find(isUnauthorizedError)
   useUnauthorizedError(unauthorizedCandidate, onUnauthorized)
 
-  const allQueries = [groupsQuery, photosQuery, ...cleaningQueries, ...shoppingQueries]
+  const allQueries = [groupsQuery, photosQuery, ...choreQueries, ...shoppingQueries]
   const hasError = allQueries.some((query) => query.error && !isUnauthorizedError(query.error))
   return {
     groups,
     recentPhotos: photosQuery.data?.items ?? [],
-    cleaningTasks: groups.flatMap((group, index) =>
-      (cleaningQueries[index]?.data ?? []).filter((task) => task.is_active).map((task) => ({ group, task })),
+    choreTasks: groups.flatMap((group, index) =>
+      (choreQueries[index]?.data ?? []).filter((task) => task.is_active).map((task) => ({ group, task })),
     ),
     shoppingItems: groups.flatMap((group, index) =>
       (shoppingQueries[index]?.data ?? [])
@@ -80,7 +80,7 @@ export function useHome({ userId, active, onUnauthorized }: UseHomeOptions) {
         queryClient.invalidateQueries({ queryKey: queryKeys.groups }),
         queryClient.invalidateQueries({ queryKey: queryKeys.recentPhotos }),
         ...groups.flatMap((group) => [
-          queryClient.invalidateQueries({ queryKey: queryKeys.cleaningTasks(group.id) }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.choreTasks(group.id) }),
           queryClient.invalidateQueries({ queryKey: queryKeys.shoppingItems(group.id) }),
         ]),
       ])

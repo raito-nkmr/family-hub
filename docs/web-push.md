@@ -21,7 +21,7 @@ The implemented flow is:
 2. The user launches standalone Family Hub from the Home Screen and taps the enable-notifications button.
 3. The frontend requests notification permission and creates a Push subscription using the public VAPID key.
 4. The endpoint and encryption keys are registered with `POST /api/v1/notifications/subscriptions`. Notification categories can be changed afterward.
-5. A photo-sharing or shopping-item transaction, or the cleaning-due command, creates a notification outbox entry.
+5. A photo-sharing or shopping-item transaction, or the chore-due command, creates a notification outbox entry.
 6. `python -m app.commands.send_notifications` claims outbox entries and sends encrypted notifications to the Web Push provider.
 7. The Service Worker handles the `push` event, displays the notification, increments the device-local unread count, and shows a badge on supported app icons.
 8. Opening a notification clears the badge and focuses the relevant Family Hub screen, opening it if necessary. Normal app startup also clears the badge.
@@ -31,11 +31,11 @@ The implemented flow is:
 | Category | Outbox trigger | Potential recipients | Default | Destination |
 | --- | --- | --- | --- | --- |
 | Photo shared | An upload with a group share, or adding a new group to an existing share | Members of the newly shared group, excluding the actor | Enabled | `/photos/new` |
-| Cleaning due | The cleaning-due command finds an active task that is due | All members of the relevant group | Enabled | `/cleaning` |
+| Chore due | The chore-due command finds an active task that is due | All members of the relevant group | Enabled | `/chores` |
 | Shopping item added | An unpurchased item is added to a group | Group members, excluding the actor | Disabled | `/shopping` |
 
 Notification messages are localized templates selected from the subscription's `en` or `ja` language. They do not
-include photo names, cleaning-task names, or shopping-item names. The authenticated app updates all Push subscriptions for
+include photo names, chore-task names, or shopping-item names. The authenticated app updates all Push subscriptions for
 the current login session through `PUT /api/v1/notifications/subscriptions/locale` when the UI language changes; this
 background update does not block the language switch. The same operation does not create duplicate outbox entries for the
 same user. The settings UI saves the enabled state of all three categories together.
@@ -54,8 +54,8 @@ provider returns `404` or `410` are deleted by the delivery worker as expired.
 ## Delivery, retries, and display
 
 Photo sharing and shopping-item additions write their outbox entries in the same database transaction as the underlying
-change. Cleaning due dates are evaluated by `python -m app.commands.enqueue_due_cleaning_notifications`, which prevents
-duplicate entries for the same task and due date. The delivery systemd timer runs every minute, and the cleaning-due
+change. Chore due dates are evaluated by `python -m app.commands.enqueue_due_chore_notifications`, which prevents
+duplicate entries for the same task and due date. The delivery systemd timer runs every minute, and the chore-due
 timer runs every hour. The production runbook keeps both timers disabled until VAPID configuration and real-device
 validation are complete.
 
@@ -99,7 +99,7 @@ with `TEST_DATABASE_URL` configured.
 The July 20, 2026 verification configured VAPID and registered a subscription from the iPhone Home Screen PWA. A
 shopping-item addition by another user was verified end to end through the outbox, Web Push provider, and Service Worker,
 including a background Japanese notification and app-icon badge. Both the outbox and per-device delivery were `sent` at
-that time, and the delivery and cleaning-due timers were `enabled` and `active`.
+that time, and the delivery and chore-due timers were `enabled` and `active`.
 
 The following acceptance checks remain:
 

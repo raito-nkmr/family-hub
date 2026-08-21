@@ -4,11 +4,14 @@ import AddTaskSymbol from './icons/material-symbols/add-task.svg?react'
 import AddSymbol from './icons/material-symbols/add.svg?react'
 import BackIosSymbol from './icons/material-symbols/back-ios.svg?react'
 import BedtimeSymbol from './icons/material-symbols/bedtime.svg?react'
+import BarChartSymbol from './icons/material-symbols/bar-chart.svg?react'
 import BlockSymbol from './icons/material-symbols/block.svg?react'
+import CalendarMonthSymbol from './icons/material-symbols/calendar-month.svg?react'
 import CancelSymbol from './icons/material-symbols/cancel.svg?react'
+import CategorySymbol from './icons/material-symbols/category.svg?react'
 import CheckSymbol from './icons/material-symbols/check.svg?react'
 import CheckCircleSymbol from './icons/material-symbols/check-circle.svg?react'
-import CleaningSymbol from './icons/material-symbols/cleaning.svg?react'
+import ChoreSymbol from './icons/material-symbols/chores.svg?react'
 import CloseSymbol from './icons/material-symbols/close.svg?react'
 import DeleteSymbol from './icons/material-symbols/delete.svg?react'
 import EditSymbol from './icons/material-symbols/edit.svg?react'
@@ -34,6 +37,7 @@ import SelectSymbol from './icons/material-symbols/select.svg?react'
 import ShareSymbol from './icons/material-symbols/share.svg?react'
 import ShoppingCartSymbol from './icons/material-symbols/shopping-cart.svg?react'
 import SunnySymbol from './icons/material-symbols/sunny.svg?react'
+import TaskAltSymbol from './icons/material-symbols/task-alt.svg?react'
 import UndoSymbol from './icons/material-symbols/undo.svg?react'
 import UploadSymbol from './icons/material-symbols/upload.svg?react'
 import ContentCopySymbol from './icons/material-symbols/content-copy.svg?react'
@@ -85,6 +89,18 @@ export function UploadIcon() {
 
 export function SaveIcon() {
   return <SaveSymbol className="material-symbol-icon" />
+}
+
+export function BarChartIcon() {
+  return <BarChartSymbol className="material-symbol-icon" />
+}
+
+export function CalendarMonthIcon() {
+  return <CalendarMonthSymbol className="material-symbol-icon" />
+}
+
+export function CategoryIcon() {
+  return <CategorySymbol className="material-symbol-icon" />
 }
 
 export function ShareIcon() {
@@ -203,8 +219,8 @@ export function PersonAddIcon() {
   return <PersonAddSymbol className="material-symbol-icon" />
 }
 
-export function CleaningIcon() {
-  return <CleaningSymbol className="material-symbol-icon" />
+export function ChoreIcon() {
+  return <ChoreSymbol className="material-symbol-icon" />
 }
 
 export function ShoppingCartIcon() {
@@ -221,4 +237,8 @@ export function CheckCircleIcon() {
 
 export function UndoIcon() {
   return <UndoSymbol className="material-symbol-icon" />
+}
+
+export function TaskAltIcon() {
+  return <TaskAltSymbol className="material-symbol-icon" />
 }

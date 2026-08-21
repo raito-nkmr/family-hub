@@ -9,4 +9,9 @@ describe('app routes', () => {
   it('does not treat an unknown path as home', () => {
     expect(getAppView('/unknown')).toBeNull()
   })
+
+  it('keeps chore navigation active on the report subpage', () => {
+    expect(getAppView('/chores/reports')).toBe('chores-reports')
+    expect(getAppView('/chores/daily')).toBe('chores-daily')
+  })
 })

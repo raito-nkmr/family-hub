@@ -16,10 +16,13 @@ from app.features.groups.router import (
     remove_group_member,
     rename_group,
     update_group_member_role,
+    update_group_settings,
 )
-from app.features.groups.schemas import GroupCreate, GroupMemberRoleUpdate, GroupUpdate
+from app.features.groups.schemas import GroupCreate, GroupMemberRoleUpdate, GroupTimezoneUpdate, GroupUpdate
 from app.features.groups.service import (
     GroupDetail,
+    GroupForbiddenError,
+    GroupInvalidTimezoneError,
     GroupMemberSummary,
     GroupNameAlreadyExistsError,
     GroupNotFoundError,
@@ -38,6 +41,7 @@ def make_detail() -> GroupDetail:
     group = GroupSummary(
         id=uuid4(),
         name="同居家族",
+        timezone="Asia/Tokyo",
         created_by_user_id=TEST_USER.id,
         created_at=now,
         updated_at=now,
@@ -88,6 +92,20 @@ class GroupServiceStub:
             raise self.error
         assert actor_user_id == TEST_USER.id
         assert name == "新しい名前"
+        assert self.detail is not None
+        return self.detail
+
+    def update_timezone(
+        self,
+        group_id: UUID,
+        actor_user_id: UUID,
+        actor_username: str,
+        timezone: str,
+    ) -> GroupDetail:
+        if self.error:
+            raise self.error
+        assert actor_user_id == TEST_USER.id
+        assert timezone == "UTC"
         assert self.detail is not None
         return self.detail
 
@@ -175,6 +193,41 @@ def test_rename_group_maps_persistence_error_to_500() -> None:
     assert error.value.status_code == 500
 
 
+def test_update_group_settings_returns_updated_timezone() -> None:
+    response = update_group_settings(
+        uuid4(),
+        GroupTimezoneUpdate(timezone="UTC"),
+        TEST_USER,
+        GroupServiceStub(make_detail()),
+    )
+
+    assert response.timezone == "Asia/Tokyo"
+
+
+def test_update_group_settings_rejects_non_admin() -> None:
+    with pytest.raises(HTTPException) as error:
+        update_group_settings(
+            uuid4(),
+            GroupTimezoneUpdate(timezone="UTC"),
+            TEST_USER,
+            GroupServiceStub(error=GroupForbiddenError()),
+        )
+
+    assert error.value.status_code == 403
+
+
+def test_update_group_settings_maps_invalid_timezone() -> None:
+    with pytest.raises(HTTPException) as error:
+        update_group_settings(
+            uuid4(),
+            GroupTimezoneUpdate(timezone="UTC"),
+            TEST_USER,
+            GroupServiceStub(error=GroupInvalidTimezoneError()),
+        )
+
+    assert error.value.status_code == 422
+
+
 def test_list_group_member_candidates_returns_selectable_users() -> None:
     response = list_group_member_candidates(uuid4(), TEST_USER, GroupServiceStub())
 
@@ -209,6 +262,7 @@ def test_group_routes_are_registered_and_mutations_require_csrf() -> None:
     assert {"get", "post"} <= set(paths["/api/v1/groups"])
     assert "get" in paths["/api/v1/groups/{group_id}"]
     assert "get" in paths["/api/v1/groups/{group_id}/member-candidates"]
+    assert "patch" in paths["/api/v1/groups/{group_id}/settings"]
     assert "/api/v1/groups/{group_id}/members" not in paths
     assert {"patch", "delete"} <= set(paths["/api/v1/groups/{group_id}/members/{user_id}"])
 

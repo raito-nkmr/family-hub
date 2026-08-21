@@ -26,11 +26,13 @@ from app.features.groups.schemas import (
     GroupMembershipInvitationListResponse,
     GroupMembershipInvitationResponse,
     GroupResponse,
+    GroupTimezoneUpdate,
     GroupUpdate,
 )
 from app.features.groups.service import (
     GroupDetail,
     GroupForbiddenError,
+    GroupInvalidTimezoneError,
     GroupMemberAlreadyExistsError,
     GroupMemberNotFoundError,
     GroupMembershipInvitationError,
@@ -73,6 +75,11 @@ def _raise_member_error(error: Exception) -> NoReturn:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not update group membership",
+        ) from error
+    if isinstance(error, GroupInvalidTimezoneError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid group timezone",
         ) from error
     raise error
 
@@ -184,6 +191,35 @@ def rename_group(
     except GroupNameAlreadyExistsError as error:
         raise HTTPException(status_code=409, detail="Group name already exists") from error
     except (GroupNotFoundError, GroupForbiddenError, GroupPersistenceError) as error:
+        _raise_member_error(error)
+
+
+@router.patch(
+    "/{group_id}/settings",
+    response_model=GroupDetailResponse,
+    dependencies=[Depends(require_csrf_token)],
+)
+def update_group_settings(
+    group_id: UUID,
+    body: GroupTimezoneUpdate,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[GroupService, Depends(get_group_service)],
+) -> GroupDetailResponse:
+    try:
+        return _detail_response(
+            service.update_timezone(
+                group_id,
+                authenticated_user.id,
+                authenticated_user.username,
+                body.timezone,
+            )
+        )
+    except (
+        GroupForbiddenError,
+        GroupInvalidTimezoneError,
+        GroupNotFoundError,
+        GroupPersistenceError,
+    ) as error:
         _raise_member_error(error)
 
 

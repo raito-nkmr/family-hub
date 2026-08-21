@@ -11,6 +11,7 @@ import {
   getGroups,
   getMyGroupMembershipInvitations,
   renameGroup,
+  updateGroupTimezone,
   type GroupDetail,
   type FamilyGroup,
 } from './api'
@@ -27,6 +28,7 @@ vi.mock('./api', () => ({
   getGroups: vi.fn(),
   getMyGroupMembershipInvitations: vi.fn(),
   renameGroup: vi.fn(),
+  updateGroupTimezone: vi.fn(),
   removeGroupMember: vi.fn(),
   updateGroupMemberRole: vi.fn(),
 }))
@@ -57,6 +59,7 @@ describe('GroupPage', () => {
       updated_at: '2026-07-15T00:00:00Z',
       current_user_role: 'admin',
       member_count: 0,
+      timezone: 'Asia/Tokyo',
     }
     const detail: GroupDetail = { ...group, members: [] }
     vi.mocked(getGroups).mockResolvedValue([group])
@@ -81,6 +84,7 @@ describe('GroupPage', () => {
       updated_at: '2026-07-15T00:00:00Z',
       current_user_role: 'admin',
       member_count: 0,
+      timezone: 'Asia/Tokyo',
     }
     const detail: GroupDetail = { ...group, members: [] }
     vi.mocked(getGroups).mockResolvedValue([group])
@@ -105,6 +109,7 @@ describe('GroupPage', () => {
       updated_at: '2026-07-15T00:00:00Z',
       current_user_role: 'admin',
       member_count: 0,
+      timezone: 'Asia/Tokyo',
     }
     vi.mocked(getGroups).mockResolvedValue([group])
     vi.mocked(getGroup).mockResolvedValue({ ...group, members: [] })
@@ -119,10 +124,46 @@ describe('GroupPage', () => {
 
     const input = await screen.findByLabelText('グループ名を変更')
     await user.type(input, '新しい名前')
-    await user.click(screen.getByRole('button', { name: '保存する' }))
+    await user.click(screen.getAllByRole('button', { name: '保存する' })[0])
 
     await waitFor(() => expect(screen.getByText('グループ名を変更できませんでした。')).toBeInTheDocument())
     expect(input).toHaveValue('新しい名前')
+  })
+
+  it('lets an administrator update the report time zone', async () => {
+    const group: FamilyGroup = {
+      id: 'group-1',
+      name: '同居家族',
+      created_by_user_id: 'user-1',
+      created_at: '2026-07-15T00:00:00Z',
+      updated_at: '2026-07-15T00:00:00Z',
+      current_user_role: 'admin',
+      member_count: 0,
+      timezone: 'Asia/Tokyo',
+    }
+    vi.mocked(getGroups).mockResolvedValue([group])
+    vi.mocked(getGroup).mockResolvedValue({ ...group, members: [] })
+    vi.mocked(getGroupAdministration).mockResolvedValue({
+      album_count: 0,
+      chore_task_count: 0,
+      shared_photo_count: 0,
+      shopping_item_count: 0,
+      active_admin_count: 1,
+    })
+    vi.mocked(getGroupAuditEvents).mockResolvedValue([])
+    vi.mocked(updateGroupTimezone).mockResolvedValue({ ...group, timezone: 'Europe/London', members: [] })
+    const user = userEvent.setup()
+
+    render(<GroupPage currentUserId="user-1" onUnauthorized={vi.fn()} />, {
+      wrapper: createAppWrapper('/groups?group=group-1'),
+    })
+
+    const timezone = await screen.findByLabelText('レポートのタイムゾーン')
+    await user.selectOptions(timezone, 'Europe/London')
+    const saveButtons = screen.getAllByRole('button', { name: '保存する' })
+    await user.click(saveButtons[1])
+
+    await waitFor(() => expect(updateGroupTimezone).toHaveBeenCalledWith('group-1', 'Europe/London'))
   })
 
   it('returns control to the app when membership invitations expire', async () => {

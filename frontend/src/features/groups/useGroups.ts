@@ -15,6 +15,7 @@ import {
   getGroups,
   removeGroupMember,
   renameGroup,
+  updateGroupTimezone,
   updateGroupMemberRole,
   type FamilyGroup,
   type GroupDetail,
@@ -75,6 +76,14 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     mutationFn: ({ groupId, name }: { groupId: string; name: string }) => renameGroup(groupId, name),
     onSuccess: (updated) => updateGroupCaches(queryClient, updated),
   })
+  const timezoneMutation = useMutation({
+    mutationFn: ({ groupId, timezone }: { groupId: string; timezone: string }) =>
+      updateGroupTimezone(groupId, timezone),
+    onSuccess: (updated) => {
+      updateGroupCaches(queryClient, updated)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.choreReports(updated.id) })
+    },
+  })
 
   const create = async (name: string) => {
     setDialogError(null)
@@ -131,8 +140,8 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     const impactSummary = [
       impact.shared_photo_count && i18n.t('groups.removalImpact.sharedPhotos', { count: impact.shared_photo_count }),
       impact.created_album_count && i18n.t('groups.removalImpact.albums', { count: impact.created_album_count }),
-      impact.created_cleaning_task_count &&
-        i18n.t('groups.removalImpact.cleaningTasks', { count: impact.created_cleaning_task_count }),
+      impact.created_chore_task_count &&
+        i18n.t('groups.removalImpact.choreTasks', { count: impact.created_chore_task_count }),
       impact.created_shopping_item_count &&
         i18n.t('groups.removalImpact.shoppingItems', { count: impact.created_shopping_item_count }),
     ]
@@ -194,6 +203,18 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     }
   }
 
+  const updateTimezone = async (timezone: string) => {
+    if (!selectedGroupId) return false
+    setPageMutationError(null)
+    try {
+      await timezoneMutation.mutateAsync({ groupId: selectedGroupId, timezone })
+      return true
+    } catch (error) {
+      handleGroupError(error, i18n.t('errors.groupTimezone'), onUnauthorized, setPageMutationError)
+      return false
+    }
+  }
+
   const refresh = async () => {
     setPageMutationError(null)
     await groupsQuery.refetch()
@@ -216,7 +237,8 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     groups: groupsQuery.data ?? [],
     selectedGroup: detailQuery.data ?? null,
     loading: groupsQuery.isPending || (selectedGroupId !== null && detailQuery.isPending),
-    submitting: createMutation.isPending || addMemberMutation.isPending || renameMutation.isPending,
+    submitting:
+      createMutation.isPending || addMemberMutation.isPending || renameMutation.isPending || timezoneMutation.isPending,
     showCreateDialog,
     showAddMemberDialog,
     memberCandidates: candidatesQuery.data ?? [],
@@ -226,6 +248,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     dialogError,
     create,
     rename,
+    updateTimezone,
     addMember,
     changeRole,
     removeMember,

@@ -27,18 +27,21 @@ import type {
   ChangePasswordApiV1AuthPasswordPutData,
   ChangePasswordApiV1AuthPasswordPutErrors,
   ChangePasswordApiV1AuthPasswordPutResponses,
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostData,
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors,
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses,
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostData,
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors,
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses,
   CompleteUploadItemApiV1UploadBatchesItemsItemIdCompletePostData,
   CompleteUploadItemApiV1UploadBatchesItemsItemIdCompletePostErrors,
   CompleteUploadItemApiV1UploadBatchesItemsItemIdCompletePostResponses,
   CreateAlbumApiV1AlbumsPostData,
   CreateAlbumApiV1AlbumsPostErrors,
   CreateAlbumApiV1AlbumsPostResponses,
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostData,
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors,
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses,
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostData,
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors,
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses,
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostData,
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors,
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses,
   CreateGroupApiV1GroupsPostData,
   CreateGroupApiV1GroupsPostErrors,
   CreateGroupApiV1GroupsPostResponses,
@@ -60,6 +63,9 @@ import type {
   DeleteAlbumApiV1AlbumsAlbumIdDeleteData,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteErrors,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteResponses,
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteData,
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors,
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteErrors,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses,
@@ -72,9 +78,12 @@ import type {
   GetAlbumApiV1AlbumsAlbumIdGetData,
   GetAlbumApiV1AlbumsAlbumIdGetErrors,
   GetAlbumApiV1AlbumsAlbumIdGetResponses,
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetData,
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors,
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses,
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetData,
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors,
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses,
+  GetChoreTaskApiV1ChoresTasksTaskIdGetData,
+  GetChoreTaskApiV1ChoresTasksTaskIdGetErrors,
+  GetChoreTaskApiV1ChoresTasksTaskIdGetResponses,
   GetCurrentSessionApiV1AuthMeGetData,
   GetCurrentSessionApiV1AuthMeGetResponses,
   GetGroupAdministrationOverviewApiV1GroupsGroupIdAdministrationGetData,
@@ -125,9 +134,12 @@ import type {
   ListAuditEventsApiV1AdminAuditEventsGetData,
   ListAuditEventsApiV1AdminAuditEventsGetErrors,
   ListAuditEventsApiV1AdminAuditEventsGetResponses,
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData,
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors,
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses,
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetData,
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors,
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses,
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetData,
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors,
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses,
   ListGroupAuditEventsApiV1GroupsGroupIdAuditEventsGetData,
   ListGroupAuditEventsApiV1GroupsGroupIdAuditEventsGetErrors,
   ListGroupAuditEventsApiV1GroupsGroupIdAuditEventsGetResponses,
@@ -198,6 +210,9 @@ import type {
   RenameGroupApiV1GroupsGroupIdPatchData,
   RenameGroupApiV1GroupsGroupIdPatchErrors,
   RenameGroupApiV1GroupsGroupIdPatchResponses,
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchData,
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors,
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses,
   RestorePhotoApiV1PhotosPhotoIdRestorePostData,
   RestorePhotoApiV1PhotosPhotoIdRestorePostErrors,
   RestorePhotoApiV1PhotosPhotoIdRestorePostResponses,
@@ -216,12 +231,18 @@ import type {
   UpdateAlbumApiV1AlbumsAlbumIdPatchData,
   UpdateAlbumApiV1AlbumsAlbumIdPatchErrors,
   UpdateAlbumApiV1AlbumsAlbumIdPatchResponses,
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchData,
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors,
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses,
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchData,
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors,
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses,
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchData,
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors,
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses,
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchData,
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchErrors,
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchResponses,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutData,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutErrors,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutResponses,
@@ -695,76 +716,37 @@ export const revokeSessionApiV1AuthSessionsSessionIdDelete = <ThrowOnError exten
   >({ url: '/api/v1/auth/sessions/{session_id}', ...options })
 
 /**
- * List Cleaning Tasks
+ * Delete Chore Category
  */
-export const listCleaningTasksApiV1CleaningGroupsGroupIdTasksGet = <ThrowOnError extends boolean = false>(
-  options: Options<ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData, ThrowOnError>,
+export const deleteChoreCategoryApiV1ChoresCategoriesCategoryIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteData, ThrowOnError>,
 ): RequestResult<
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses,
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors,
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses,
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors,
   ThrowOnError
 > =>
-  (options.client ?? client).get<
-    ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses,
-    ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors,
+  (options.client ?? client).delete<
+    DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses,
+    DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors,
     ThrowOnError
-  >({ url: '/api/v1/cleaning/groups/{group_id}/tasks', ...options })
+  >({ url: '/api/v1/chores/categories/{category_id}', ...options })
 
 /**
- * Create Cleaning Task
+ * Update Chore Category
  */
-export const createCleaningTaskApiV1CleaningGroupsGroupIdTasksPost = <ThrowOnError extends boolean = false>(
-  options: Options<CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostData, ThrowOnError>,
+export const updateChoreCategoryApiV1ChoresCategoriesCategoryIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchData, ThrowOnError>,
 ): RequestResult<
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses,
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).post<
-    CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses,
-    CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors,
-    ThrowOnError
-  >({
-    url: '/api/v1/cleaning/groups/{group_id}/tasks',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-
-/**
- * Get Cleaning Task
- */
-export const getCleaningTaskApiV1CleaningTasksTaskIdGet = <ThrowOnError extends boolean = false>(
-  options: Options<GetCleaningTaskApiV1CleaningTasksTaskIdGetData, ThrowOnError>,
-): RequestResult<
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses,
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).get<
-    GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses,
-    GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors,
-    ThrowOnError
-  >({ url: '/api/v1/cleaning/tasks/{task_id}', ...options })
-
-/**
- * Update Cleaning Task
- */
-export const updateCleaningTaskApiV1CleaningTasksTaskIdPatch = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchData, ThrowOnError>,
-): RequestResult<
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses,
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors,
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses,
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors,
   ThrowOnError
 > =>
   (options.client ?? client).patch<
-    UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses,
-    UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors,
+    UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses,
+    UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors,
     ThrowOnError
   >({
-    url: '/api/v1/cleaning/tasks/{task_id}',
+    url: '/api/v1/chores/categories/{category_id}',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -773,20 +755,178 @@ export const updateCleaningTaskApiV1CleaningTasksTaskIdPatch = <ThrowOnError ext
   })
 
 /**
- * Complete Cleaning Task
+ * List Chore Categories
  */
-export const completeCleaningTaskApiV1CleaningTasksTaskIdCompletionsPost = <ThrowOnError extends boolean = false>(
-  options: Options<CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostData, ThrowOnError>,
+export const listChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetData, ThrowOnError>,
 ): RequestResult<
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses,
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors,
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses,
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses,
+    ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/chores/groups/{group_id}/categories', ...options })
+
+/**
+ * Create Chore Category
+ */
+export const createChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostData, ThrowOnError>,
+): RequestResult<
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses,
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors,
   ThrowOnError
 > =>
   (options.client ?? client).post<
-    CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses,
-    CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors,
+    CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses,
+    CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors,
     ThrowOnError
-  >({ url: '/api/v1/cleaning/tasks/{task_id}/completions', ...options })
+  >({
+    url: '/api/v1/chores/groups/{group_id}/categories',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Reorder Chore Categories
+ */
+export const reorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatch = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchData, ThrowOnError>,
+): RequestResult<
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses,
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses,
+    ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/chores/groups/{group_id}/categories/order',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Get Chore Monthly Report
+ */
+export const getChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetData, ThrowOnError>,
+): RequestResult<
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses,
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses,
+    GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/chores/groups/{group_id}/reports/monthly', ...options })
+
+/**
+ * List Chore Tasks
+ */
+export const listChoreTasksApiV1ChoresGroupsGroupIdTasksGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetData, ThrowOnError>,
+): RequestResult<
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses,
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses,
+    ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/chores/groups/{group_id}/tasks', ...options })
+
+/**
+ * Create Chore Task
+ */
+export const createChoreTaskApiV1ChoresGroupsGroupIdTasksPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostData, ThrowOnError>,
+): RequestResult<
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses,
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses,
+    CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/chores/groups/{group_id}/tasks',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Get Chore Task
+ */
+export const getChoreTaskApiV1ChoresTasksTaskIdGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetChoreTaskApiV1ChoresTasksTaskIdGetData, ThrowOnError>,
+): RequestResult<
+  GetChoreTaskApiV1ChoresTasksTaskIdGetResponses,
+  GetChoreTaskApiV1ChoresTasksTaskIdGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetChoreTaskApiV1ChoresTasksTaskIdGetResponses,
+    GetChoreTaskApiV1ChoresTasksTaskIdGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/chores/tasks/{task_id}', ...options })
+
+/**
+ * Update Chore Task
+ */
+export const updateChoreTaskApiV1ChoresTasksTaskIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateChoreTaskApiV1ChoresTasksTaskIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses,
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses,
+    UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/chores/tasks/{task_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Complete Chore Task
+ */
+export const completeChoreTaskApiV1ChoresTasksTaskIdCompletionsPost = <ThrowOnError extends boolean = false>(
+  options: Options<CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostData, ThrowOnError>,
+): RequestResult<
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses,
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses,
+    CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors,
+    ThrowOnError
+  >({ url: '/api/v1/chores/tasks/{task_id}/completions', ...options })
 
 /**
  * List Groups
@@ -1008,6 +1148,29 @@ export const inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost = <Thr
     ThrowOnError
   >({
     url: '/api/v1/groups/{group_id}/membership-invitations',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Update Group Settings
+ */
+export const updateGroupSettingsApiV1GroupsGroupIdSettingsPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
+    UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/groups/{group_id}/settings',
     ...options,
     headers: {
       'Content-Type': 'application/json',

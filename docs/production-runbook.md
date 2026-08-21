@@ -160,6 +160,12 @@ sudo systemd-run --wait --pipe --collect \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
 
+The current resettable schema chain has three revisions, ending at `20260821_03_household`. The household revision
+contains the complete current chore schema. The upgrade contains schema DDL only; it does not create users, groups,
+categories, tasks, or completion history. Run `create_user` and any other bootstrap commands separately. Development
+reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
+command against the production-like service or volume.
+
 Create the initial administrator with a PTY so password input is hidden:
 
 ```bash
@@ -232,7 +238,7 @@ URLs in `/etc/family-hub/backend.env` before starting units:
 | Photo integrity | `MONITORING_PING_URL_INTEGRITY` |
 | Trash purge | `MONITORING_PING_URL_TRASH_PURGE` |
 | Web Push delivery | `MONITORING_PING_URL_NOTIFICATIONS` |
-| Cleaning due | `MONITORING_PING_URL_CLEANING_NOTIFICATIONS` |
+| Chore due | `MONITORING_PING_URL_CHORE_NOTIFICATIONS` |
 | Secondary storage backup | `MONITORING_PING_URL_SECONDARY_BACKUP` |
 
 Units POST `/start`, the base URL on success, and `/fail` on failure. Unconfigured values are no-ops. Never record actual
@@ -320,26 +326,25 @@ sudo systemctl list-timers 'family-hub-*' --all --no-pager
 Do not enable notification timers before VAPID configuration and real-device validation. Verify that
 `PUSH_ALLOWED_ENDPOINT_HOSTS` contains only verified providers and that the per-user subscription limit is intended.
 Enable notifications from standalone iPhone Family Hub, trigger an event from another user, manually run the delivery
-service, and verify device display, click navigation, and non-secret journal output. After cleaning-due notification is also
+service, and verify device display, click navigation, and non-secret journal output. After chore-due notification is also
 verified manually, enable both timers:
 
 ```bash
 sudo systemctl start family-hub-notifications.service
-sudo systemctl start family-hub-cleaning-notifications.service
-sudo systemctl enable --now family-hub-notifications.timer family-hub-cleaning-notifications.timer
+sudo systemctl start family-hub-chore-notifications.service
+sudo systemctl enable --now family-hub-notifications.timer family-hub-chore-notifications.timer
 sudo systemctl list-timers 'family-hub-*notifications*' --all --no-pager
 ```
 
-## One-time full data reset and migration rebuild
+## One-time development database reset and migration rebuild
 
-The following procedure is a one-time rebuild for environments that contain only disposable dummy data. It resets the
-development and production-like databases and all primary, derivative, and backup data so the new five-revision Alembic
-baseline can be created consistently. Do not use it after real family data is stored; use database and storage restoration
-instead.
+The following procedure rebuilds the development database for disposable dummy data. It does not reset the production-like
+database and does not replace the separate production reset procedure below. Do not use it after real family data is stored;
+use database and storage restoration instead.
 
 Before deleting anything:
 
-- Stop the development backend, production backend, workers, and maintenance timers.
+- Stop the development backend and any development workers.
 - Verify development PostgreSQL is `127.0.0.1:15432` and production PostgreSQL is `127.0.0.1:5433`.
 - Verify the development Compose volume and `family-hub-production-postgres-data` are separate volumes.
 - Verify each `PHOTO_STORAGE_ROOT`, its `.photo-storage-marker`, each derivative root, and the separate backup marker.
@@ -354,7 +359,15 @@ docker compose down --volumes
 docker compose up --detach --wait db
 ```
 
-Reset the production-like database only after confirming the named external volume:
+Apply the latest schema and create development bootstrap data:
+
+```bash
+cd backend
+uv run --locked alembic upgrade head
+uv run --locked python -m app.commands.create_user --username owner --system-role admin
+```
+
+Reset the production-like database only as a separate, explicitly approved operation after confirming the named external volume:
 
 ```bash
 sudo systemctl stop family-hub-backend.service
@@ -365,14 +378,20 @@ sudo docker volume create family-hub-production-postgres-data
 sudo systemctl start family-hub-database.service
 ```
 
-For each primary photo root, remove only the contents of `originals/`, `incoming/`, and `database-backups/`. For each
-derivative root, remove only the contents of `thumbnails/` and `incoming/`. For the separate backup root, remove only its
-snapshot and database-backup contents. Preserve each root directory, storage marker, and backup marker. Resolve and review
-the absolute paths before deletion; never use an unset or broad environment variable as a deletion target.
+The production-like database and storage reset is a separate operation. Do not continue with its database, photo-storage,
+derivative, or backup deletion commands as part of the development reset above. When that operation is approved, repeat the
+schema, bootstrap, and storage steps against the production-like service and its explicitly verified paths.
 
-Recreate the empty directories, apply the new migrations to both databases, and recreate the initial administrator in each
-environment. Run the photo-integrity command against the empty primary storage and verify that the first test upload creates
-one original, one sidecar, and one thumbnail. After this rebuild, use backup restoration instead of this reset procedure.
+For the development storage reset only, remove the contents of each development primary photo root's `originals/`,
+`incoming/`, and `database-backups/`. For each development derivative root, remove only the contents of `thumbnails/` and
+`incoming/`. For the separate development backup root, remove only its snapshot and database-backup contents. Preserve each
+root directory, storage marker, and backup marker. Resolve and review the absolute paths before deletion; never use an unset
+or broad environment variable as a deletion target.
+
+Recreate only the development directories that are intentionally part of the local reset, apply the new migrations to the
+development database, and recreate its initial administrator. Run the photo-integrity command against the empty development
+primary storage and verify that the first test upload creates one original, one sidecar, and one thumbnail. After a real-data
+rebuild, use backup restoration instead of this reset procedure.
 
 ## Release update
 

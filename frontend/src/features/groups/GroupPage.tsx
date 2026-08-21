@@ -111,6 +111,12 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                   {t('common.save')}
                 </button>
               </form>
+              <GroupTimezoneForm
+                key={`${selectedGroup.id}:${selectedGroup.timezone}`}
+                timezone={selectedGroup.timezone}
+                submitting={state.submitting}
+                updateTimezone={state.updateTimezone}
+              />
               {administrationQuery.error && !isUnauthorizedError(administrationQuery.error) && (
                 <PageMessage>{t('groups.administrationLoadFailed')}</PageMessage>
               )}
@@ -125,8 +131,8 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                     <dd>{administrationQuery.data.shared_photo_count}</dd>
                   </div>
                   <div>
-                    <dt>{t('cleaning.title')}</dt>
-                    <dd>{administrationQuery.data.cleaning_task_count}</dd>
+                    <dt>{t('chores.title')}</dt>
+                    <dd>{administrationQuery.data.chore_task_count}</dd>
                   </div>
                   <div>
                     <dt>{t('shopping.title')}</dt>
@@ -339,3 +345,55 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
     </>
   )
 }
+
+function GroupTimezoneForm({
+  timezone,
+  submitting,
+  updateTimezone,
+}: {
+  timezone: string
+  submitting: boolean
+  updateTimezone: (timezone: string) => Promise<boolean>
+}) {
+  const { t } = useTranslation()
+  const [value, setValue] = useState(timezone)
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    await updateTimezone(value)
+  }
+
+  return (
+    <form className="group-form" onSubmit={(event) => void submit(event)}>
+      <label>
+        {t('groups.timezone')}
+        <select
+          className="form-control form-control--subtle"
+          value={value}
+          disabled={submitting}
+          onChange={(event) => setValue(event.target.value)}
+        >
+          {TIMEZONE_OPTIONS.map((option) => (
+            <option value={option} key={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button className="success-button icon-button" type="submit" disabled={value === timezone || submitting}>
+        <SaveIcon />
+        {t('common.save')}
+      </button>
+    </form>
+  )
+}
+
+const TIMEZONE_OPTIONS = [
+  'Asia/Tokyo',
+  'Australia/Sydney',
+  'Europe/Berlin',
+  'Europe/London',
+  'America/New_York',
+  'America/Los_Angeles',
+  'UTC',
+]

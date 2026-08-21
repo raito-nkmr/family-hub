@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, cleaning,
+This document defines the PostgreSQL schema, constraints, indexes, and migration policy for Family Hub photos, chores,
 and shopping. Image files are stored on the internal photo-storage HDD; PostgreSQL stores metadata required for search and
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema is represented by a short linear baseline chain because the development and pre-production
-databases are reset when the baseline is rebuilt. The chain is divided by feature and dependency boundaries so each
-revision remains readable. Future approved schema changes should be added as new migrations. Tables for future features
-such as person detection are not created until the feature is approved and its requirements are known.
+The current application schema starts with a short three-revision linear baseline because the development and pre-production
+databases are reset when the baseline is rebuilt. Subsequent approved schema changes extend that chain. Revisions are
+divided by dependency boundaries so each remains readable. Tables for future features such as person detection are not
+created until the feature is approved and its requirements are known.
 
 ```text
 family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
@@ -21,7 +21,7 @@ users 1 ───── 0..N photo_favorites N..1 ───── 1 photos
 photos 1 ───── 0..N photo_activity_events 1 ───── 1..N photo_activity_event_groups N..1 ───── 1 family_groups
 users 1 ───── 0..1 photo_activity_states
 users 1 ───── 0..N family_group_members N..1 ───── 1 family_groups
-family_groups 1 ───── 0..N cleaning_tasks 1 ───── 0..N cleaning_completions
+family_groups 1 ───── 0..N chore_tasks 1 ───── 0..N chore_completions
 family_groups 1 ───── 0..N shopping_items
 users 1 ───── 0..N upload_batches 1 ───── 1..N upload_items N..0 ───── 0..1 photos
 upload_batches 1 ───── 0..N upload_batch_group_shares N..1 ───── 1 family_groups
@@ -120,20 +120,43 @@ Stores group-admin invitations to existing active users, including group, invite
 `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and user is allowed.
 Acceptance creates membership in the same transaction; group deletion cascades.
 
-## Cleaning and shopping tables
+## Chore and shopping tables
 
-### `cleaning_tasks`
+### `chore_tasks`
 
-Stores group-scoped cleaning locations and day intervals. `interval_days` is 1–3650, `is_active` defaults to true, and
-creator and timestamps are retained. Index `(group_id, is_active)` as `ix_cleaning_tasks_group_id_is_active`. Do not store a
+Stores group-scoped chore locations, a required reference to a group-owned chore category, and day intervals.
+`interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index `(group_id,
+is_active)` as `ix_chore_tasks_group_id_is_active` and `category_id` as `ix_chore_tasks_category_id`. Do not store a
 countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
-state change and preserves history.
+state change and preserves history. Category filtering is performed by the authenticated client after loading the group
+task and category lists.
 
-### `cleaning_completions`
+### `chore_categories`
 
-Append-only completion history with task, completing user, and server-generated UTC time. Index
-`(task_id, completed_at DESC, id DESC)` as `ix_cleaning_completions_task_id_completed_at`. Concurrent completions are both
-retained; the newest timestamp and UUID determine the next due time. Editing and deleting history are out of scope.
+Stores group-shared category names and their non-negative `sort_order`. Names are trimmed, limited to 40 characters, and
+unique within a group without regard to case. Every group member may create, rename, reorder, and delete an unused category.
+Categories referenced by a chore task cannot be deleted. The `(group_id, sort_order, id)` index supports the shared
+display order; ties are resolved by normalized name and ID for legacy rows.
+
+### `chore_completions`
+
+Append-only completion history with task, completing user, and server-generated UTC time. `task_name_snapshot` and
+`category_name_snapshot` preserve the labels shown in historical reports. `category_id` is nullable and uses
+`ON DELETE SET NULL`, so deleting a category does not remove report history. Index `(completed_at, task_id)` as
+`ix_chore_completions_completed_at_task_id` for monthly ranges, in addition to
+`(task_id, completed_at DESC, id DESC)` as `ix_chore_completions_task_id_completed_at`. Concurrent completions are
+both retained; the newest timestamp and UUID determine the next due time. Editing and deleting history are out of scope.
+
+### `family_groups.timezone`
+
+Stores the group's IANA time-zone name for calendar boundaries in monthly chore reports. New groups use `Asia/Tokyo`.
+The API validates names with Python `zoneinfo`, and only group administrators may change the setting.
+
+### Chore monthly reports
+
+The monthly report is calculated directly from `chore_completions`; no report or cache table is stored. The API converts
+the requested local month to a UTC half-open range, then aggregates completion count, unique task count, daily counts,
+category counts, member rankings, and task/member counts. Empty months return the same response shape with zero counts.
 
 ### `shopping_items`
 
@@ -310,7 +333,7 @@ and time. It deliberately has no foreign keys to actors or groups so audit rows 
 `push_subscriptions` associates an endpoint and encryption keys with a user and login session. A composite foreign key to
 `(user_sessions.id, user_sessions.user_id)` prevents a subscription from pairing one user with another user's session.
 `notification_preferences`
-stores photo-sharing, cleaning-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
+stores photo-sharing, chore-due, and shopping-added preferences per user. `notification_outbox` has a unique recipient
 and deduplication key and is created in the same transaction as the business operation. `claimed_at` and `claim_token` track
 worker ownership. `notification_deliveries` uses the outbox/subscription pair as a composite key and stores per-device
 attempt count, status, completion time, and a non-secret error code.
@@ -320,21 +343,21 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history was reset and rebuilt as the following immutable baseline chain:
+The development and pre-production history is reset and rebuilt as the following immutable baseline chain:
 
-- `20260820_01` — extensions, identity, and family groups
-- `20260820_02` — photos, activity, and uploads
-- `20260820_03` — albums
-- `20260820_04` — cleaning and shopping
-- `20260820_05` — notifications, maintenance, and audit
+- `20260821_01_core` — extensions, identity, and family groups
+- `20260821_02_media` — photos, activity, uploads, and albums
+- `20260821_03_household` — complete chore, shopping, notifications, maintenance, and audit schema
 
-The final constraints and indexes, including forced password changes, lifecycle invariants, and required positive photo
-dimensions, are included in the baseline chain. Never rewrite these revisions after the rebuild; future approved schema
-changes must be added as new migrations.
+The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
+dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
+and category ordering, are included directly in the current chain.
+Never rewrite these revisions after the rebuild; future approved schema changes must be added as new migrations.
 
-Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
-with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with
-application startup `create_all()`; every schema change must be an Alembic migration that can be applied and rolled back in
-a controlled unit.
+Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
+update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate
+bootstrap or management commands. Development and pre-production resets are separate operations; do not use the
+development reset procedure against a real-data environment. Do not create schema implicitly with application startup
+`create_all()`; every schema change must be an Alembic migration that can be applied and rolled back in a controlled unit.
 
 日本語版: [database-design.ja.md](./database-design.ja.md)

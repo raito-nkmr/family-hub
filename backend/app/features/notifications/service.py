@@ -18,7 +18,7 @@ from app.features.notifications.schemas import (
 
 DEFAULT_PREFERENCES = {
     NotificationType.PHOTO_SHARED: True,
-    NotificationType.CLEANING_DUE: True,
+    NotificationType.CHORE_DUE: True,
     NotificationType.SHOPPING_ADDED: False,
 }
 

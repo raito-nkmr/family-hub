@@ -16,9 +16,9 @@ def test_enqueue_group_notification_locks_groups_before_reading_members() -> Non
     enqueue_group_notification(
         session,
         {group_id},
-        NotificationType.CLEANING_DUE,
-        "cleaning:task:due",
-        {"url": "/cleaning"},
+        NotificationType.CHORE_DUE,
+        "chore:task:due",
+        {"url": "/chores"},
     )
 
     lock_statement = session.scalars.call_args.args[0]

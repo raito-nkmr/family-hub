@@ -27,7 +27,7 @@ export function HomeRoute({
       recentPhotos={home.recentPhotos}
       unseenPhotoCount={photoActivity.unseenCount}
       groups={home.groups}
-      cleaningTasks={home.cleaningTasks}
+      choreTasks={home.choreTasks}
       shoppingItems={home.shoppingItems}
       loading={home.loading}
       error={home.error}

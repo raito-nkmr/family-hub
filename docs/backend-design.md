@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the incremental FastAPI and PostgreSQL backend for Family Hub photos, cleaning, and shopping. It
+This document defines the incremental FastAPI and PostgreSQL backend for Family Hub photos, chores, and shopping. It
 describes the MVP architecture, responsibilities, dependency direction, API boundaries, data model, file storage,
 safety, and testing. See [`product-brief.md`](./product-brief.md) for product scope and
 [`database-design.md`](./database-design.md) for the detailed schema and migration policy.
@@ -32,7 +32,7 @@ backend/
 │   └── features/
 │       ├── albums/
 │       ├── auth/
-│       ├── cleaning/
+│       ├── chores/
 │       ├── groups/
 │       ├── health/
 │       ├── maintenance/
@@ -64,7 +64,10 @@ for feature logic.
 
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
-function or registry for Alembic.
+function or registry for Alembic. The current Alembic chain consists of three explicit schema-only baseline revisions
+(`core`, `media`, and `household`). The `household` baseline contains the complete current chore schema, including
+categories, completion snapshots, report settings, and category ordering. Migrations must not write application data,
+seed rows, or perform backfills.
 
 ### `features.health`
 
@@ -99,12 +102,12 @@ must be active and not already members. A database unique constraint and pre-che
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership, invitations, albums and relations, cleaning history, shopping items,
+aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items,
 photo shares, activity-group relations, and upload-batch shares. Photos remain; affected sidecars are synchronized after commit.
 
-Membership removal and photo, upload, album, cleaning, and shopping operations that depend on membership are serialized by
+Membership removal and photo, upload, album, chore, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
-albums, cleaning tasks, and shopping items in that order.
+albums, chore tasks, and shopping items in that order.
 Upload batch creation locks the requested groups before checking membership. Notification fan-out locks all target groups in
 stable ID order before reading members, preventing membership removal from racing the read-and-enqueue operation.
 
@@ -112,12 +115,17 @@ Mutations that can change the last active system or group administrator use one 
 lock is acquired before authorization checks and held through the decision and commit so system-admin status changes and
 group-admin membership changes cannot leave an administrator invariant broken by a concurrent request.
 
-### `features.cleaning`
+### `features.chores`
 
-Owns group-scoped cleaning tasks, day intervals, and append-only completion history. Members may list and complete active
-tasks; group administrators may create, edit, pause, and resume them. Mutations lock the group, recheck membership, then lock
-the task. Completion time always comes from the server's current UTC time. Use PostgreSQL `DISTINCT ON` to return the latest
-completion per task without loading all history. Non-members receive `404`.
+Owns group-scoped chore categories, tasks, day intervals, and append-only completion history. Every group member may
+create, rename, and delete unused categories; members may list and complete active tasks; group administrators may create,
+edit, categorize, pause, and resume them. Category order is group-shared and updated through a complete ordered ID list.
+Mutations lock the group, recheck membership, then lock the category or task.
+Completion time always comes from the server's current UTC time. Completion rows store task and category name snapshots,
+while their nullable category reference uses `ON DELETE SET NULL`. The monthly report endpoint aggregates completion rows
+in SQL after converting the UTC range to the group's IANA time zone. It returns daily, category, member, and task/member
+breakdowns without a report table; non-members receive `404`. Group administrators may update the group time zone, which
+defaults to `Asia/Tokyo`.
 
 ### `features.shopping`
 
@@ -158,7 +166,7 @@ snapshots, and trash purge run only as management commands and systemd timers, n
 
 Notifications own session-bound Web Push subscriptions, preferences, and outbox. The database composite foreign key keeps
 the stored subscription user and session owner identical. Photo sharing and shopping additions create
-outbox entries in the same transaction as the business change; cleaning due notifications are enqueued periodically. Workers
+outbox entries in the same transaction as the business change; chore due notifications are enqueued periodically. Workers
 exclude expired sessions, claim with timestamps and tokens, requeue stale claims, and retry only failed devices. Endpoints are
 HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository. An endpoint hash already owned
 by another user is rejected with `409 Conflict` and the `push_subscription_endpoint_conflict` error code; the subscription
@@ -426,8 +434,9 @@ serialization.
 ### Services
 
 Control Storage and Session boundaries to test success and cleanup after duplicate, commit, and finalization failures. Cover
-cleaning authorization, admin roles, due calculation, pause, completion user, shopping ordering, purchaser, restore, and
-concurrent conflicts. Use real PostgreSQL for group-lock serialization, all Alembic revisions, notification claim and stale
+chore authorization, admin roles, due calculation, pause, completion user, snapshots, monthly report aggregation,
+time-zone boundaries, shopping ordering, purchaser, restore, and concurrent conflicts. Use real PostgreSQL for group-lock
+serialization, all Alembic revisions, notification claim and stale
 recovery, deduplication, per-device retries, and maintenance terminal states.
 
 ### Routers and migrations

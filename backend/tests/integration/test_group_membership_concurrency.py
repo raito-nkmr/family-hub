@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.features.auth.models import SystemRole, User
 from app.features.auth.public import UserDirectory
-from app.features.cleaning.models import CleaningTask
-from app.features.cleaning.service import CleaningNotFoundError, CleaningService
+from app.features.chores.models import ChoreCategory, ChoreTask
+from app.features.chores.service import ChoreNotFoundError, ChoreService
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
 from app.features.groups.service import GroupMembershipInvitationError, GroupService
 from app.features.notifications.models import NotificationType
@@ -137,7 +137,7 @@ def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
         engine.dispose()
 
 
-@pytest.mark.parametrize("resource_kind", ["shopping", "cleaning"])
+@pytest.mark.parametrize("resource_kind", ["shopping", "chore"])
 def test_member_action_cannot_commit_after_membership_removal(resource_kind: str) -> None:
     assert TEST_DATABASE_URL is not None
     engine = create_engine(TEST_DATABASE_URL, connect_args={"options": "-c timezone=UTC"})
@@ -191,11 +191,23 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                 )
             )
         else:
+            category_id = uuid4()
             session.add(
-                CleaningTask(
+                ChoreCategory(
+                    id=category_id,
+                    group_id=group_id,
+                    name="浴室",
+                    sort_order=0,
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
+                )
+            )
+            session.add(
+                ChoreTask(
                     id=resource_id,
                     group_id=group_id,
                     name="Kitchen",
+                    category_id=category_id,
                     interval_days=1,
                     is_active=True,
                     created_by_user_id=user_id,
@@ -224,8 +236,8 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                 with pytest.raises(ShoppingNotFoundError):
                     ShoppingService(session, UserDirectory(session)).purchase_item(resource_id, user_id)
             else:
-                with pytest.raises(CleaningNotFoundError):
-                    CleaningService(session, UserDirectory(session)).complete_task(resource_id, user_id)
+                with pytest.raises(ChoreNotFoundError):
+                    ChoreService(session, UserDirectory(session)).complete_task(resource_id, user_id)
 
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:

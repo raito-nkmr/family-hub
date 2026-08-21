@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
-import type { CleaningTask } from '../cleaning/api'
+import type { ChoreTask } from '../chores/api'
 import type { FamilyGroup } from '../groups/api'
 import type { ShoppingItem } from '../shopping/api'
 import { HomePage } from './HomePage'
@@ -15,12 +15,14 @@ const group: FamilyGroup = {
   updated_at: '2026-07-14T00:00:00Z',
   current_user_role: 'admin',
   member_count: 2,
+  timezone: 'Asia/Tokyo',
 }
 
-const task: CleaningTask = {
+const task: ChoreTask = {
   id: 'task-id',
   group_id: group.id,
   name: 'お風呂',
+  category_id: 'chore-id',
   interval_days: 1,
   is_active: true,
   created_by_user_id: 'user-id',
@@ -44,14 +46,14 @@ const item: ShoppingItem = {
 }
 
 describe('HomePage', () => {
-  it('summarizes cleaning and shopping and opens their apps', () => {
+  it('summarizes chore and shopping and opens their apps', () => {
     render(
       <MemoryRouter>
         <HomePage
           recentPhotos={[]}
           unseenPhotoCount={2}
           groups={[group]}
-          cleaningTasks={[{ group, task }]}
+          choreTasks={[{ group, task }]}
           shoppingItems={[{ group, item }]}
           loading={false}
           error={null}
@@ -67,7 +69,7 @@ describe('HomePage', () => {
     expect(screen.getByText('未読の更新 2件')).toBeInTheDocument()
     expect(screen.getByText('お風呂')).toBeInTheDocument()
     expect(screen.getByText('牛乳')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '掃除を開く' })).toHaveAttribute('href', '/cleaning')
+    expect(screen.getByRole('link', { name: '家事を開く' })).toHaveAttribute('href', '/chores')
     expect(screen.getByRole('link', { name: '買い物リストを開く' })).toHaveAttribute('href', '/shopping')
   })
 
@@ -81,7 +83,7 @@ describe('HomePage', () => {
           recentPhotos={[]}
           unseenPhotoCount={0}
           groups={[]}
-          cleaningTasks={[]}
+          choreTasks={[]}
           shoppingItems={[]}
           loading={false}
           error={null}

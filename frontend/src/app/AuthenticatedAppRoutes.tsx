@@ -11,8 +11,14 @@ const AccountPage = lazy(() =>
   import('../features/auth/AccountPage').then((module) => ({ default: module.AccountPage })),
 )
 const AlbumPage = lazy(() => import('../features/albums/AlbumPage').then((module) => ({ default: module.AlbumPage })))
-const CleaningPage = lazy(() =>
-  import('../features/cleaning/CleaningPage').then((module) => ({ default: module.CleaningPage })),
+const ChoresPage = lazy(() =>
+  import('../features/chores/ChoresPage').then((module) => ({ default: module.ChoresPage })),
+)
+const ChoreDailyPage = lazy(() =>
+  import('../features/chores/ChoreDailyPage').then((module) => ({ default: module.ChoreDailyPage })),
+)
+const ChoreReportPage = lazy(() =>
+  import('../features/chores/ChoreReportPage').then((module) => ({ default: module.ChoreReportPage })),
 )
 const GroupPage = lazy(() => import('../features/groups/GroupPage').then((module) => ({ default: module.GroupPage })))
 const HomeRoute = lazy(() => import('../features/home/HomeRoute').then((module) => ({ default: module.HomeRoute })))
@@ -87,7 +93,9 @@ export function AuthenticatedAppRoutes({
           <PhotoTrashPage onUnauthorized={onUnauthorized} onLibraryChanged={() => void photoDashboard.refresh()} />
         }
       />
-      <Route path={appPaths.cleaning} element={<CleaningPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths.chores} element={<ChoresPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths['chores-daily']} element={<ChoreDailyPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths['chores-reports']} element={<ChoreReportPage onUnauthorized={onUnauthorized} />} />
       <Route path={appPaths.shopping} element={<ShoppingPage onUnauthorized={onUnauthorized} />} />
       <Route
         path={appPaths.groups}

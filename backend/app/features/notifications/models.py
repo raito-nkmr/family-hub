@@ -25,7 +25,7 @@ from app.database.base import Base
 
 class NotificationType(StrEnum):
     PHOTO_SHARED = "photo_shared"
-    CLEANING_DUE = "cleaning_due"
+    CHORE_DUE = "chore_due"
     SHOPPING_ADDED = "shopping_added"
 
 
@@ -84,7 +84,7 @@ class NotificationPreference(Base):
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "notification_type", name="pk_notification_preferences"),
         CheckConstraint(
-            "notification_type IN ('photo_shared', 'cleaning_due', 'shopping_added')",
+            "notification_type IN ('photo_shared', 'chore_due', 'shopping_added')",
             name="ck_notification_preferences_type",
         ),
     )
@@ -105,7 +105,7 @@ class NotificationOutbox(Base):
         PrimaryKeyConstraint("id", name="pk_notification_outbox"),
         UniqueConstraint("recipient_user_id", "deduplication_key", name="uq_notification_outbox_recipient_dedupe"),
         CheckConstraint(
-            "notification_type IN ('photo_shared', 'cleaning_due', 'shopping_added')",
+            "notification_type IN ('photo_shared', 'chore_due', 'shopping_added')",
             name="ck_notification_outbox_type",
         ),
         CheckConstraint(

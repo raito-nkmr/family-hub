@@ -20,7 +20,7 @@ describe('NotificationSettings', () => {
       },
       preferences: [
         { notification_type: 'photo_shared', enabled: true },
-        { notification_type: 'cleaning_due', enabled: true },
+        { notification_type: 'chore_due', enabled: true },
         { notification_type: 'shopping_added', enabled: false },
       ],
       permission: 'granted',
