@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -14,15 +15,12 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260820_06"]
-    assert scripts.get_bases() == ["20260820_01"]
+    assert scripts.get_heads() == ["20260821_03_household"]
+    assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260820_06",
-        "20260820_05",
-        "20260820_04",
-        "20260820_03",
-        "20260820_02",
-        "20260820_01",
+        "20260821_03_household",
+        "20260821_02_media",
+        "20260821_01_core",
     ]
 
 
@@ -47,7 +45,10 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "height INTEGER NOT NULL" in sql
     assert "effective_captured_at TIMESTAMP WITH TIME ZONE" in sql
     assert "ix_photos_sort_date_id" in sql
-    assert "UPDATE photos AS photos" in sql
+    assert "effective_captured_at TIMESTAMP WITH TIME ZONE NOT NULL" in sql
+    assert "category VARCHAR(16) NOT NULL" in sql
+    assert "ck_cleaning_tasks_category" in sql
+    assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
 def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_path, monkeypatch, capsys) -> None:

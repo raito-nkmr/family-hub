@@ -1,8 +1,8 @@
-"""Create extensions, identity, and family-group schema.
+"""Create the core identity and family-group schema.
 
-Revision ID: 20260820_01
+Revision ID: 20260821_01_core
 Revises:
-Create Date: 2026-08-20
+Create Date: 2026-08-21
 
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260820_01"
+revision: str = "20260821_01_core"
 down_revision: str | None = None
 branch_labels: str | None = None
 depends_on: str | None = None
