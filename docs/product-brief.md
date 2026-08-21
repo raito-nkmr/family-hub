@@ -28,7 +28,8 @@ upload is finalized. Lists and albums serve thumbnails; the enlarged modal serve
 limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
 
 Original image previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
-photo does not download it again. The cache is released when the authenticated session ends; API responses remain non-cacheable.
+photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
+cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
 group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
