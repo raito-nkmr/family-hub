@@ -14,6 +14,9 @@ const AlbumPage = lazy(() => import('../features/albums/AlbumPage').then((module
 const CleaningPage = lazy(() =>
   import('../features/cleaning/CleaningPage').then((module) => ({ default: module.CleaningPage })),
 )
+const CleaningDailyPage = lazy(() =>
+  import('../features/cleaning/CleaningDailyPage').then((module) => ({ default: module.CleaningDailyPage })),
+)
 const CleaningReportPage = lazy(() =>
   import('../features/cleaning/CleaningReportPage').then((module) => ({ default: module.CleaningReportPage })),
 )
@@ -91,6 +94,7 @@ export function AuthenticatedAppRoutes({
         }
       />
       <Route path={appPaths.cleaning} element={<CleaningPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths['cleaning-daily']} element={<CleaningDailyPage onUnauthorized={onUnauthorized} />} />
       <Route path={appPaths['cleaning-reports']} element={<CleaningReportPage onUnauthorized={onUnauthorized} />} />
       <Route path={appPaths.shopping} element={<ShoppingPage onUnauthorized={onUnauthorized} />} />
       <Route

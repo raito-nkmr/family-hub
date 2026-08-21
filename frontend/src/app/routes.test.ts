@@ -12,5 +12,6 @@ describe('app routes', () => {
 
   it('keeps cleaning navigation active on the report subpage', () => {
     expect(getAppView('/cleaning/reports')).toBe('cleaning-reports')
+    expect(getAppView('/cleaning/daily')).toBe('cleaning-daily')
   })
 })

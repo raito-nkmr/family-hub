@@ -668,6 +668,89 @@
   font-size: 1.4rem;
 }
 
+.cleaning-report-daily-page__heading {
+  align-items: center;
+}
+
+.cleaning-report-view-switcher {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.cleaning-report-view-switcher button {
+  min-height: var(--control-height-compact);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.cleaning-report-view-switcher button.is-active {
+  color: var(--color-action-filled-text);
+  background: var(--color-action-filled-bg);
+  border-color: var(--color-action-filled-bg);
+}
+
+.cleaning-report-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.cleaning-report-calendar__weekday {
+  padding: 0.25rem 0.2rem;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-align: center;
+}
+
+.cleaning-report-calendar__cell {
+  display: flex;
+  min-height: clamp(3.6rem, 8vw, 5.5rem);
+  padding: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  justify-content: space-between;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+}
+
+.cleaning-report-calendar__cell > span {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.cleaning-report-calendar__cell > strong {
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.cleaning-report-calendar__cell--empty {
+  visibility: hidden;
+}
+
+.cleaning-report-calendar__cell--level-1 {
+  background: color-mix(in srgb, var(--cleaning-report-bar) 20%, var(--color-bg-subtle));
+}
+
+.cleaning-report-calendar__cell--level-2 {
+  background: color-mix(in srgb, var(--cleaning-report-bar) 40%, var(--color-bg-subtle));
+}
+
+.cleaning-report-calendar__cell--level-3 {
+  background: color-mix(in srgb, var(--cleaning-report-bar) 60%, var(--color-bg-subtle));
+}
+
+.cleaning-report-calendar__cell--level-4 {
+  color: var(--color-text-on-emphasis);
+  background: var(--cleaning-report-bar);
+}
+
+.cleaning-report-calendar__cell--level-4 > span {
+  color: inherit;
+  opacity: 0.8;
+}
+
 .cleaning-report-section {
   margin-top: 2.25rem;
   padding: clamp(1rem, 3vw, 1.5rem);
@@ -871,6 +954,33 @@
     min-width: 0;
     flex: 1;
     font-size: 1.25rem;
+  }
+
+  .cleaning-report-daily-page__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cleaning-report-view-switcher {
+    width: 100%;
+  }
+
+  .cleaning-report-view-switcher button {
+    flex: 1;
+  }
+
+  .cleaning-report-calendar {
+    gap: 0.2rem;
+  }
+
+  .cleaning-report-calendar__cell {
+    min-height: 3.5rem;
+    padding: 0.35rem;
+    border-radius: 7px;
+  }
+
+  .cleaning-report-calendar__cell > strong {
+    font-size: 0.95rem;
   }
 
   .cleaning-report-summary {

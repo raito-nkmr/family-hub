@@ -1,7 +1,8 @@
 import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router'
 import { appPaths } from '../../app/routes'
-import { AddTaskIcon, CleaningIcon, EditIcon, UndoIcon } from '../../shared/ui/icons'
+import { AddTaskIcon, CategoryIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -19,6 +20,7 @@ const ALL_CATEGORIES = 'all'
 
 export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
   const { t } = useTranslation()
+  const location = useLocation()
   const state = useCleaning({ onUnauthorized })
   const [now, setNow] = useState(() => new Date())
   const [swipeOpenTaskId, setSwipeOpenTaskId] = useState<string | null>(null)
@@ -64,9 +66,9 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
             <p>{t('cleaning.description')}</p>
           </div>
           <div className="cleaning-hero__actions">
-            <a className="secondary-button" href={appPaths['cleaning-reports']}>
+            <Link className="secondary-button" to={{ pathname: appPaths['cleaning-reports'], search: location.search }}>
               {t('cleaning.reportLink')}
-            </a>
+            </Link>
             {isAdmin && (
               <button
                 className="primary-button icon-button"
@@ -124,7 +126,7 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
                 disabled={state.submitting}
                 onClick={state.openCategoryDialog}
               >
-                <EditIcon />
+                <CategoryIcon />
                 {t('cleaning.categoryManage')}
               </button>
             </div>
@@ -151,14 +153,14 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
           ) : state.groups.length === 0 ? (
             <EmptyState
               className="cleaning-empty-state"
-              icon={<CleaningIcon />}
+              icon={<TaskAltIcon />}
               title={t('cleaning.groupNeeded')}
               description={t('cleaning.groupNeededHelp')}
             />
           ) : visibleActiveTasks.length === 0 ? (
             <EmptyState
               className="cleaning-empty-state"
-              icon={<CleaningIcon />}
+              icon={<TaskAltIcon />}
               title={
                 effectiveSelectedCategory === ALL_CATEGORIES
                   ? t('cleaning.empty')

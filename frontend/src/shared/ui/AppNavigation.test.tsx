@@ -5,7 +5,13 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { AppNavigation, SectionNavigation } from './AppNavigation'
 
 function LocationProbe() {
-  return <output aria-label="current path">{useLocation().pathname}</output>
+  const location = useLocation()
+  return (
+    <>
+      <output aria-label="current path">{location.pathname}</output>
+      <output aria-label="current search">{location.search}</output>
+    </>
+  )
 }
 
 describe('AppNavigation', () => {
@@ -18,7 +24,7 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     )
 
-    expect(container.querySelectorAll('.app-navigation__mobile-only')).toHaveLength(2)
+    expect(container.querySelectorAll('.app-navigation__mobile-only')).toHaveLength(3)
     expect(container.querySelector('.app-navigation__section')).toHaveTextContent('写真')
     expect(screen.getByRole('link', { name: 'ライブラリ' })).toHaveAttribute('aria-current', 'page')
     await user.click(screen.getByRole('link', { name: 'ホーム' }))
@@ -51,6 +57,31 @@ describe('AppNavigation', () => {
 
     await user.click(screen.getByRole('link', { name: 'アカウント' }))
     expect(screen.getByLabelText('current path')).toHaveTextContent('/account')
+  })
+
+  it('groups cleaning destinations and preserves report filters', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/cleaning/daily?group=group-1&month=2026-07&view=chart']}>
+        <AppNavigation showInvitations={false} photoUnseenCount={0} />
+        <SectionNavigation showInvitations={false} photoUnseenCount={0} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByText('掃除').length).toBeGreaterThan(0)
+    expect(
+      screen
+        .getAllByRole('link', { name: '日別' })
+        .some((link) => link.getAttribute('href') === '/cleaning/daily?group=group-1&month=2026-07&view=chart'),
+    ).toBe(true)
+    const monthlyLink = screen
+      .getAllByRole('link', { name: '月次' })
+      .find((link) => link.closest('.section-navigation') !== null)
+    expect(monthlyLink).toBeDefined()
+    await user.click(monthlyLink!)
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/cleaning/reports')
+    expect(screen.getByLabelText('current search')).toHaveTextContent('?group=group-1&month=2026-07&view=chart')
   })
 
   it('keeps desktop management links in the same order as mobile management tabs', () => {

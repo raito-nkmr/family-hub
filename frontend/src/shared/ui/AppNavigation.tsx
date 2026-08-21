@@ -3,7 +3,8 @@ import { NavLink, useLocation } from 'react-router'
 import { appPaths, cleaningViews, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
 import {
   AlbumIcon,
-  CleaningIcon,
+  BarChartIcon,
+  CalendarMonthIcon,
   DeleteIcon,
   EditIcon,
   FamilyGroupIcon,
@@ -14,6 +15,7 @@ import {
   PhotoLibraryIcon,
   ShoppingCartIcon,
   SaveIcon,
+  TaskAltIcon,
 } from './icons'
 
 interface NavigationProps {
@@ -23,7 +25,10 @@ interface NavigationProps {
 
 export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationProps) {
   const { t } = useTranslation()
-  const activeView = getAppView(useLocation().pathname)
+  const location = useLocation()
+  const activeView = getAppView(location.pathname)
+  const cleaningSearch = activeView && cleaningViews.includes(activeView) ? location.search : ''
+  const cleaningTo = (view: (typeof cleaningViews)[number]) => ({ pathname: appPaths[view], search: cleaningSearch })
   const itemClass = (view: AppView, extra = '') =>
     `${activeView === view ? 'app-navigation__item app-navigation__item--active' : 'app-navigation__item'} ${extra}`.trim()
   const sectionClass = (views: AppView[], extra = '') =>
@@ -78,8 +83,33 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         <DeleteIcon />
         {t('navigation.photoTrash')}
       </NavLink>
-      <NavLink className={sectionClass(cleaningViews)} to={appPaths.cleaning}>
-        <CleaningIcon />
+      <span className="app-navigation__section app-navigation__desktop-only">
+        <TaskAltIcon />
+        {t('navigation.cleaning')}
+      </span>
+      <NavLink
+        className={itemClass('cleaning', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={cleaningTo('cleaning')}
+      >
+        <TaskAltIcon />
+        {t('navigation.cleaning')}
+      </NavLink>
+      <NavLink
+        className={itemClass('cleaning-daily', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={cleaningTo('cleaning-daily')}
+      >
+        <CalendarMonthIcon />
+        {t('navigation.cleaningDaily')}
+      </NavLink>
+      <NavLink
+        className={itemClass('cleaning-reports', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={cleaningTo('cleaning-reports')}
+      >
+        <BarChartIcon />
+        {t('navigation.cleaningMonthly')}
+      </NavLink>
+      <NavLink className={sectionClass(cleaningViews, 'app-navigation__mobile-only')} to={cleaningTo('cleaning')}>
+        <TaskAltIcon />
         {t('navigation.cleaning')}
       </NavLink>
       <NavLink className={itemClass('shopping')} to={appPaths.shopping}>
@@ -119,7 +149,9 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
 
 export function SectionNavigation({ showInvitations, photoUnseenCount }: NavigationProps) {
   const { t } = useTranslation()
-  const activeView = getAppView(useLocation().pathname)
+  const location = useLocation()
+  const activeView = getAppView(location.pathname)
+  const cleaningSearch = activeView && cleaningViews.includes(activeView) ? location.search : ''
   const tabs =
     activeView && photoViews.includes(activeView)
       ? [
@@ -133,25 +165,41 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
           { view: 'albums' as const, label: t('navigation.albums'), count: 0, icon: <AlbumIcon /> },
           { view: 'photo-trash' as const, label: t('navigation.photoTrash'), count: 0, icon: <DeleteIcon /> },
         ]
-      : activeView && managementViews.includes(activeView)
+      : activeView && cleaningViews.includes(activeView)
         ? [
-            { view: 'groups' as const, label: t('navigation.groups'), count: 0, icon: <GroupIcon /> },
-            ...(showInvitations
-              ? [
-                  {
-                    view: 'invitations' as const,
-                    label: t('navigation.invitations'),
-                    count: 0,
-                    icon: <PersonAddIcon />,
-                  },
-                ]
-              : []),
-            { view: 'account' as const, label: t('navigation.account'), count: 0, icon: <EditIcon /> },
-            ...(showInvitations
-              ? [{ view: 'system' as const, label: t('navigation.system'), count: 0, icon: <SaveIcon /> }]
-              : []),
+            { view: 'cleaning' as const, label: t('navigation.cleaning'), count: 0, icon: <TaskAltIcon /> },
+            {
+              view: 'cleaning-daily' as const,
+              label: t('navigation.cleaningDaily'),
+              count: 0,
+              icon: <CalendarMonthIcon />,
+            },
+            {
+              view: 'cleaning-reports' as const,
+              label: t('navigation.cleaningMonthly'),
+              count: 0,
+              icon: <BarChartIcon />,
+            },
           ]
-        : []
+        : activeView && managementViews.includes(activeView)
+          ? [
+              { view: 'groups' as const, label: t('navigation.groups'), count: 0, icon: <GroupIcon /> },
+              ...(showInvitations
+                ? [
+                    {
+                      view: 'invitations' as const,
+                      label: t('navigation.invitations'),
+                      count: 0,
+                      icon: <PersonAddIcon />,
+                    },
+                  ]
+                : []),
+              { view: 'account' as const, label: t('navigation.account'), count: 0, icon: <EditIcon /> },
+              ...(showInvitations
+                ? [{ view: 'system' as const, label: t('navigation.system'), count: 0, icon: <SaveIcon /> }]
+                : []),
+            ]
+          : []
   if (tabs.length === 0) return null
   return (
     <nav className="section-navigation" aria-label={t('navigation.sectionLabel')}>
@@ -162,7 +210,11 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
               ? 'section-navigation__item section-navigation__item--active'
               : 'section-navigation__item'
           }
-          to={appPaths[tab.view]}
+          to={
+            cleaningViews.includes(tab.view)
+              ? { pathname: appPaths[tab.view], search: cleaningSearch }
+              : appPaths[tab.view]
+          }
           key={tab.view}
         >
           {tab.icon}

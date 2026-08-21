@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { CleaningPage } from './CleaningPage'
 import type { CleaningTask } from './api'
 
@@ -32,6 +33,10 @@ function makeTask(overrides: Partial<CleaningTask> = {}): CleaningTask {
     },
     ...overrides,
   }
+}
+
+function renderCleaningPage() {
+  return render(<CleaningPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/cleaning') })
 }
 
 describe('CleaningPage', () => {
@@ -84,7 +89,7 @@ describe('CleaningPage', () => {
 
   it('shows the shared task and records completion', async () => {
     const user = userEvent.setup()
-    render(<CleaningPage onUnauthorized={vi.fn()} />)
+    renderCleaningPage()
 
     expect(screen.getByRole('heading', { name: 'お風呂' })).toBeInTheDocument()
     expect(screen.getAllByText(/family-member/)).toHaveLength(2)
@@ -98,7 +103,7 @@ describe('CleaningPage', () => {
 
   it('reveals completion after a right swipe and waits for the action tap', async () => {
     const user = userEvent.setup()
-    const { container } = render(<CleaningPage onUnauthorized={vi.fn()} />)
+    const { container } = renderCleaningPage()
     const card = container.querySelector('.cleaning-card-swipe')
     const swipeAction = container.querySelector('.cleaning-card__swipe-complete')
 
@@ -116,7 +121,7 @@ describe('CleaningPage', () => {
   })
 
   it('does not open for a left swipe or vertical movement', () => {
-    const { container } = render(<CleaningPage onUnauthorized={vi.fn()} />)
+    const { container } = renderCleaningPage()
     const card = container.querySelector('.cleaning-card-swipe')
 
     expect(card).not.toBeNull()
@@ -130,7 +135,7 @@ describe('CleaningPage', () => {
   })
 
   it('renders an accessible progressbar and compact completion metadata', () => {
-    render(<CleaningPage onUnauthorized={vi.fn()} />)
+    renderCleaningPage()
 
     expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemin', '0')
     expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemax', '100')
@@ -139,7 +144,7 @@ describe('CleaningPage', () => {
 
   it('filters tasks by category', async () => {
     const user = userEvent.setup()
-    render(<CleaningPage onUnauthorized={vi.fn()} />)
+    renderCleaningPage()
 
     await user.click(screen.getByRole('button', { name: /^水やり$/ }))
 

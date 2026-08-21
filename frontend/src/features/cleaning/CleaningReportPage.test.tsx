@@ -67,11 +67,12 @@ describe('CleaningReportPage', () => {
     useCleaningReport.mockReturnValue(makeState())
   })
 
-  it('shows the monthly summary, charts, ranking, and task breakdown', () => {
+  it('shows the monthly summary, category breakdown, ranking, and task breakdown', () => {
     render(<CleaningReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/cleaning/reports') })
 
     expect(screen.getByRole('heading', { name: '掃除の月次レポート' })).toBeInTheDocument()
     expect(screen.getAllByText('完了回数').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('heading', { name: '日別の完了回数' })).not.toBeInTheDocument()
     expect(screen.getByText('ユーザー別ランキング')).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'ユーザー別ランキング' })).toBeInTheDocument()
     expect(screen.getByText('1. 太郎')).toBeInTheDocument()
