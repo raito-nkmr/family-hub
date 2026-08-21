@@ -1,7 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
-import { DialogActions } from '../../../shared/ui/DialogActions'
 import { CancelIcon, DeleteIcon, EditIcon, PlusIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { CleaningCategory } from '../api'
 
@@ -163,12 +162,12 @@ export function CleaningCategoryManagerDialog({
         <p className="cleaning-category-list__empty">{t('cleaning.noCategories')}</p>
       )}
 
-      <DialogActions disabled={submitting} onCancel={onClose}>
-        <button className="secondary-button icon-button" type="button" onClick={onClose}>
+      <div className="dialog-actions">
+        <button className="secondary-button icon-button" type="button" onClick={onClose} disabled={submitting}>
           <CancelIcon />
           {t('common.close')}
         </button>
-      </DialogActions>
+      </div>
     </Dialog>
   )
 }
