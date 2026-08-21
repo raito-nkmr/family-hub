@@ -3,12 +3,14 @@ import {
   createCleaningTaskApiV1CleaningGroupsGroupIdTasksPost,
   listCleaningTasksApiV1CleaningGroupsGroupIdTasksGet,
   updateCleaningTaskApiV1CleaningTasksTaskIdPatch,
+  type CleaningTaskCategory,
   type CleaningTaskResponse,
   type CleaningTaskUpdate,
 } from '../../shared/api/generated'
 import { sdkData } from '../../shared/api/sdkClient'
 
 export type CleaningTask = CleaningTaskResponse
+export type { CleaningTaskCategory }
 export type CleaningTaskChanges = CleaningTaskUpdate
 
 export async function getCleaningTasks(groupId: string, signal?: AbortSignal): Promise<CleaningTask[]> {
@@ -16,11 +18,16 @@ export async function getCleaningTasks(groupId: string, signal?: AbortSignal): P
     .items
 }
 
-export function createCleaningTask(groupId: string, name: string, intervalDays: number): Promise<CleaningTask> {
+export function createCleaningTask(
+  groupId: string,
+  name: string,
+  intervalDays: number,
+  category: CleaningTaskCategory,
+): Promise<CleaningTask> {
   return sdkData(
     createCleaningTaskApiV1CleaningGroupsGroupIdTasksPost({
       path: { group_id: groupId },
-      body: { name, interval_days: intervalDays },
+      body: { name, interval_days: intervalDays, category },
     }),
   )
 }

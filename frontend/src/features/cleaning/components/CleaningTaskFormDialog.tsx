@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
 import { DialogActions } from '../../../shared/ui/DialogActions'
 import { SaveIcon } from '../../../shared/ui/icons'
-import type { CleaningTask } from '../api'
+import type { CleaningTask, CleaningTaskCategory } from '../api'
 
 interface CleaningTaskFormDialogProps {
   task: CleaningTask | null
   submitting: boolean
   error: string | null
-  onSubmit: (name: string, intervalDays: number) => Promise<void>
+  onSubmit: (name: string, intervalDays: number, category: CleaningTaskCategory) => Promise<void>
   onClose: () => void
 }
 
@@ -18,14 +18,16 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
   const headingId = useId()
   const nameId = useId()
   const intervalId = useId()
+  const categoryId = useId()
   const errorId = useId()
   const [name, setName] = useState(task?.name ?? '')
   const [intervalDays, setIntervalDays] = useState(task?.interval_days ?? 1)
+  const [category, setCategory] = useState<CleaningTaskCategory>(task?.category ?? 'cleaning')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (submitting || !name.trim() || intervalDays < 1 || intervalDays > 3650) return
-    await onSubmit(name.trim(), intervalDays)
+    await onSubmit(name.trim(), intervalDays, category)
   }
 
   return (
@@ -48,6 +50,17 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
           aria-describedby={error ? errorId : undefined}
           onChange={(event) => setName(event.target.value)}
         />
+        <label htmlFor={categoryId}>{t('cleaning.category')}</label>
+        <select
+          className="form-control form-control--subtle"
+          id={categoryId}
+          value={category}
+          onChange={(event) => setCategory(event.currentTarget.value as CleaningTaskCategory)}
+        >
+          <option value="watering">{t('cleaning.categories.watering')}</option>
+          <option value="cleaning">{t('cleaning.categories.cleaning')}</option>
+          <option value="children">{t('cleaning.categories.children')}</option>
+        </select>
         <label htmlFor={intervalId}>{t('cleaning.frequency')}</label>
         <div className="cleaning-task-form__interval">
           <input

@@ -9,7 +9,9 @@ def test_cleaning_task_constraints_and_indexes_are_named() -> None:
     assert "ck_cleaning_tasks_name_trimmed" in constraint_names
     assert "ck_cleaning_tasks_name_length" in constraint_names
     assert "ck_cleaning_tasks_interval_days" in constraint_names
+    assert "ck_cleaning_tasks_category" in constraint_names
     assert "ix_cleaning_tasks_group_id_is_active" in index_names
+    assert CleaningTask.__table__.c.category.nullable is False
 
 
 def test_cleaning_completion_indexes_are_named() -> None:

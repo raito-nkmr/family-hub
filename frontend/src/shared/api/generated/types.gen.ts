@@ -455,9 +455,15 @@ export type CleaningCompletionResponse = {
 }
 
 /**
+ * CleaningTaskCategory
+ */
+export type CleaningTaskCategory = 'watering' | 'cleaning' | 'children'
+
+/**
  * CleaningTaskCreate
  */
 export type CleaningTaskCreate = {
+  category?: CleaningTaskCategory
   /**
    * Interval Days
    */
@@ -482,6 +488,7 @@ export type CleaningTaskListResponse = {
  * CleaningTaskResponse
  */
 export type CleaningTaskResponse = {
+  category: CleaningTaskCategory
   /**
    * Created At
    */
@@ -526,6 +533,7 @@ export type CleaningTaskResponse = {
  * CleaningTaskUpdate
  */
 export type CleaningTaskUpdate = {
+  category?: CleaningTaskCategory | null
   /**
    * Interval Days
    */

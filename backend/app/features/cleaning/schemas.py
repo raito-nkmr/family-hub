@@ -3,11 +3,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.features.cleaning.models import CleaningTaskCategory
 from app.features.groups.public import GroupRole
 
 
 class CleaningTaskCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    category: CleaningTaskCategory = CleaningTaskCategory.CLEANING
     interval_days: int = Field(ge=1, le=3650)
 
     @field_validator("name")
@@ -21,6 +23,7 @@ class CleaningTaskCreate(BaseModel):
 
 class CleaningTaskUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
+    category: CleaningTaskCategory | None = None
     interval_days: int | None = Field(default=None, ge=1, le=3650)
     is_active: bool | None = None
 
@@ -36,7 +39,7 @@ class CleaningTaskUpdate(BaseModel):
 
     @model_validator(mode="after")
     def require_change(self) -> "CleaningTaskUpdate":
-        if self.name is None and self.interval_days is None and self.is_active is None:
+        if self.name is None and self.category is None and self.interval_days is None and self.is_active is None:
             raise ValueError("at least one cleaning task field must be provided")
         return self
 
@@ -63,6 +66,7 @@ class CleaningTaskResponse(BaseModel):
     id: UUID
     group_id: UUID
     name: str
+    category: CleaningTaskCategory
     interval_days: int
     is_active: bool
     created_by_user_id: UUID

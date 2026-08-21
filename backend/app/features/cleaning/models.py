@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -18,6 +19,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database.base import Base
 
 
+class CleaningTaskCategory(StrEnum):
+    WATERING = "watering"
+    CLEANING = "cleaning"
+    CHILDREN = "children"
+
+
 class CleaningTask(Base):
     __tablename__ = "cleaning_tasks"
     __table_args__ = (
@@ -25,6 +32,10 @@ class CleaningTask(Base):
         CheckConstraint("name = btrim(name)", name="ck_cleaning_tasks_name_trimmed"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_cleaning_tasks_name_length"),
         CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_cleaning_tasks_interval_days"),
+        CheckConstraint(
+            "category IN ('watering', 'cleaning', 'children')",
+            name="ck_cleaning_tasks_category",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -33,6 +44,7 @@ class CleaningTask(Base):
         ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_cleaning_tasks_group_id_family_groups"),
     )
     name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(String(16), nullable=False)
     interval_days: Mapped[int] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true")
     created_by_user_id: Mapped[UUID] = mapped_column(

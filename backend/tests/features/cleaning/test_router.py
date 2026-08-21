@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app.core.config import Settings
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.cleaning.models import CleaningTaskCategory
 from app.features.cleaning.router import complete_cleaning_task, create_cleaning_task, list_cleaning_tasks
 from app.features.cleaning.schemas import CleaningTaskCreate
 from app.features.cleaning.service import (
@@ -25,6 +26,7 @@ def make_summary() -> CleaningTaskSummary:
         id=uuid4(),
         group_id=uuid4(),
         name="お風呂",
+        category=CleaningTaskCategory.CLEANING,
         interval_days=1,
         is_active=True,
         created_by_user_id=TEST_USER.id,
@@ -47,11 +49,18 @@ class CleaningServiceStub:
         assert user_id == TEST_USER.id
         return [self.summary] if self.summary else []
 
-    def create_task(self, group_id: UUID, user_id: UUID, name: str, interval_days: int) -> CleaningTaskSummary:
+    def create_task(
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        name: str,
+        interval_days: int,
+        category: CleaningTaskCategory,
+    ) -> CleaningTaskSummary:
         if self.error:
             raise self.error
         assert user_id == TEST_USER.id
-        assert (name, interval_days) == ("お風呂", 1)
+        assert (name, interval_days, category) == ("お風呂", 1, CleaningTaskCategory.CLEANING)
         assert self.summary is not None
         return self.summary
 
@@ -75,7 +84,7 @@ def test_create_cleaning_task_requires_group_admin() -> None:
     with pytest.raises(HTTPException) as error:
         create_cleaning_task(
             uuid4(),
-            CleaningTaskCreate(name="お風呂", interval_days=1),
+            CleaningTaskCreate(name="お風呂", interval_days=1, category=CleaningTaskCategory.CLEANING),
             TEST_USER,
             CleaningServiceStub(error=CleaningForbiddenError()),
         )

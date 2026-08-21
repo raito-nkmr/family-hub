@@ -13,6 +13,7 @@ import {
   createCleaningTask,
   getCleaningTasks,
   updateCleaningTask,
+  type CleaningTaskCategory,
   type CleaningTask,
 } from './api'
 
@@ -55,10 +56,10 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
   useUnauthorizedError(tasksQuery.error, onUnauthorized)
 
   const saveMutation = useMutation({
-    mutationFn: async ({ groupId, task, name, intervalDays }: SaveTaskInput) =>
+    mutationFn: async ({ groupId, task, name, intervalDays, category }: SaveTaskInput) =>
       task
-        ? updateCleaningTask(task.id, { name, interval_days: intervalDays })
-        : createCleaningTask(groupId, name, intervalDays),
+        ? updateCleaningTask(task.id, { name, interval_days: intervalDays, category })
+        : createCleaningTask(groupId, name, intervalDays, category),
     onSuccess: (saved, { groupId }) => {
       queryClient.setQueryData<CleaningTask[]>(queryKeys.cleaningTasks(groupId), (current = []) =>
         sortTasks([...current.filter((task) => task.id !== saved.id), saved]),
@@ -71,12 +72,12 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
     await selectGroupInUrl(groupId)
   }
 
-  const saveTask = async (name: string, intervalDays: number) => {
+  const saveTask = async (name: string, intervalDays: number, category: CleaningTaskCategory) => {
     const groupId = editingTask?.group_id ?? selectedGroupId
     if (!groupId) return
     setDialogError(null)
     try {
-      await saveMutation.mutateAsync({ groupId, task: editingTask, name, intervalDays })
+      await saveMutation.mutateAsync({ groupId, task: editingTask, name, intervalDays, category })
       setShowTaskDialog(false)
       setEditingTask(null)
     } catch (error) {
@@ -160,4 +161,5 @@ interface SaveTaskInput {
   task: CleaningTask | null
   name: string
   intervalDays: number
+  category: CleaningTaskCategory
 }

@@ -7,7 +7,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.features.auth.public import PublicUser, UserDirectory
-from app.features.cleaning.models import CleaningCompletion, CleaningTask
+from app.features.cleaning.models import CleaningCompletion, CleaningTask, CleaningTaskCategory
 from app.features.cleaning.service import (
     CleaningForbiddenError,
     CleaningInactiveTaskError,
@@ -76,11 +76,13 @@ def test_create_task_persists_for_group_admin() -> None:
     session.scalars.return_value.all.return_value = [group_id]
     service, _ = make_service(session)
 
-    result = service.create_task(group_id, user_id, "お風呂", 1)
+    result = service.create_task(group_id, user_id, "お風呂", 1, CleaningTaskCategory.WATERING)
 
     task = session.add.call_args.args[0]
     assert isinstance(task, CleaningTask)
     assert task.group_id == group_id
+    assert task.category is CleaningTaskCategory.WATERING
+    assert result.category is CleaningTaskCategory.WATERING
     assert result.next_due_at == task.created_at + timedelta(days=1)
     session.commit.assert_called_once_with()
 

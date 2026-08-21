@@ -7,6 +7,7 @@ function makeTask(overrides: Partial<CleaningTask> = {}): CleaningTask {
     id: 'task-id',
     group_id: 'group-id',
     name: 'お風呂',
+    category: 'cleaning',
     interval_days: 1,
     is_active: true,
     created_by_user_id: 'user-id',

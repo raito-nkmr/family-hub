@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CleaningPage } from './CleaningPage'
@@ -11,11 +11,12 @@ vi.mock('./useCleaning', () => ({
   useCleaning: () => useCleaning(),
 }))
 
-function makeTask(): CleaningTask {
+function makeTask(overrides: Partial<CleaningTask> = {}): CleaningTask {
   return {
     id: 'task-id',
     group_id: 'group-id',
     name: 'お風呂',
+    category: 'cleaning',
     interval_days: 1,
     is_active: true,
     created_by_user_id: 'user-id',
@@ -29,6 +30,7 @@ function makeTask(): CleaningTask {
       completed_by_username: 'family-member',
       completed_at: '2026-07-15T00:00:00Z',
     },
+    ...overrides,
   }
 }
 
@@ -49,7 +51,7 @@ describe('CleaningPage', () => {
       ],
       selectedGroupId: 'group-id',
       selectedGroup: { id: 'group-id', current_user_role: 'admin' },
-      tasks: [makeTask()],
+      tasks: [makeTask(), makeTask({ id: 'watering-task-id', name: '花', category: 'watering' })],
       loading: false,
       submitting: false,
       pendingTaskIds: new Set<string>(),
@@ -72,9 +74,11 @@ describe('CleaningPage', () => {
     render(<CleaningPage onUnauthorized={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'お風呂' })).toBeInTheDocument()
-    expect(screen.getByText(/family-member/)).toBeInTheDocument()
+    expect(screen.getAllByText(/family-member/)).toHaveLength(2)
 
-    await user.click(screen.getByRole('button', { name: '掃除完了' }))
+    const card = screen.getByRole('heading', { name: 'お風呂' }).closest('article')
+    expect(card).not.toBeNull()
+    await user.click(within(card!).getByRole('button', { name: '掃除完了' }))
 
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-id' }))
   })
@@ -117,6 +121,16 @@ describe('CleaningPage', () => {
 
     expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemin', '0')
     expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemax', '100')
-    expect(screen.getByText(/前回: .*family-member/)).toBeInTheDocument()
+    expect(screen.getAllByText(/前回: .*family-member/)).toHaveLength(2)
+  })
+
+  it('filters tasks by category', async () => {
+    const user = userEvent.setup()
+    render(<CleaningPage onUnauthorized={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /^水やり$/ }))
+
+    expect(screen.getByRole('heading', { name: '花' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'お風呂' })).not.toBeInTheDocument()
   })
 })

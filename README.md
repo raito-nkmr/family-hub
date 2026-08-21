@@ -18,7 +18,7 @@ layout.
   - Individual downloads and streamed ZIP exports for photos the user can view
   - Trash, restore, permanent deletion, and storage integrity checks
 - **Household coordination**
-  - Cleaning tasks with configurable intervals, completion history, pause, and resume
+  - Categorized cleaning tasks with configurable intervals, completion history, pause, and resume
   - Shared shopping lists with purchased and unpurchased states
   - Home dashboard aggregating recent photos, due cleaning tasks, and shopping items
 - **Family and account management**

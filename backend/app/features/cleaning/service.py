@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.features.auth.public import UserDirectory
-from app.features.cleaning.models import CleaningCompletion, CleaningTask
+from app.features.cleaning.models import CleaningCompletion, CleaningTask, CleaningTaskCategory
 from app.features.groups.public import FamilyGroupMember, GroupRole, lock_user_group_ids
 
 
@@ -40,6 +40,7 @@ class CleaningTaskSummary:
     id: UUID
     group_id: UUID
     name: str
+    category: CleaningTaskCategory
     interval_days: int
     is_active: bool
     created_by_user_id: UUID
@@ -76,13 +77,21 @@ class CleaningService:
         completion = self._latest_completions({task.id}).get(task.id)
         return self._summary(task, membership, completion)
 
-    def create_task(self, group_id: UUID, user_id: UUID, name: str, interval_days: int) -> CleaningTaskSummary:
+    def create_task(
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        name: str,
+        interval_days: int,
+        category: CleaningTaskCategory = CleaningTaskCategory.CLEANING,
+    ) -> CleaningTaskSummary:
         membership = self._lock_admin(group_id, user_id)
         now = datetime.now(UTC)
         task = CleaningTask(
             id=uuid4(),
             group_id=group_id,
             name=name,
+            category=category,
             interval_days=interval_days,
             is_active=True,
             created_by_user_id=user_id,
@@ -99,6 +108,7 @@ class CleaningService:
         user_id: UUID,
         *,
         name: str | None,
+        category: CleaningTaskCategory | None,
         interval_days: int | None,
         is_active: bool | None,
     ) -> CleaningTaskSummary:
@@ -109,6 +119,8 @@ class CleaningService:
             raise CleaningNotFoundError
         if name is not None:
             task.name = name
+        if category is not None:
+            task.category = category
         if interval_days is not None:
             task.interval_days = interval_days
         if is_active is not None:
@@ -222,6 +234,7 @@ class CleaningService:
             id=task.id,
             group_id=task.group_id,
             name=task.name,
+            category=CleaningTaskCategory(task.category),
             interval_days=task.interval_days,
             is_active=task.is_active,
             created_by_user_id=task.created_by_user_id,

@@ -196,6 +196,7 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                     id=resource_id,
                     group_id=group_id,
                     name="Kitchen",
+                    category="cleaning",
                     interval_days=1,
                     is_active=True,
                     created_by_user_id=user_id,

@@ -77,7 +77,15 @@ def create_cleaning_task(
     service: Annotated[CleaningService, Depends(get_cleaning_service)],
 ) -> CleaningTaskResponse:
     try:
-        return _response(service.create_task(group_id, authenticated_user.id, body.name, body.interval_days))
+        return _response(
+            service.create_task(
+                group_id,
+                authenticated_user.id,
+                body.name,
+                body.interval_days,
+                body.category,
+            )
+        )
     except (CleaningNotFoundError, CleaningForbiddenError, CleaningPersistenceError) as error:
         _raise_cleaning_error(error)
 
@@ -111,6 +119,7 @@ def update_cleaning_task(
                 task_id,
                 authenticated_user.id,
                 name=body.name,
+                category=body.category,
                 interval_days=body.interval_days,
                 is_active=body.is_active,
             )

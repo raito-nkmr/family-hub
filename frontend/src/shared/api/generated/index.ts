@@ -146,6 +146,7 @@ export type {
   ChangePasswordApiV1AuthPasswordPutResponse,
   ChangePasswordApiV1AuthPasswordPutResponses,
   CleaningCompletionResponse,
+  CleaningTaskCategory,
   CleaningTaskCreate,
   CleaningTaskListResponse,
   CleaningTaskResponse,

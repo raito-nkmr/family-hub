@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.features.cleaning.models import CleaningCompletion, CleaningTask
+from app.features.cleaning.models import CleaningCompletion, CleaningTask, CleaningTaskCategory
 
 
 def make_cleaning_task(
@@ -10,6 +10,7 @@ def make_cleaning_task(
     group_id: UUID | None = None,
     created_by_user_id: UUID | None = None,
     name: str = "お風呂",
+    category: CleaningTaskCategory = CleaningTaskCategory.CLEANING,
     interval_days: int = 1,
     is_active: bool = True,
 ) -> CleaningTask:
@@ -18,6 +19,7 @@ def make_cleaning_task(
         id=task_id or uuid4(),
         group_id=group_id or uuid4(),
         name=name,
+        category=category,
         interval_days=interval_days,
         is_active=is_active,
         created_by_user_id=created_by_user_id or uuid4(),

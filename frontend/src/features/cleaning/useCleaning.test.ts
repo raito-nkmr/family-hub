@@ -24,6 +24,7 @@ function makeTask(groupId: string): CleaningTask {
     id: `task-${groupId}`,
     group_id: groupId,
     name: groupId,
+    category: 'cleaning',
     interval_days: 1,
     is_active: true,
     created_by_user_id: 'user-1',
