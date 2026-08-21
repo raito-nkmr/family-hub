@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router'
-import { appPaths } from '../../app/routes'
 import { TaskAltIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
@@ -21,15 +19,11 @@ interface ChoreReportFrameProps {
 
 export function ChoreReportFrame({ state, title, eyebrow, description, children }: ChoreReportFrameProps) {
   const { t, i18n } = useTranslation()
-  const location = useLocation()
 
   return (
     <main id="top" className="chore-report-page">
       <header className="chore-report-hero">
         <div>
-          <Link className="chore-report__back" to={{ pathname: appPaths.chores, search: location.search }}>
-            {t('chores.reportBack')}
-          </Link>
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
           <p>{description}</p>

@@ -78,7 +78,7 @@ describe('ChoreReportPage', () => {
     expect(screen.getByText('1. 太郎')).toBeInTheDocument()
     expect(screen.getByText('タスク別の実績')).toBeInTheDocument()
     expect(screen.getAllByText('お風呂').length).toBeGreaterThan(0)
-    expect(screen.getByRole('link', { name: '家事タスク一覧へ戻る' })).toHaveAttribute('href', '/chores')
+    expect(screen.queryByRole('link', { name: '家事タスク一覧へ戻る' })).not.toBeInTheDocument()
   })
 
   it('moves to the previous month and keeps task details collapsible', async () => {
