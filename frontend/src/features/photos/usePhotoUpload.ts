@@ -8,8 +8,8 @@ import {
   createUploadBatch,
   getUploadBatch,
   uploadItemContent,
-  type StorageStatus,
-} from './api'
+} from './uploadApi'
+import type { StorageStatus } from './api'
 import type { UploadMessage } from './components/PhotoUploadCard'
 import { getPhotoContentType } from './contentType'
 import { getUploadErrorMessage } from './errors'

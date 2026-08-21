@@ -1,4 +1,3 @@
-import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -10,10 +9,7 @@ from app.features.albums.public import remove_photo_from_group_albums
 from app.features.audit.public import record_administrative_event
 from app.features.groups.public import FamilyGroupMember, lock_group_admin, lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
-from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
-from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
-from app.features.photos.service import (
-    BulkPhotoSharingResult,
+from app.features.photos.errors import (
     InvalidPhotoSharingError,
     PhotoBulkSelectionError,
     PhotoNotFoundError,
@@ -22,9 +18,11 @@ from app.features.photos.service import (
     PhotoUpdatePersistenceError,
     PhotoUpdateStorageError,
 )
+from app.features.photos.metadata_persistence import PhotoMetadataPersistence
+from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
+from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
 from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
-
-logger = logging.getLogger(__name__)
+from app.features.photos.types import BulkPhotoSharingResult
 
 
 class PhotoMetadataService:
@@ -32,7 +30,7 @@ class PhotoMetadataService:
 
     def __init__(self, session: Session, storage: PhotoStorage) -> None:
         self._session = session
-        self._storage = storage
+        self._persistence = PhotoMetadataPersistence(session, storage)
 
     def update_photo(
         self,
@@ -80,9 +78,9 @@ class PhotoMetadataService:
                 captured_at_override.tzinfo is None or captured_at_override.utcoffset() is None
             ):
                 raise PhotoUpdatePersistenceError("Capture time override must be timezone-aware")
-            photo.metadata_record.captured_at_override = (
-                captured_at_override.astimezone(UTC) if captured_at_override is not None else None
-            )
+            normalized_override = captured_at_override.astimezone(UTC) if captured_at_override is not None else None
+            photo.metadata_record.captured_at_override = normalized_override
+            photo.effective_captured_at = normalized_override or photo.captured_at or photo.uploaded_at
         if sharing_group_ids is not None:
             visible_existing_group_ids = set(
                 self._session.scalars(
@@ -121,8 +119,7 @@ class PhotoMetadataService:
         photo.metadata_record.version += 1
         photo.metadata_record.updated_at = datetime.now(UTC)
         next_metadata = build_sidecar_metadata(photo)
-        self._persist_sidecar_and_commit(
-            photo,
+        self._persistence.persist_and_commit(
             previous_metadata,
             next_metadata,
             storage_error="Could not update photo sidecar",
@@ -165,8 +162,7 @@ class PhotoMetadataService:
             target_id=str(photo.id),
             details={"uploaded_by_username": photo.uploaded_by_username},
         )
-        self._persist_sidecar_and_commit(
-            photo,
+        self._persistence.persist_and_commit(
             previous_metadata,
             build_sidecar_metadata(photo),
             storage_error="Could not update photo sidecar",
@@ -237,50 +233,19 @@ class PhotoMetadataService:
         updated_sidecar_count = 0
         try:
             for photo in changed_photos:
-                self._storage.update_sidecar(build_sidecar_metadata(photo))
+                self._persistence.update_sidecar(build_sidecar_metadata(photo))
                 updated_sidecar_count += 1
         except PhotoStorageError as error:
             self._session.rollback()
-            self._restore_sidecars(previous_metadata[:updated_sidecar_count])
+            self._persistence.restore_sidecars(previous_metadata[:updated_sidecar_count])
             raise PhotoUpdateStorageError("Could not update photo sidecars") from error
         try:
             self._session.commit()
         except SQLAlchemyError as error:
             self._session.rollback()
-            self._restore_sidecars(previous_metadata)
+            self._persistence.restore_sidecars(previous_metadata)
             raise PhotoUpdatePersistenceError("Could not update photo sharing") from error
         return BulkPhotoSharingResult(operation_id, len(changed_photos), len(photos) - len(changed_photos))
-
-    def _persist_sidecar_and_commit(
-        self,
-        photo: Photo,
-        previous_metadata: SidecarMetadata,
-        next_metadata: SidecarMetadata,
-        *,
-        storage_error: str,
-        persistence_error: str,
-    ) -> None:
-        try:
-            self._storage.update_sidecar(next_metadata)
-        except PhotoStorageError as error:
-            self._session.rollback()
-            raise PhotoUpdateStorageError(storage_error) from error
-        try:
-            self._session.commit()
-        except SQLAlchemyError as error:
-            self._session.rollback()
-            try:
-                self._storage.update_sidecar(previous_metadata)
-            except PhotoStorageError:
-                logger.exception("Failed to restore photo sidecar photo_id=%s", photo.id)
-            raise PhotoUpdatePersistenceError(persistence_error) from error
-
-    def _restore_sidecars(self, metadata_records: list[SidecarMetadata]) -> None:
-        for metadata in metadata_records:
-            try:
-                self._storage.update_sidecar(metadata)
-            except PhotoStorageError:
-                logger.exception("Failed to restore photo sidecar photo_id=%s", metadata.photo_id)
 
 
 def _photo_is_in_library(viewer_user_id: UUID):

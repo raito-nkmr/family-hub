@@ -113,4 +113,20 @@ describe('App routes', () => {
     expect(screen.getByRole('heading', { name: 'アカウントを作成' })).toBeInTheDocument()
     expect(getCurrentSession).not.toHaveBeenCalled()
   })
+
+  it('restores an existing session after leaving an invitation fragment', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getCurrentSession).mockResolvedValue({
+      id: 'user-id',
+      username: 'family-member',
+      system_role: 'user',
+      must_change_password: false,
+    })
+
+    renderApp('/invitations#invite=invitation-token')
+    await user.click(screen.getByRole('button', { name: '招待を使わずログインへ戻る' }))
+
+    expect(await screen.findByText('Authenticated as family-member')).toBeInTheDocument()
+    expect(getCurrentSession).toHaveBeenCalledOnce()
+  })
 })

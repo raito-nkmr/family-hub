@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Photo } from '../api'
+import type { Photo, PhotoListItem } from '../api'
 import { PhotoModal } from './PhotoModal'
 
 const photo: Photo = {
@@ -28,6 +28,20 @@ const photo: Photo = {
   trashed_at: null,
   purge_after: null,
   purge_requested_at: null,
+}
+
+const photoSummary: PhotoListItem = {
+  id: photo.id,
+  uploaded_by_user_id: photo.uploaded_by_user_id,
+  uploaded_by_username: photo.uploaded_by_username,
+  visibility: photo.visibility,
+  is_favorite: photo.is_favorite,
+  original_filename: photo.original_filename,
+  content_type: photo.content_type,
+  width: photo.width,
+  height: photo.height,
+  captured_at: photo.captured_at,
+  uploaded_at: photo.uploaded_at,
 }
 
 describe('PhotoModal', () => {
@@ -127,6 +141,54 @@ describe('PhotoModal', () => {
     )
 
     expect(screen.queryByText('photo.jpg')).not.toBeInTheDocument()
+    expect(screen.getByText('Could not load photo details.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '詳細の読み込みを再試行' }))
+
+    expect(onRetryPhotoDetail).toHaveBeenCalledOnce()
+  })
+
+  it('shows the list summary while the detail request is loading', () => {
+    render(
+      <PhotoModal
+        photo={photoSummary}
+        photoDetailLoading
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'photo.jpg' })).toBeInTheDocument()
+    expect(screen.getByText('読み込み中…')).toBeInTheDocument()
+    expect(screen.queryByLabelText('共有メモ')).not.toBeInTheDocument()
+  })
+
+  it('shows the list summary and retry action when detail loading fails initially', () => {
+    const onRetryPhotoDetail = vi.fn()
+    render(
+      <PhotoModal
+        photo={photoSummary}
+        photoDetailError="Could not load photo details."
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onRetryPhotoDetail={onRetryPhotoDetail}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'photo.jpg' })).toBeInTheDocument()
     expect(screen.getByText('Could not load photo details.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '詳細の読み込みを再試行' }))
 

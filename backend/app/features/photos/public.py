@@ -1,7 +1,7 @@
 from collections.abc import Collection
 from uuid import UUID
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.features.groups.public import FamilyGroupMember
@@ -74,7 +74,7 @@ class PhotoCatalog:
             .join(PhotoMetadata, PhotoMetadata.photo_id == Photo.id)
             .where(Photo.id.in_(photo_ids), photo_is_in_library(viewer_user_id))
             .order_by(
-                func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at, Photo.uploaded_at).asc(),
+                Photo.effective_captured_at.asc(),
                 Photo.id.asc(),
             )
         )

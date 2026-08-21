@@ -14,8 +14,7 @@ export function PrivacyPage({ theme, onToggleTheme }: PrivacyPageProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const returnToCandidate = (location.state as { returnTo?: unknown } | null)?.returnTo
-  const returnTo =
-    typeof returnToCandidate === 'string' && getAppView(returnToCandidate) ? returnToCandidate : appPaths.home
+  const returnTo = getSafeReturnTo(returnToCandidate)
 
   return (
     <main className="privacy-page">
@@ -102,4 +101,15 @@ export function PrivacyPage({ theme, onToggleTheme }: PrivacyPageProps) {
       </article>
     </main>
   )
+}
+
+function getSafeReturnTo(candidate: unknown): string {
+  if (typeof candidate !== 'string') return appPaths.home
+  try {
+    const url = new URL(candidate, window.location.origin)
+    if (url.origin !== window.location.origin || !getAppView(url.pathname)) return appPaths.home
+    return `${url.pathname}${url.search}`
+  } catch {
+    return appPaths.home
+  }
 }

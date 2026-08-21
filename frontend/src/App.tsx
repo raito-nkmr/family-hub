@@ -22,7 +22,6 @@ function App() {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const [initialInvitationToken] = useState(() => readInvitationToken(location.hash))
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [sessionCheckCompleted, setSessionCheckCompleted] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -30,11 +29,9 @@ function App() {
     document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
   )
   const invitationToken = readInvitationToken(location.hash)
+  const isPrivacyPath = location.pathname === '/privacy'
   const shouldRestoreSession =
-    initialInvitationToken === null &&
-    location.pathname !== '/privacy' &&
-    currentUser === null &&
-    !sessionCheckCompleted
+    invitationToken === null && !isPrivacyPath && currentUser === null && !sessionCheckCompleted
 
   useEffect(() => {
     if (!shouldRestoreSession) return
@@ -89,6 +86,15 @@ function App() {
     )
   }
 
+  if (isPrivacyPath) {
+    return (
+      <div className="public-shell">
+        <PrivacyPage theme={theme} onToggleTheme={toggleTheme} />
+        <AppFooter privacyCurrent />
+      </div>
+    )
+  }
+
   if (shouldRestoreSession) {
     return (
       <main className="session-loading" aria-label={t('auth.checking')}>
@@ -111,15 +117,6 @@ function App() {
 
   return (
     <Routes>
-      <Route
-        path="/privacy"
-        element={
-          <div className="public-shell">
-            <PrivacyPage theme={theme} onToggleTheme={toggleTheme} />
-            <AppFooter privacyCurrent />
-          </div>
-        }
-      />
       <Route
         path="*"
         element={

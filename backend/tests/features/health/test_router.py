@@ -34,7 +34,7 @@ async def test_get_root_returns_api_links() -> None:
 
     assert response.status_code == 200
     assert response.json() == {
-        "message": "Photo storage API is running",
+        "message": "Family Hub API is running",
         "health": "/api/v1/health",
         "docs": "/docs",
     }

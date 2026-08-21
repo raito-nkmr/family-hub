@@ -11,16 +11,20 @@ export function useCachedPhotoMediaUrl(url: string, enabled: boolean) {
   useEffect(() => {
     if (!shouldCache || !cache || cache.get(url)) return
     let active = true
+    let temporaryObjectUrl: string | null = null
     void cache
       .load(url)
-      .then((objectUrl) => {
+      .then(({ objectUrl, cached }) => {
+        if (!cached) temporaryObjectUrl = objectUrl
         if (active) setState({ url, objectUrl, failed: false })
+        else if (!cached) cache.release(objectUrl)
       })
       .catch(() => {
         if (active) setState({ url, objectUrl: '', failed: true })
       })
     return () => {
       active = false
+      if (temporaryObjectUrl) cache.release(temporaryObjectUrl)
     }
   }, [cache, shouldCache, url])
 

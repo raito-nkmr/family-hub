@@ -78,8 +78,9 @@ Owns family login, server-side sessions, system roles, invitation-based account 
 limiting. It contains routers, service logic, `User`, `UserSession`, and `UserInvitation` models, Argon2id password helpers,
 rate limiting, authentication dependencies, invitation handling, and a deliberately small `public.py` boundary.
 
-Login and password changes lock the target `User` row with `FOR UPDATE` before verifying the current hash. This prevents an
-old-password login from creating a new session concurrently with a password change.
+Login, password changes, and current-password reauthentication lock the target `User` row with `FOR UPDATE` before
+verifying the current hash. This prevents an old-password login or protected mutation from passing concurrently with a
+password change. The query uses `populate_existing` so verification reads the row version obtained after the lock.
 
 An operator password reset marks the user as requiring a password change. The user may authenticate only to retrieve the
 current session, change the password, or log out while this flag is set; all other authenticated feature APIs return `403`.
@@ -130,14 +131,18 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`storage.py` validates HDD state, receives resumable chunks, hashes, writes sidecars, and finalizes files; `thumbnails.py` creates WebP
-thumbnails from images or the first video frame, and `video_validation.py` validates supported video containers with
-`ffprobe`;
+`errors.py` owns photo-domain exceptions and `types.py` owns photo DTO/result types. `storage_paths.py` owns storage-key and
+path safety validation, while `storage_types.py` owns storage status, error, and staged/finalized-file types.
+`storage_uploads.py` and `storage_files.py` implement resumable upload, sidecar, finalization, and deletion operations;
+`storage.py` remains the compatibility `PhotoStorage` facade for those operations and storage state;
+`thumbnails.py` creates WebP thumbnails from images or the first video frame, and `video_validation.py` validates supported
+video containers with `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
 catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
 content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `registration.py` handles
 finalized photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
-`export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
+`export_service.py` validates ZIP-export selections. `metadata_persistence.py` coordinates sidecar writes, transaction
+commit, and sidecar restoration when metadata persistence fails. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
 
@@ -155,7 +160,9 @@ Notifications own session-bound Web Push subscriptions, preferences, and outbox.
 the stored subscription user and session owner identical. Photo sharing and shopping additions create
 outbox entries in the same transaction as the business change; cleaning due notifications are enqueued periodically. Workers
 exclude expired sessions, claim with timestamps and tokens, requeue stale claims, and retry only failed devices. Endpoints are
-HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository.
+HTTPS and limited to configured provider hosts; VAPID private keys stay outside the repository. An endpoint hash already owned
+by another user is rejected with `409 Conflict` and the `push_subscription_endpoint_conflict` error code; the subscription
+limit uses `push_subscription_limit_reached`.
 
 ## Dependency direction
 
@@ -265,8 +272,10 @@ Do not enlarge small images and preserve alpha. Lists and albums use thumbnail A
 API. Originals, downloads, thumbnails, and ZIP exports return `private, no-store`.
 
 Sidecars use schema version 7 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
-capture-time overrides, and shares. The original EXIF capture time remains separate from the effective capture time used by
-photo queries.
+capture-time overrides, and shares. The database stores `effective_captured_at` as the denormalized sort value
+`captured_at_override`, then EXIF `captured_at`, then `uploaded_at`. It is synchronized at registration and override updates;
+the original EXIF capture time remains separate from this fallback value so the API does not present upload time as a known
+capture time. `ix_photos_sort_date_id` covers `(effective_captured_at DESC, id DESC)`.
 After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to regenerate every sidecar from the database.
 
 ## Upload processing
@@ -291,14 +300,13 @@ interrupted request can be distinguished from a lost response. Do not log filena
 other credentials as upload diagnostics.
 
 Successful `PATCH` responses use `200 OK` with a short, explicitly sized body instead of an empty `204`. After receiving the
-status and `Upload-Offset` header, the browser aborts that request's response stream without waiting for its body. This
-forces iPhone Safari to release a development-LAN cross-origin request instead of retaining six responses and indefinitely
-queueing the seventh. The client also accepts the former `204` response during a rolling deployment.
+status and `Upload-Offset` header, the browser aborts that request's response stream without waiting for its body only on
+the development direct-upload route. This forces iPhone Safari to release a development-LAN cross-origin request instead of
+retaining six responses and indefinitely queueing the seventh. Same-origin production responses are consumed normally.
 
 The response-stream abort is a workaround for development uploads sent directly from the Vite origin on port `15173` to
-FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI.
-Before production acceptance, scope the abort behavior to the development direct-upload route or explicitly validate that
-it does not create client-closed responses through Cloudflare.
+FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI;
+the production response stream is not aborted by the browser.
 
 The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
@@ -361,8 +369,9 @@ invocation. Key settings include `DATABASE_URL`, trusted origins,
 session idle/absolute/touch limits, secure-cookie and login limits, fixed invitation expiry choices of 24, 72, or 168 hours,
 `PHOTO_STORAGE_ROOT`, `PHOTO_DERIVATIVE_ROOT`, `BACKUP_STORAGE_ROOT`, storage markers, upload and free-space limits,
 default timezone, Push provider allowlist and
-subscription limit, and optional `MONITORING_PING_URL_*` values. Development defaults include 100 MiB maximum file size,
-1 MiB chunks, and 10 GiB minimum free space. Never place real `.env` values in code or documentation.
+subscription limit, and optional `MONITORING_PING_URL_*` values. The recommended development values in `.env.example` are
+100 MiB maximum file size, 1 MiB chunks, and 10 GiB minimum free space; these are configuration examples, not code defaults.
+Never place real `.env` values in code or documentation.
 
 ## Testing strategy
 

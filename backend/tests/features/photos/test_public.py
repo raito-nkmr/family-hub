@@ -21,7 +21,7 @@ def test_photo_catalog_lists_album_photos_oldest_first() -> None:
     assert result == photos
     statement = session.scalars.call_args.args[0]
     sql = str(statement.compile(dialect=postgresql.dialect()))
-    assert "ORDER BY coalesce(photo_metadata.captured_at_override, photos.captured_at, photos.uploaded_at) ASC" in sql
+    assert "ORDER BY photos.effective_captured_at ASC" in sql
     assert "family_group_members.user_id" in sql
 
 

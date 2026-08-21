@@ -36,6 +36,7 @@ def make_photo(
         height=480,
         captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC),
         uploaded_at=uploaded_at,
+        effective_captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC),
         lifecycle_state=PhotoLifecycleState.ACTIVE,
         trashed_at=None,
         trashed_by_user_id=None,

@@ -143,7 +143,7 @@ class GroupService:
         self,
         name: str,
         creator_user_id: UUID,
-        creator_username: str = "unknown",
+        creator_username: str,
     ) -> GroupDetail:
         lock_administrator_mutations(self._session)
         creator = self._user_directory.list_by_ids({creator_user_id}).get(creator_user_id)
@@ -168,18 +168,17 @@ class GroupService:
             joined_at=now,
         )
         self._session.add_all([group, membership])
-        if creator_username != "unknown":
-            record_administrative_event(
-                self._session,
-                scope="group",
-                action="group.created",
-                actor_user_id=creator_user_id,
-                actor_username=creator_username,
-                group_id=group.id,
-                target_type="group",
-                target_id=str(group.id),
-                details={"name": name},
-            )
+        record_administrative_event(
+            self._session,
+            scope="group",
+            action="group.created",
+            actor_user_id=creator_user_id,
+            actor_username=creator_username,
+            group_id=group.id,
+            target_type="group",
+            target_id=str(group.id),
+            details={"name": name},
+        )
         try:
             self._session.commit()
         except IntegrityError as error:
@@ -441,7 +440,7 @@ class GroupService:
         target_user_id: UUID,
         actor_user_id: UUID,
         role: GroupRole,
-        actor_username: str = "unknown",
+        actor_username: str,
     ) -> GroupDetail:
         lock_administrator_mutations(self._session)
         group = self._get_group_for_admin(group_id, actor_user_id)
@@ -453,18 +452,17 @@ class GroupService:
 
         membership.role = role
         group.updated_at = datetime.now(UTC)
-        if actor_username != "unknown":
-            record_administrative_event(
-                self._session,
-                scope="group",
-                action="membership.role_changed",
-                actor_user_id=actor_user_id,
-                actor_username=actor_username,
-                group_id=group_id,
-                target_type="user",
-                target_id=str(target_user_id),
-                details={"role": role.value},
-            )
+        record_administrative_event(
+            self._session,
+            scope="group",
+            action="membership.role_changed",
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            group_id=group_id,
+            target_type="user",
+            target_id=str(target_user_id),
+            details={"role": role.value},
+        )
         self._commit("Could not update group member role")
         return self.get_group(group_id, actor_user_id)
 
@@ -473,7 +471,7 @@ class GroupService:
         group_id: UUID,
         target_user_id: UUID,
         actor_user_id: UUID,
-        actor_username: str = "unknown",
+        actor_username: str,
     ) -> None:
         lock_administrator_mutations(self._session)
         group = self._get_group_for_admin(group_id, actor_user_id)
@@ -485,17 +483,16 @@ class GroupService:
 
         self._session.delete(membership)
         group.updated_at = datetime.now(UTC)
-        if actor_username != "unknown":
-            record_administrative_event(
-                self._session,
-                scope="group",
-                action="membership.removed",
-                actor_user_id=actor_user_id,
-                actor_username=actor_username,
-                group_id=group_id,
-                target_type="user",
-                target_id=str(target_user_id),
-            )
+        record_administrative_event(
+            self._session,
+            scope="group",
+            action="membership.removed",
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            group_id=group_id,
+            target_type="user",
+            target_id=str(target_user_id),
+        )
         self._commit("Could not remove group member")
 
     def _get_group_for_admin(self, group_id: UUID, actor_user_id: UUID, *, lock: bool = True) -> FamilyGroup:

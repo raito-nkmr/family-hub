@@ -4,9 +4,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.features.photos.access import photo_is_in_library
+from app.features.photos.errors import PhotoContentUnavailableError, PhotoExportSelectionError
 from app.features.photos.models import Photo
-from app.features.photos.service import PhotoContentUnavailableError, PhotoExportEntry, PhotoExportSelectionError
 from app.features.photos.storage import PhotoStorage, PhotoStorageError
+from app.features.photos.types import PhotoExportEntry
 
 
 class PhotoExportService:

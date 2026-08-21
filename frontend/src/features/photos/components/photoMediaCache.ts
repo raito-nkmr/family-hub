@@ -14,7 +14,8 @@ interface PhotoMediaCacheOptions {
 
 export interface PhotoMediaCache {
   get: (url: string) => string | undefined
-  load: (url: string) => Promise<string>
+  load: (url: string) => Promise<{ objectUrl: string; cached: boolean }>
+  release: (objectUrl: string) => void
   clear: () => void
 }
 
@@ -23,7 +24,8 @@ export function createPhotoMediaCache(options: PhotoMediaCacheOptions = {}): Pho
   const createObjectUrl = options.createObjectUrl ?? ((blob: Blob) => URL.createObjectURL(blob))
   const revokeObjectUrl = options.revokeObjectUrl ?? ((objectUrl: string) => URL.revokeObjectURL(objectUrl))
   const entries = new Map<string, PhotoMediaCacheEntry>()
-  const pending = new Map<string, Promise<string>>()
+  const pending = new Map<string, Promise<{ objectUrl: string; cached: boolean }>>()
+  const temporaryObjectUrls = new Set<string>()
   let totalBytes = 0
   let generation = 0
 
@@ -45,9 +47,9 @@ export function createPhotoMediaCache(options: PhotoMediaCacheOptions = {}): Pho
     revokeObjectUrl(oldest[1].objectUrl)
   }
 
-  const load = (url: string): Promise<string> => {
+  const load = (url: string): Promise<{ objectUrl: string; cached: boolean }> => {
     const cached = get(url)
-    if (cached) return Promise.resolve(cached)
+    if (cached) return Promise.resolve({ objectUrl: cached, cached: true })
 
     const existingRequest = pending.get(url)
     if (existingRequest) return existingRequest
@@ -64,6 +66,10 @@ export function createPhotoMediaCache(options: PhotoMediaCacheOptions = {}): Pho
           revokeObjectUrl(objectUrl)
           throw new Error('Photo media cache was cleared')
         }
+        if (blob.size > MAX_CACHE_BYTES) {
+          temporaryObjectUrls.add(objectUrl)
+          return { objectUrl, cached: false }
+        }
         const previous = entries.get(url)
         if (previous) {
           totalBytes -= previous.sizeBytes
@@ -72,22 +78,29 @@ export function createPhotoMediaCache(options: PhotoMediaCacheOptions = {}): Pho
         entries.set(url, { objectUrl, sizeBytes: blob.size, lastUsedAt: Date.now() })
         totalBytes += blob.size
         while (totalBytes > MAX_CACHE_BYTES && entries.size > 1) removeOldest()
-        return objectUrl
+        return { objectUrl, cached: true }
       })
       .finally(() => {
-        pending.delete(url)
+        if (pending.get(url) === request) pending.delete(url)
       })
     pending.set(url, request)
     return request
   }
 
+  const release = (objectUrl: string) => {
+    if (!temporaryObjectUrls.delete(objectUrl)) return
+    revokeObjectUrl(objectUrl)
+  }
+
   const clear = () => {
     generation += 1
     for (const entry of entries.values()) revokeObjectUrl(entry.objectUrl)
+    for (const objectUrl of temporaryObjectUrls) revokeObjectUrl(objectUrl)
     entries.clear()
+    temporaryObjectUrls.clear()
     pending.clear()
     totalBytes = 0
   }
 
-  return { get, load, clear }
+  return { get, load, release, clear }
 }

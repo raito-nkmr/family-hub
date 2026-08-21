@@ -151,8 +151,8 @@ class InvitationService:
     def revoke_invitation(
         self,
         invitation_id: UUID,
-        actor_user_id: UUID | None = None,
-        actor_username: str | None = None,
+        actor_user_id: UUID,
+        actor_username: str,
     ) -> None:
         invitation = self._session.scalar(
             select(UserInvitation).where(UserInvitation.id == invitation_id).with_for_update()
@@ -163,17 +163,16 @@ class InvitationService:
             raise InvitationUnavailableError
         if invitation.revoked_at is None:
             invitation.revoked_at = datetime.now(UTC)
-            if actor_username is not None:
-                record_administrative_event(
-                    self._session,
-                    scope="system",
-                    action="invitation.revoked",
-                    actor_user_id=actor_user_id,
-                    actor_username=actor_username,
-                    target_type="user_invitation",
-                    target_id=str(invitation.id),
-                    details={"username": invitation.username},
-                )
+            record_administrative_event(
+                self._session,
+                scope="system",
+                action="invitation.revoked",
+                actor_user_id=actor_user_id,
+                actor_username=actor_username,
+                target_type="user_invitation",
+                target_id=str(invitation.id),
+                details={"username": invitation.username},
+            )
             self._commit()
 
     def remove_invitation_history(

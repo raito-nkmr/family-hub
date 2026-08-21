@@ -6,8 +6,7 @@ import type {
   NotificationPreferenceUpdate,
   NotificationType,
 } from '../../shared/api/generated'
-import { ApiError } from '../../shared/api/client'
-import { isAbortError, isUnauthorizedError } from '../../shared/api/errors'
+import { isAbortError, isApiErrorWithCode, isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import type { AppLanguage } from '../../i18n'
@@ -144,9 +143,10 @@ export function useNotificationSettings({ locale, onUnauthorized }: UseNotificat
     } catch (subscribeError) {
       if (createdSubscription && !serverSubscriptionCreated) await createdSubscription.unsubscribe().catch(() => false)
       if (!isUnauthorizedError(subscribeError)) {
-        setError(
-          subscribeError instanceof ApiError && subscribeError.status === 409 ? 'subscriptionLimit' : 'subscribe',
-        )
+        const isSubscriptionLimit =
+          isApiErrorWithStatus(subscribeError, 409) &&
+          (isApiErrorWithCode(subscribeError, 'push_subscription_limit_reached') || subscribeError.code === undefined)
+        setError(isSubscriptionLimit ? 'subscriptionLimit' : 'subscribe')
       }
     } finally {
       setBusyAction(null)

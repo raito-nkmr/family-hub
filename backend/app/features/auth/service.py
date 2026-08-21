@@ -114,7 +114,9 @@ class AuthService:
         self._session.commit()
 
     def verify_current_password(self, user_id: UUID, password: str) -> None:
-        user = self._session.get(User, user_id)
+        user = self._session.scalar(
+            select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True)
+        )
         if user is None or not user.is_active or not verify_password(password, user.password_hash):
             raise InvalidCurrentPasswordError
 

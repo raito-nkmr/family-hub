@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.features.auth.dependencies import AuthenticatedUser
-from app.features.photos.service import PhotoPurgeNotDueError
+from app.features.photos.errors import PhotoPurgeNotDueError
 from app.features.photos.trash_router import permanently_delete_photo
 
 

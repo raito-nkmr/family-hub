@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.dialects import postgresql
@@ -10,6 +11,7 @@ from app.features.notifications.schemas import PushSubscriptionCreate, PushSubsc
 from app.features.notifications.service import (
     NotificationEndpointNotAllowedError,
     NotificationService,
+    NotificationSubscriptionEndpointConflictError,
     NotificationSubscriptionLimitError,
 )
 from tests.features.auth.factories import make_user_session
@@ -60,6 +62,25 @@ def test_subscribe_enforces_per_user_limit() -> None:
         service.subscribe(context, make_body())
 
     session.add.assert_not_called()
+
+
+def test_subscribe_rejects_an_endpoint_owned_by_another_user() -> None:
+    session = MagicMock(spec=Session)
+    context = make_context()
+    existing_subscription = MagicMock()
+    existing_subscription.user_id = uuid4()
+    existing_subscription.user_session_id = uuid4()
+    existing_subscription.endpoint = "https://web.push.apple.com/owned-by-another-user"
+    session.scalar.side_effect = [context.user.id, existing_subscription]
+    service = make_service(session)
+
+    with pytest.raises(NotificationSubscriptionEndpointConflictError):
+        service.subscribe(context, make_body())
+
+    session.add.assert_not_called()
+    session.commit.assert_not_called()
+    assert existing_subscription.user_id != context.user.id
+    assert existing_subscription.endpoint == "https://web.push.apple.com/owned-by-another-user"
 
 
 def test_update_subscription_locale_updates_current_session_subscriptions() -> None:

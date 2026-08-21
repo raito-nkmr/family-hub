@@ -43,7 +43,8 @@ current relational contract.
 - Store timestamps as `TIMESTAMPTZ` in UTC; keep the PostgreSQL session time zone at UTC.
 - FastAPI returns UTC ISO 8601 timestamps and never converts them to JST at the DB/API boundary.
 - React explicitly converts display values to `Asia/Tokyo`; JST date boundaries are used for date search and grouping.
-- Prefer `captured_at` for photo organization and fall back to `uploaded_at` only when capture time is unavailable.
+- Store the denormalized `effective_captured_at` sort value as owner override, EXIF `captured_at`, then `uploaded_at`; keep
+  the source capture fields separate so upload time is never presented as a known capture time.
 - Do not store image data, absolute HDD paths, or environment-specific mount points in PostgreSQL.
 - Give constraints and indexes stable names managed by Alembic.
 - Avoid PostgreSQL-specific ENUMs for now; use strings with `CHECK` constraints so values remain easier to change.
@@ -146,8 +147,9 @@ purchase time must both be null or both be set. Index `(group_id, purchased_at, 
 ### `photos`
 
 Stores one metadata row per original. Important fields are uploader and username snapshot, display filename, relative
-`storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, capture and upload timestamps, lifecycle
-state (`active`, `trashed`, or `purge_pending`), and trash/purge timestamps and owner. The same row represents either an
+`storage_key`, verified content type, positive size, lowercase SHA-256, dimensions, source capture and upload timestamps,
+the denormalized `effective_captured_at` sort timestamp, lifecycle state (`active`, `trashed`, or `purge_pending`), and
+trash/purge timestamps and owner. The same row represents either an
 image or a supported video; `content_type` distinguishes them. Dimensions describe the displayed orientation after applying
 EXIF image orientation or video rotation metadata.
 
@@ -160,7 +162,9 @@ includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTim
 
 Separates user-editable information from original metadata. It is keyed by `photo_id` and stores a memo of at most 2,000
 characters, an optional owner-entered `captured_at_override`, memo attribution, last-edit time, optimistic-lock `version`, and
-timestamps. The effective capture time is `captured_at_override` when set, otherwise the original EXIF `photos.captured_at`.
+timestamps. `photos.effective_captured_at` is synchronized from `captured_at_override`, the original EXIF `photos.captured_at`,
+or `photos.uploaded_at` when the override is cleared. The API continues to expose only the source/override capture values as
+known capture times.
 Viewers can edit the shared memo; only the owner can edit sharing or the capture-time override. Every metadata update
 increments the version and synchronizes `metadata_version` in the JSON sidecar.
 
@@ -191,15 +195,15 @@ than that pair and currently visible to the user. Use `(occurred_at DESC, id DES
 
 ## List indexes and search
 
-Photo ordering uses capture time with upload fallback:
+Photo ordering uses the effective capture time: owner override, original capture time, then upload time:
 
 ```sql
 SELECT *
 FROM photos
-ORDER BY COALESCE(captured_at, uploaded_at) DESC, id DESC;
+ORDER BY effective_captured_at DESC, id DESC;
 
 CREATE INDEX ix_photos_sort_date_id
-    ON photos (COALESCE(captured_at, uploaded_at) DESC, id DESC);
+    ON photos (effective_captured_at DESC, id DESC);
 ```
 
 The date and UUID pair is stored in the cursor; fetch at most 100 rows smaller than the last pair. Use `pg_trgm` GIN indexes
@@ -212,7 +216,9 @@ CREATE INDEX ix_photo_metadata_memo_trgm
     ON photo_metadata USING gin (memo gin_trgm_ops);
 ```
 
-Convert `COALESCE(captured_at, uploaded_at)` to `Asia/Tokyo` for month and date boundaries while keeping stored timestamps UTC.
+Convert `effective_captured_at` to `Asia/Tokyo` for month and date boundaries while keeping stored timestamps UTC. The
+`captured_at` and `captured_at_override` columns remain separate so the API can distinguish known capture time from the
+upload-time fallback.
 Do not duplicate indexes already supplied by unique constraints.
 
 ## Upload tables and transaction
@@ -258,7 +264,7 @@ unregistered files, and database rows missing files.
 Members of the group can view and edit albums. List by `updated_at DESC, id DESC` and count `album_photos`.
 
 `album_photos` has composite primary key `(album_id, photo_id)` and `added_at`. Index `photo_id`; order album photos by
-`COALESCE(captured_at, uploaded_at) ASC, photos.id ASC`. An unset cover falls back to the oldest added photo. A cover must
+`effective_captured_at ASC, photos.id ASC`. An unset cover falls back to the oldest added photo. A cover must
 belong to the album, and removing a photo clears the cover. Removing a group share also removes the inaccessible album
 relationship in the same transaction. Album relationships are not written to JSON sidecars.
 

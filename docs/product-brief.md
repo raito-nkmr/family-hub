@@ -28,7 +28,8 @@ upload is finalized. Lists and albums serve thumbnails; the enlarged modal serve
 limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
 
 Original image previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
-photo does not download it again. The cache is released when the authenticated session ends; API responses remain non-cacheable.
+photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
+cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
 group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
@@ -73,6 +74,8 @@ Photo details fit the complete image or video inside a bounded media stage witho
 play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
 upload panel stays open while uploading. Both are always visible at widths of 641 px or more.
+When photo detail metadata cannot be loaded, the detail modal remains open with the selected photo's list information and
+offers a manual retry. Detail-only editing controls are shown only after the full metadata response succeeds.
 
 The New view shows photos uploaded by other users to the user's groups and photos newly shared with those groups, ordered
 by operation time. A batch upload or bulk share is represented as one operation. Events before group membership, the user's
@@ -400,7 +403,6 @@ configured on the browser or server operating system.
 - Tags
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
-- Scheduled or operator-triggered snapshots to a disconnected external HDD
 - Calendar cleaning schedules, assignees, notifications, and completion undo
 - Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
 

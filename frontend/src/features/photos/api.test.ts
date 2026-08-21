@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UploadItem } from './api'
-import {
-  addBulkPhotoSharing,
-  getPhotoExportUrl,
-  getPhotoActivity,
-  getPhotos,
-  markPhotoActivitySeen,
-  uploadItemContent,
-} from './api'
+import type { UploadItem } from './uploadApi'
+import { addBulkPhotoSharing, getPhotoExportUrl, getPhotoActivity, getPhotos, markPhotoActivitySeen } from './api'
+import { uploadItemContent } from './uploadApi'
 
 const item: UploadItem = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -49,7 +43,7 @@ function stubUploadFetch(responses: MockUploadResponse[]) {
       })
     }
     if ('kind' in response) throw new Error('Upload request failed')
-    const body = init?.method === 'PATCH' && response.status !== 204 ? (response.body ?? 'ok') : null
+    const body = init?.method === 'PATCH' && response.status === 200 ? (response.body ?? 'ok') : null
     return new Response(body, {
       status: response.status,
       headers: {
@@ -169,6 +163,7 @@ describe('uploadItemContent', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('uploads a selected file with fetch and reports the completed offset', async () => {
@@ -209,6 +204,39 @@ describe('uploadItemContent', () => {
         requestId: 'request-2',
       }),
     )
+  })
+
+  it('keeps the same-origin response stream open after a PATCH response', async () => {
+    vi.stubEnv('DEV', false)
+    const requests = stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 200, offset: '5' },
+    ])
+
+    await uploadItemContent(
+      item,
+      new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+      new AbortController().signal,
+      vi.fn(),
+    )
+
+    expect(requests[1].signal?.aborted).toBe(false)
+  })
+
+  it('rejects the retired 204 upload response', async () => {
+    stubUploadFetch([
+      { status: 200, offset: '0' },
+      { status: 204, offset: '5' },
+    ])
+
+    await expect(
+      uploadItemContent(
+        item,
+        new File(['photo'], 'photo.jpeg', { type: 'image/jpeg' }),
+        new AbortController().signal,
+        vi.fn(),
+      ),
+    ).rejects.toMatchObject({ status: 204 })
   })
 
   it('uses the returned offset when starting the next chunk', async () => {

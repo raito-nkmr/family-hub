@@ -14,9 +14,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260820_05"]
+    assert scripts.get_heads() == ["20260820_06"]
     assert scripts.get_bases() == ["20260820_01"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260820_06",
         "20260820_05",
         "20260820_04",
         "20260820_03",
@@ -44,6 +45,9 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "fk_push_subscriptions_user_session_user_id_user_sessions" in sql
     assert "width INTEGER NOT NULL" in sql
     assert "height INTEGER NOT NULL" in sql
+    assert "effective_captured_at TIMESTAMP WITH TIME ZONE" in sql
+    assert "ix_photos_sort_date_id" in sql
+    assert "UPDATE photos AS photos" in sql
 
 
 def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_path, monkeypatch, capsys) -> None:

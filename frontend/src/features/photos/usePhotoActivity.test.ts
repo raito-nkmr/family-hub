@@ -45,7 +45,7 @@ describe('usePhotoActivity', () => {
     vi.mocked(markPhotoActivitySeen).mockResolvedValue()
     const onUnauthorized = vi.fn()
     const { result, rerender } = renderHook(
-      ({ active, userId }) => usePhotoActivity({ enabled: true, userId, active, onUnauthorized }),
+      ({ active, userId }) => usePhotoActivity({ userId, active, onUnauthorized }),
       { initialProps: { active: false, userId: 'user-1' }, wrapper: createAppWrapper() },
     )
 
@@ -65,7 +65,7 @@ describe('usePhotoActivity', () => {
     let resolveNext: ((value: Awaited<ReturnType<typeof getPhotoActivity>>) => void) | undefined
     vi.mocked(getPhotoActivity).mockImplementationOnce(() => new Promise((resolve) => (resolveNext = resolve)))
     const { result, rerender } = renderHook(
-      ({ userId }) => usePhotoActivity({ enabled: true, userId, active: false, onUnauthorized: vi.fn() }),
+      ({ userId }) => usePhotoActivity({ userId, active: false, onUnauthorized: vi.fn() }),
       { initialProps: { userId: 'user-1' }, wrapper: createAppWrapper() },
     )
     await waitFor(() => expect(result.current.unseenCount).toBe(3))
@@ -107,10 +107,9 @@ describe('usePhotoActivity', () => {
       unseen_count: 1,
     })
     vi.mocked(markPhotoActivitySeen).mockRejectedValueOnce(new Error('temporary failure')).mockResolvedValueOnce()
-    const { result } = renderHook(
-      () => usePhotoActivity({ enabled: true, userId: 'user-1', active: true, onUnauthorized: vi.fn() }),
-      { wrapper: createAppWrapper() },
-    )
+    const { result } = renderHook(() => usePhotoActivity({ userId: 'user-1', active: true, onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper(),
+    })
 
     await waitFor(() => expect(result.current.markSeenError).toBe('新着写真を既読にできませんでした。'))
     expect(markPhotoActivitySeen).toHaveBeenCalledTimes(1)

@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import i18n from '../../i18n'
 import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { useGroupSelection } from '../../shared/routing/useGroupSelection'
+import { usePendingIds } from '../../shared/lib/usePendingIds'
 import { getGroups } from '../groups/api'
 import {
   createShoppingItem,
@@ -31,10 +32,9 @@ function sortItems(items: ShoppingItem[]): ShoppingItem[] {
 
 export function useShopping({ onUnauthorized }: UseShoppingOptions) {
   const queryClient = useQueryClient()
-  const [pendingItemIds, setPendingItemIds] = useState<ReadonlySet<string>>(() => new Set())
+  const { pendingIds: pendingItemIds, start: startItem, finish: finishItem } = usePendingIds()
   const [pageMutationError, setPageMutationError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const pendingItemIdsRef = useRef(new Set<string>())
 
   const groupsQuery = useQuery({
     queryKey: queryKeys.groups,
@@ -81,9 +81,7 @@ export function useShopping({ onUnauthorized }: UseShoppingOptions) {
   }
 
   const changePurchaseState = async (item: ShoppingItem, purchased: boolean) => {
-    if (pendingItemIdsRef.current.has(item.id)) return
-    pendingItemIdsRef.current.add(item.id)
-    setPendingItemIds((current) => new Set(current).add(item.id))
+    if (!startItem(item.id)) return
     setPageMutationError(null)
     try {
       const updated = purchased ? await purchaseShoppingItem(item.id) : await restoreShoppingItem(item.id)
@@ -94,12 +92,7 @@ export function useShopping({ onUnauthorized }: UseShoppingOptions) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setPageMutationError(i18n.t(purchased ? 'errors.shoppingPurchase' : 'errors.shoppingRestore'))
     } finally {
-      pendingItemIdsRef.current.delete(item.id)
-      setPendingItemIds((current) => {
-        const next = new Set(current)
-        next.delete(item.id)
-        return next
-      })
+      finishItem(item.id)
     }
   }
 

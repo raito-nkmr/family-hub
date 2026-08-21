@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -166,3 +167,19 @@ def test_change_password_rejects_incorrect_current_password(monkeypatch: pytest.
 
     session.execute.assert_not_called()
     session.commit.assert_not_called()
+
+
+def test_verify_current_password_locks_and_refreshes_the_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = MagicMock(spec=Session)
+    user = make_user()
+    session.scalar.return_value = user
+    verify = MagicMock(return_value=True)
+    monkeypatch.setattr("app.features.auth.service.verify_password", verify)
+
+    make_service(session).verify_current_password(user.id, "current password")
+
+    statement = session.scalar.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "FOR UPDATE" in sql
+    assert statement.get_execution_options()["populate_existing"] is True
+    verify.assert_called_once_with("current password", user.password_hash)

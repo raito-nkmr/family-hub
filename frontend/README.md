@@ -42,7 +42,7 @@ public/
 `styles.css`からアプリ共通、shared、および各featureのグローバルCSSを読み込みます。
 
 画面URLは`src/app/routes.ts`を正本とし、React RouterのDeclarative modeで画面とURLを対応付けます。
-認証後の共通データとレイアウトは`src/app/AuthenticatedApp.tsx`で維持し、管理者専用画面は
+認証後の共通データとレイアウトは`src/app/AuthenticatedApp.tsx`とその状態・ルート・オーバーレイ分割へ置き、管理者専用画面は
 `src/app/routeGuards.tsx`のルートガードで保護します。ナビゲーションには`Link`または`NavLink`を使用し、
 コンポーネントからHistory APIを直接操作しません。
 認証後の各Pageは`React.lazy`で画面単位に読み込み、初回表示に不要な画面コードをメインバンドルへ含めません。
@@ -64,8 +64,9 @@ APIから取得する共有データはTanStack Queryでキャッシュし、取
 `use*.ts` hookへ置きます。単純な表示用ローカル状態まで共通hookへ移動せず、画面の責務を読み取りにくくする
 抽象化は追加しません。
 
-写真状態は`features/photos/usePhotoLibrary.ts`がTanStack Queryによる一覧・詳細・検索を、
-`features/photos/usePhotoUpload.ts`がバッチ作成、2並列の分割送信、ファイル別の進捗、中止、および失敗分の再試行を
+写真状態は`features/photos/usePhotoLibraryData.ts`が一覧・検索・タイムライン・ストレージQueryを管理し、
+`features/photos/usePhotoLibrary.ts`がそのデータと選択・詳細フック、メタデータ更新フックを画面向けに合成します。
+`usePhotoUpload.ts`がバッチ作成、2並列の分割送信、ファイル別の進捗、中止、および失敗分の再試行を
 それぞれ管理します。`usePhotoDashboard.ts`は両者を画面向けに合成するだけに留めます。写真以外の機能画面では
 写真一覧とタイムラインを取得しません。
 写真一覧、アルバム詳細、アルバムの写真追加画面、およびゴミ箱は、50件単位のカーソルページネーションを
