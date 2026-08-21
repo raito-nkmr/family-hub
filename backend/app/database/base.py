@@ -10,7 +10,7 @@ def get_model_metadata() -> MetaData:
     from app.features.albums.models import Album, AlbumPhoto
     from app.features.audit.models import AdministrativeAuditEvent
     from app.features.auth.models import User, UserInvitation, UserSession
-    from app.features.cleaning.models import CleaningCompletion, CleaningTask
+    from app.features.cleaning.models import CleaningCategory, CleaningCompletion, CleaningTask
     from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation
     from app.features.maintenance.models import MaintenanceRun
     from app.features.notifications.models import (
@@ -38,6 +38,7 @@ def get_model_metadata() -> MetaData:
         Album,
         AlbumPhoto,
         AdministrativeAuditEvent,
+        CleaningCategory,
         CleaningCompletion,
         CleaningTask,
         FamilyGroup,

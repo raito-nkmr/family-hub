@@ -7,21 +7,73 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.features.auth.public import PublicUser, UserDirectory
-from app.features.cleaning.models import CleaningCompletion, CleaningTask, CleaningTaskCategory
+from app.features.cleaning.models import CleaningCategory, CleaningCompletion, CleaningTask
 from app.features.cleaning.service import (
+    CleaningCategoryDuplicateError,
+    CleaningCategoryInUseError,
     CleaningForbiddenError,
     CleaningInactiveTaskError,
     CleaningNotFoundError,
     CleaningService,
 )
 from app.features.groups.models import GroupRole
-from tests.features.cleaning.factories import make_cleaning_task, make_completion
+from tests.features.cleaning.factories import make_cleaning_category, make_cleaning_task, make_completion
 from tests.features.groups.factories import make_membership
 
 
 def make_service(session: Session) -> tuple[CleaningService, MagicMock]:
     directory = MagicMock(spec=UserDirectory)
     return CleaningService(session, directory), directory
+
+
+def test_member_can_create_cleaning_category() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    session.scalars.return_value.all.return_value = [group_id]
+    session.scalar.return_value = None
+    service, _ = make_service(session)
+
+    result = service.create_category(group_id, user_id, "  2階  ")
+
+    category = session.add.call_args.args[0]
+    assert isinstance(category, CleaningCategory)
+    assert category.group_id == group_id
+    assert category.name == "2階"
+    assert result.name == "2階"
+    session.commit.assert_called_once_with()
+
+
+def test_duplicate_cleaning_category_is_rejected() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    session.scalars.return_value.all.return_value = [group_id]
+    session.scalar.return_value = uuid4()
+    service, _ = make_service(session)
+
+    with pytest.raises(CleaningCategoryDuplicateError):
+        service.create_category(group_id, user_id, "掃除")
+
+    session.add.assert_not_called()
+
+
+def test_used_cleaning_category_cannot_be_deleted() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    category = make_cleaning_category(group_id=group_id)
+    session.scalar.side_effect = [group_id, category, 1]
+    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    session.scalars.return_value.all.return_value = [group_id]
+    service, _ = make_service(session)
+
+    with pytest.raises(CleaningCategoryInUseError):
+        service.delete_category(category.id, user_id)
+
+    session.delete.assert_not_called()
 
 
 def test_list_tasks_returns_latest_completion_and_calculates_due_at() -> None:
@@ -58,12 +110,13 @@ def test_create_task_requires_group_admin() -> None:
     session = MagicMock(spec=Session)
     group_id = uuid4()
     user_id = uuid4()
-    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    category = make_cleaning_category(group_id=group_id)
+    session.get.side_effect = [make_membership(group_id, user_id, role=GroupRole.MEMBER), category]
     session.scalars.return_value.all.return_value = [group_id]
     service, _ = make_service(session)
 
     with pytest.raises(CleaningForbiddenError):
-        service.create_task(group_id, user_id, "お風呂", 1)
+        service.create_task(group_id, user_id, "お風呂", 1, category.id)
 
     session.add.assert_not_called()
 
@@ -72,17 +125,19 @@ def test_create_task_persists_for_group_admin() -> None:
     session = MagicMock(spec=Session)
     group_id = uuid4()
     user_id = uuid4()
-    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.ADMIN)
+    category = make_cleaning_category(group_id=group_id)
+    session.get.side_effect = [make_membership(group_id, user_id, role=GroupRole.ADMIN), category]
     session.scalars.return_value.all.return_value = [group_id]
+    session.scalar.return_value = None
     service, _ = make_service(session)
 
-    result = service.create_task(group_id, user_id, "お風呂", 1, CleaningTaskCategory.WATERING)
+    result = service.create_task(group_id, user_id, "お風呂", 1, category.id)
 
     task = session.add.call_args.args[0]
     assert isinstance(task, CleaningTask)
     assert task.group_id == group_id
-    assert task.category is CleaningTaskCategory.WATERING
-    assert result.category is CleaningTaskCategory.WATERING
+    assert task.category_id == category.id
+    assert result.category_id == category.id
     assert result.next_due_at == task.created_at + timedelta(days=1)
     session.commit.assert_called_once_with()
 

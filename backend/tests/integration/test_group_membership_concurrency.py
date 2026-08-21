@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.features.auth.models import SystemRole, User
 from app.features.auth.public import UserDirectory
-from app.features.cleaning.models import CleaningTask
+from app.features.cleaning.models import CleaningCategory, CleaningTask
 from app.features.cleaning.service import CleaningNotFoundError, CleaningService
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
 from app.features.groups.service import GroupMembershipInvitationError, GroupService
@@ -191,12 +191,22 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                 )
             )
         else:
+            category_id = uuid4()
+            session.add(
+                CleaningCategory(
+                    id=category_id,
+                    group_id=group_id,
+                    name="掃除",
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
+                )
+            )
             session.add(
                 CleaningTask(
                     id=resource_id,
                     group_id=group_id,
                     name="Kitchen",
-                    category="cleaning",
+                    category_id=category_id,
                     interval_days=1,
                     is_active=True,
                     created_by_user_id=user_id,

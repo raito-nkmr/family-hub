@@ -1,7 +1,7 @@
 from typing import Annotated, NoReturn
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.features.auth.dependencies import (
     AuthenticatedUser,
@@ -11,12 +11,20 @@ from app.features.auth.dependencies import (
 )
 from app.features.cleaning.dependencies import get_cleaning_service
 from app.features.cleaning.schemas import (
+    CleaningCategoryCreate,
+    CleaningCategoryListResponse,
+    CleaningCategoryResponse,
+    CleaningCategoryUpdate,
     CleaningTaskCreate,
     CleaningTaskListResponse,
     CleaningTaskResponse,
     CleaningTaskUpdate,
 )
 from app.features.cleaning.service import (
+    CleaningCategoryDuplicateError,
+    CleaningCategoryInUseError,
+    CleaningCategoryNotFoundError,
+    CleaningCategorySummary,
     CleaningForbiddenError,
     CleaningInactiveTaskError,
     CleaningNotFoundError,
@@ -35,6 +43,10 @@ def _response(task: CleaningTaskSummary) -> CleaningTaskResponse:
     return CleaningTaskResponse.model_validate(task)
 
 
+def _category_response(category: CleaningCategorySummary) -> CleaningCategoryResponse:
+    return CleaningCategoryResponse.model_validate(category)
+
+
 def _raise_cleaning_error(error: Exception) -> NoReturn:
     if isinstance(error, CleaningNotFoundError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cleaning task not found") from error
@@ -47,6 +59,12 @@ def _raise_cleaning_error(error: Exception) -> NoReturn:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not update cleaning task",
         ) from error
+    if isinstance(error, CleaningCategoryNotFoundError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cleaning category not found") from error
+    if isinstance(error, CleaningCategoryDuplicateError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cleaning category already exists") from error
+    if isinstance(error, CleaningCategoryInUseError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cleaning category is in use") from error
     raise error
 
 
@@ -62,6 +80,89 @@ def list_cleaning_tasks(
         )
     except CleaningNotFoundError as error:
         _raise_cleaning_error(error)
+
+
+@router.get("/groups/{group_id}/categories", response_model=CleaningCategoryListResponse)
+def list_cleaning_categories(
+    group_id: UUID,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[CleaningService, Depends(get_cleaning_service)],
+) -> CleaningCategoryListResponse:
+    try:
+        return CleaningCategoryListResponse(
+            items=[
+                _category_response(category) for category in service.list_categories(group_id, authenticated_user.id)
+            ]
+        )
+    except (CleaningCategoryNotFoundError, CleaningNotFoundError) as error:
+        _raise_cleaning_error(error)
+
+
+@router.post(
+    "/groups/{group_id}/categories",
+    response_model=CleaningCategoryResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_csrf_token)],
+)
+def create_cleaning_category(
+    group_id: UUID,
+    body: CleaningCategoryCreate,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[CleaningService, Depends(get_cleaning_service)],
+) -> CleaningCategoryResponse:
+    try:
+        return _category_response(service.create_category(group_id, authenticated_user.id, body.name))
+    except (
+        CleaningCategoryDuplicateError,
+        CleaningCategoryNotFoundError,
+        CleaningNotFoundError,
+        CleaningPersistenceError,
+    ) as error:
+        _raise_cleaning_error(error)
+
+
+@router.patch(
+    "/categories/{category_id}",
+    response_model=CleaningCategoryResponse,
+    dependencies=[Depends(require_csrf_token)],
+)
+def update_cleaning_category(
+    category_id: UUID,
+    body: CleaningCategoryUpdate,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[CleaningService, Depends(get_cleaning_service)],
+) -> CleaningCategoryResponse:
+    try:
+        return _category_response(service.update_category(category_id, authenticated_user.id, body.name))
+    except (
+        CleaningCategoryDuplicateError,
+        CleaningCategoryNotFoundError,
+        CleaningNotFoundError,
+        CleaningPersistenceError,
+    ) as error:
+        _raise_cleaning_error(error)
+
+
+@router.delete(
+    "/categories/{category_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_csrf_token)],
+)
+def delete_cleaning_category(
+    category_id: UUID,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[CleaningService, Depends(get_cleaning_service)],
+) -> Response:
+    try:
+        service.delete_category(category_id, authenticated_user.id)
+    except (
+        CleaningCategoryInUseError,
+        CleaningCategoryNotFoundError,
+        CleaningNotFoundError,
+        CleaningPersistenceError,
+    ) as error:
+        _raise_cleaning_error(error)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
@@ -83,10 +184,15 @@ def create_cleaning_task(
                 authenticated_user.id,
                 body.name,
                 body.interval_days,
-                body.category,
+                body.category_id,
             )
         )
-    except (CleaningNotFoundError, CleaningForbiddenError, CleaningPersistenceError) as error:
+    except (
+        CleaningCategoryNotFoundError,
+        CleaningForbiddenError,
+        CleaningNotFoundError,
+        CleaningPersistenceError,
+    ) as error:
         _raise_cleaning_error(error)
 
 
@@ -119,12 +225,17 @@ def update_cleaning_task(
                 task_id,
                 authenticated_user.id,
                 name=body.name,
-                category=body.category,
+                category_id=body.category_id,
                 interval_days=body.interval_days,
                 is_active=body.is_active,
             )
         )
-    except (CleaningNotFoundError, CleaningForbiddenError, CleaningPersistenceError) as error:
+    except (
+        CleaningCategoryNotFoundError,
+        CleaningForbiddenError,
+        CleaningNotFoundError,
+        CleaningPersistenceError,
+    ) as error:
         _raise_cleaning_error(error)
 
 

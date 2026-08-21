@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
@@ -19,10 +18,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database.base import Base
 
 
-class CleaningTaskCategory(StrEnum):
-    WATERING = "watering"
-    CLEANING = "cleaning"
-    CHILDREN = "children"
+class CleaningCategory(Base):
+    __tablename__ = "cleaning_categories"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_cleaning_categories"),
+        CheckConstraint("name = btrim(name)", name="ck_cleaning_categories_name_trimmed"),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 40", name="ck_cleaning_categories_name_length"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    group_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_cleaning_categories_group_id_family_groups"),
+    )
+    name: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
 
 class CleaningTask(Base):
@@ -32,10 +43,6 @@ class CleaningTask(Base):
         CheckConstraint("name = btrim(name)", name="ck_cleaning_tasks_name_trimmed"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_cleaning_tasks_name_length"),
         CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_cleaning_tasks_interval_days"),
-        CheckConstraint(
-            "category IN ('watering', 'cleaning', 'children')",
-            name="ck_cleaning_tasks_category",
-        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -44,7 +51,14 @@ class CleaningTask(Base):
         ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_cleaning_tasks_group_id_family_groups"),
     )
     name: Mapped[str] = mapped_column(String(120))
-    category: Mapped[str] = mapped_column(String(16), nullable=False)
+    category_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey(
+            "cleaning_categories.id",
+            ondelete="RESTRICT",
+            name="fk_cleaning_tasks_category_id_cleaning_categories",
+        ),
+    )
     interval_days: Mapped[int] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true")
     created_by_user_id: Mapped[UUID] = mapped_column(
@@ -71,7 +85,15 @@ class CleaningCompletion(Base):
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
 
+Index("ix_cleaning_categories_group_id", CleaningCategory.group_id)
+Index(
+    "uq_cleaning_categories_group_name_ci",
+    CleaningCategory.group_id,
+    func.lower(CleaningCategory.name),
+    unique=True,
+)
 Index("ix_cleaning_tasks_group_id_is_active", CleaningTask.group_id, CleaningTask.is_active)
+Index("ix_cleaning_tasks_category_id", CleaningTask.category_id)
 Index(
     "ix_cleaning_completions_task_id_completed_at",
     CleaningCompletion.task_id,

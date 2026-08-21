@@ -3,13 +3,53 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.features.cleaning.models import CleaningTaskCategory
 from app.features.groups.public import GroupRole
+
+
+def _normalize_category_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("cleaning category name must not be blank")
+    return normalized
+
+
+class CleaningCategoryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        return _normalize_category_name(value)
+
+
+class CleaningCategoryUpdate(CleaningCategoryCreate):
+    pass
+
+
+class CleaningCategoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    group_id: UUID
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def normalize_datetime_to_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("cleaning category datetime must be timezone-aware")
+        return value.astimezone(UTC)
+
+
+class CleaningCategoryListResponse(BaseModel):
+    items: list[CleaningCategoryResponse]
 
 
 class CleaningTaskCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    category: CleaningTaskCategory = CleaningTaskCategory.CLEANING
+    category_id: UUID
     interval_days: int = Field(ge=1, le=3650)
 
     @field_validator("name")
@@ -23,7 +63,7 @@ class CleaningTaskCreate(BaseModel):
 
 class CleaningTaskUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
-    category: CleaningTaskCategory | None = None
+    category_id: UUID | None = None
     interval_days: int | None = Field(default=None, ge=1, le=3650)
     is_active: bool | None = None
 
@@ -39,7 +79,7 @@ class CleaningTaskUpdate(BaseModel):
 
     @model_validator(mode="after")
     def require_change(self) -> "CleaningTaskUpdate":
-        if self.name is None and self.category is None and self.interval_days is None and self.is_active is None:
+        if self.name is None and self.category_id is None and self.interval_days is None and self.is_active is None:
             raise ValueError("at least one cleaning task field must be provided")
         return self
 
@@ -66,7 +106,7 @@ class CleaningTaskResponse(BaseModel):
     id: UUID
     group_id: UUID
     name: str
-    category: CleaningTaskCategory
+    category_id: UUID
     interval_days: int
     is_active: bool
     created_by_user_id: UUID

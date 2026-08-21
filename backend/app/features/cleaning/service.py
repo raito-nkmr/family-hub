@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.features.auth.public import UserDirectory
-from app.features.cleaning.models import CleaningCompletion, CleaningTask, CleaningTaskCategory
+from app.features.cleaning.models import CleaningCategory, CleaningCompletion, CleaningTask
 from app.features.groups.public import FamilyGroupMember, GroupRole, lock_user_group_ids
 
 
@@ -27,6 +27,27 @@ class CleaningPersistenceError(Exception):
     pass
 
 
+class CleaningCategoryNotFoundError(Exception):
+    pass
+
+
+class CleaningCategoryDuplicateError(Exception):
+    pass
+
+
+class CleaningCategoryInUseError(Exception):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class CleaningCategorySummary:
+    id: UUID
+    group_id: UUID
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
 @dataclass(frozen=True, slots=True)
 class CleaningCompletionSummary:
     id: UUID
@@ -40,7 +61,7 @@ class CleaningTaskSummary:
     id: UUID
     group_id: UUID
     name: str
-    category: CleaningTaskCategory
+    category_id: UUID
     interval_days: int
     is_active: bool
     created_by_user_id: UUID
@@ -55,6 +76,60 @@ class CleaningService:
     def __init__(self, session: Session, user_directory: UserDirectory) -> None:
         self._session = session
         self._user_directory = user_directory
+
+    def list_categories(self, group_id: UUID, user_id: UUID) -> list[CleaningCategorySummary]:
+        self._require_membership(group_id, user_id)
+        categories = self._session.scalars(
+            select(CleaningCategory)
+            .where(CleaningCategory.group_id == group_id)
+            .order_by(func.lower(CleaningCategory.name), CleaningCategory.id)
+        ).all()
+        return [self._category_summary(category) for category in categories]
+
+    def create_category(self, group_id: UUID, user_id: UUID, name: str) -> CleaningCategorySummary:
+        self._lock_membership(group_id, user_id)
+        normalized_name = name.strip()
+        if self._category_exists(group_id, normalized_name):
+            raise CleaningCategoryDuplicateError
+        now = datetime.now(UTC)
+        category = CleaningCategory(
+            id=uuid4(),
+            group_id=group_id,
+            name=normalized_name,
+            created_at=now,
+            updated_at=now,
+        )
+        self._session.add(category)
+        self._commit_category("Could not create cleaning category")
+        return self._category_summary(category)
+
+    def update_category(self, category_id: UUID, user_id: UUID, name: str) -> CleaningCategorySummary:
+        group_id = self._category_group_id(category_id)
+        self._lock_membership(group_id, user_id)
+        category = self._locked_category(category_id)
+        if category.group_id != group_id:
+            raise CleaningCategoryNotFoundError
+        normalized_name = name.strip()
+        if self._category_exists(group_id, normalized_name, exclude_id=category_id):
+            raise CleaningCategoryDuplicateError
+        category.name = normalized_name
+        category.updated_at = datetime.now(UTC)
+        self._commit_category("Could not update cleaning category")
+        return self._category_summary(category)
+
+    def delete_category(self, category_id: UUID, user_id: UUID) -> None:
+        group_id = self._category_group_id(category_id)
+        self._lock_membership(group_id, user_id)
+        category = self._locked_category(category_id)
+        if category.group_id != group_id:
+            raise CleaningCategoryNotFoundError
+        task_count = self._session.scalar(
+            select(func.count()).select_from(CleaningTask).where(CleaningTask.category_id == category_id)
+        )
+        if task_count:
+            raise CleaningCategoryInUseError
+        self._session.delete(category)
+        self._commit("Could not delete cleaning category")
 
     def list_tasks(self, group_id: UUID, user_id: UUID) -> list[CleaningTaskSummary]:
         membership = self._require_membership(group_id, user_id)
@@ -83,15 +158,16 @@ class CleaningService:
         user_id: UUID,
         name: str,
         interval_days: int,
-        category: CleaningTaskCategory = CleaningTaskCategory.CLEANING,
+        category_id: UUID,
     ) -> CleaningTaskSummary:
         membership = self._lock_admin(group_id, user_id)
+        self._require_category(category_id, group_id)
         now = datetime.now(UTC)
         task = CleaningTask(
             id=uuid4(),
             group_id=group_id,
             name=name,
-            category=category,
+            category_id=category_id,
             interval_days=interval_days,
             is_active=True,
             created_by_user_id=user_id,
@@ -108,7 +184,7 @@ class CleaningService:
         user_id: UUID,
         *,
         name: str | None,
-        category: CleaningTaskCategory | None,
+        category_id: UUID | None,
         interval_days: int | None,
         is_active: bool | None,
     ) -> CleaningTaskSummary:
@@ -117,10 +193,12 @@ class CleaningService:
         task = self._locked_task(task_id)
         if task.group_id != group_id:
             raise CleaningNotFoundError
+        if category_id is not None:
+            self._require_category(category_id, group_id)
         if name is not None:
             task.name = name
-        if category is not None:
-            task.category = category
+        if category_id is not None:
+            task.category_id = category_id
         if interval_days is not None:
             task.interval_days = interval_days
         if is_active is not None:
@@ -163,6 +241,35 @@ class CleaningService:
         if task is None:
             raise CleaningNotFoundError
         return task
+
+    def _locked_category(self, category_id: UUID) -> CleaningCategory:
+        category = self._session.scalar(
+            select(CleaningCategory).where(CleaningCategory.id == category_id).with_for_update()
+        )
+        if category is None:
+            raise CleaningCategoryNotFoundError
+        return category
+
+    def _category_group_id(self, category_id: UUID) -> UUID:
+        group_id = self._session.scalar(select(CleaningCategory.group_id).where(CleaningCategory.id == category_id))
+        if group_id is None:
+            raise CleaningCategoryNotFoundError
+        return group_id
+
+    def _require_category(self, category_id: UUID, group_id: UUID) -> CleaningCategory:
+        category = self._session.get(CleaningCategory, category_id)
+        if category is None or category.group_id != group_id:
+            raise CleaningCategoryNotFoundError
+        return category
+
+    def _category_exists(self, group_id: UUID, name: str, *, exclude_id: UUID | None = None) -> bool:
+        statement = select(CleaningCategory.id).where(
+            CleaningCategory.group_id == group_id,
+            func.lower(CleaningCategory.name) == name.lower(),
+        )
+        if exclude_id is not None:
+            statement = statement.where(CleaningCategory.id != exclude_id)
+        return self._session.scalar(statement) is not None
 
     def _task_group_id(self, task_id: UUID) -> UUID:
         group_id = self._session.scalar(select(CleaningTask.group_id).where(CleaningTask.id == task_id))
@@ -234,7 +341,7 @@ class CleaningService:
             id=task.id,
             group_id=task.group_id,
             name=task.name,
-            category=CleaningTaskCategory(task.category),
+            category_id=task.category_id,
             interval_days=task.interval_days,
             is_active=task.is_active,
             created_by_user_id=task.created_by_user_id,
@@ -251,3 +358,20 @@ class CleaningService:
         except SQLAlchemyError as error:
             self._session.rollback()
             raise CleaningPersistenceError(message) from error
+
+    def _commit_category(self, message: str) -> None:
+        try:
+            self._session.commit()
+        except SQLAlchemyError as error:
+            self._session.rollback()
+            raise CleaningPersistenceError(message) from error
+
+    @staticmethod
+    def _category_summary(category: CleaningCategory) -> CleaningCategorySummary:
+        return CleaningCategorySummary(
+            id=category.id,
+            group_id=category.group_id,
+            name=category.name,
+            created_at=category.created_at,
+            updated_at=category.updated_at,
+        )
