@@ -145,7 +145,7 @@ describe('GroupPage', () => {
     vi.mocked(getGroup).mockResolvedValue({ ...group, members: [] })
     vi.mocked(getGroupAdministration).mockResolvedValue({
       album_count: 0,
-      cleaning_task_count: 0,
+      chore_task_count: 0,
       shared_photo_count: 0,
       shopping_item_count: 0,
       active_admin_count: 1,

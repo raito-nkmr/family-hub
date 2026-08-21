@@ -4,7 +4,7 @@ import { appPaths } from '../../app/routes'
 import { formatDateTime } from '../../shared/lib/format'
 import {
   CheckCircleIcon,
-  CleaningIcon,
+  ChoreIcon,
   PhotoActivityIcon,
   PhotoLibraryIcon,
   ShoppingCartIcon,
@@ -12,18 +12,18 @@ import {
 import { LoadingState } from '../../shared/ui/LoadingState'
 import { PageMessage } from '../../shared/ui/PageMessage'
 import { RefreshButton } from '../../shared/ui/RefreshButton'
-import { getCleaningDueStatus } from '../cleaning/status'
+import { getChoreDueStatus } from '../chores/status'
 import type { FamilyGroup } from '../groups/api'
 import { PwaInstallCard } from '../pwa/PwaInstallCard'
 import type { PhotoListItem } from '../photos/api'
 import { PhotoCard } from '../photos/components/PhotoCard'
-import type { GroupCleaningTask, GroupShoppingItem } from './useHome'
+import type { GroupChoreTask, GroupShoppingItem } from './useHome'
 
 interface HomePageProps {
   recentPhotos: PhotoListItem[]
   unseenPhotoCount: number
   groups: FamilyGroup[]
-  cleaningTasks: GroupCleaningTask[]
+  choreTasks: GroupChoreTask[]
   shoppingItems: GroupShoppingItem[]
   loading: boolean
   error: string | null
@@ -38,7 +38,7 @@ export function HomePage({
   recentPhotos,
   unseenPhotoCount,
   groups,
-  cleaningTasks,
+  choreTasks,
   shoppingItems,
   loading,
   error,
@@ -49,7 +49,7 @@ export function HomePage({
   onDismissPwaInstallPrompt,
 }: HomePageProps) {
   const { t } = useTranslation()
-  const upcomingCleaning = [...cleaningTasks]
+  const upcomingChore = [...choreTasks]
     .sort((left, right) => new Date(left.task.next_due_at).getTime() - new Date(right.task.next_due_at).getTime())
     .slice(0, 3)
   const nextShoppingItems = [...shoppingItems]
@@ -104,20 +104,20 @@ export function HomePage({
             </Link>
           </section>
 
-          <section className="home-panel" aria-labelledby="home-cleaning-heading">
+          <section className="home-panel" aria-labelledby="home-chore-heading">
             <header>
               <span className="home-panel__icon">
-                <CleaningIcon />
+                <ChoreIcon />
               </span>
               <div>
-                <h2 id="home-cleaning-heading">{t('home.cleaning')}</h2>
-                <p>{t('home.cleaningCount', { count: cleaningTasks.length })}</p>
+                <h2 id="home-chore-heading">{t('home.chores')}</h2>
+                <p>{t('home.choresCount', { count: choreTasks.length })}</p>
               </div>
             </header>
-            {upcomingCleaning.length > 0 ? (
+            {upcomingChore.length > 0 ? (
               <ul className="home-summary-list">
-                {upcomingCleaning.map(({ group, task }) => {
-                  const due = getCleaningDueStatus(task)
+                {upcomingChore.map(({ group, task }) => {
+                  const due = getChoreDueStatus(task)
                   return (
                     <li key={task.id}>
                       <CheckCircleIcon />
@@ -132,11 +132,11 @@ export function HomePage({
                 })}
               </ul>
             ) : (
-              <p className="home-panel__empty">{groups.length === 0 ? t('home.groupNeeded') : t('home.noCleaning')}</p>
+              <p className="home-panel__empty">{groups.length === 0 ? t('home.groupNeeded') : t('home.noChores')}</p>
             )}
-            <Link className="secondary-button icon-button home-panel__action" to={appPaths.cleaning}>
-              <CleaningIcon />
-              {t('home.openCleaning')}
+            <Link className="secondary-button icon-button home-panel__action" to={appPaths.chores}>
+              <ChoreIcon />
+              {t('home.openChores')}
             </Link>
           </section>
 

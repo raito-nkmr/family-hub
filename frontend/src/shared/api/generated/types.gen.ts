@@ -433,9 +433,9 @@ export type BulkPhotoSharingResponse = {
 }
 
 /**
- * CleaningCategoryCreate
+ * ChoreCategoryCreate
  */
-export type CleaningCategoryCreate = {
+export type ChoreCategoryCreate = {
   /**
    * Name
    */
@@ -443,19 +443,19 @@ export type CleaningCategoryCreate = {
 }
 
 /**
- * CleaningCategoryListResponse
+ * ChoreCategoryListResponse
  */
-export type CleaningCategoryListResponse = {
+export type ChoreCategoryListResponse = {
   /**
    * Items
    */
-  items: Array<CleaningCategoryResponse>
+  items: Array<ChoreCategoryResponse>
 }
 
 /**
- * CleaningCategoryOrderUpdate
+ * ChoreCategoryOrderUpdate
  */
-export type CleaningCategoryOrderUpdate = {
+export type ChoreCategoryOrderUpdate = {
   /**
    * Category Ids
    */
@@ -463,9 +463,9 @@ export type CleaningCategoryOrderUpdate = {
 }
 
 /**
- * CleaningCategoryResponse
+ * ChoreCategoryResponse
  */
-export type CleaningCategoryResponse = {
+export type ChoreCategoryResponse = {
   /**
    * Created At
    */
@@ -493,9 +493,9 @@ export type CleaningCategoryResponse = {
 }
 
 /**
- * CleaningCategoryUpdate
+ * ChoreCategoryUpdate
  */
-export type CleaningCategoryUpdate = {
+export type ChoreCategoryUpdate = {
   /**
    * Name
    */
@@ -503,9 +503,9 @@ export type CleaningCategoryUpdate = {
 }
 
 /**
- * CleaningCompletionResponse
+ * ChoreCompletionResponse
  */
-export type CleaningCompletionResponse = {
+export type ChoreCompletionResponse = {
   /**
    * Completed At
    */
@@ -525,9 +525,9 @@ export type CleaningCompletionResponse = {
 }
 
 /**
- * CleaningMonthlyCategoryResponse
+ * ChoreMonthlyCategoryResponse
  */
-export type CleaningMonthlyCategoryResponse = {
+export type ChoreMonthlyCategoryResponse = {
   /**
    * Category Id
    */
@@ -547,9 +547,9 @@ export type CleaningMonthlyCategoryResponse = {
 }
 
 /**
- * CleaningMonthlyDailyResponse
+ * ChoreMonthlyDailyResponse
  */
-export type CleaningMonthlyDailyResponse = {
+export type ChoreMonthlyDailyResponse = {
   /**
    * Completion Count
    */
@@ -565,9 +565,9 @@ export type CleaningMonthlyDailyResponse = {
 }
 
 /**
- * CleaningMonthlyMemberResponse
+ * ChoreMonthlyMemberResponse
  */
-export type CleaningMonthlyMemberResponse = {
+export type ChoreMonthlyMemberResponse = {
   /**
    * Completion Count
    */
@@ -591,17 +591,17 @@ export type CleaningMonthlyMemberResponse = {
 }
 
 /**
- * CleaningMonthlyReportResponse
+ * ChoreMonthlyReportResponse
  */
-export type CleaningMonthlyReportResponse = {
+export type ChoreMonthlyReportResponse = {
   /**
    * Categories
    */
-  categories: Array<CleaningMonthlyCategoryResponse>
+  categories: Array<ChoreMonthlyCategoryResponse>
   /**
    * Daily
    */
-  daily: Array<CleaningMonthlyDailyResponse>
+  daily: Array<ChoreMonthlyDailyResponse>
   /**
    * Group Id
    */
@@ -609,16 +609,16 @@ export type CleaningMonthlyReportResponse = {
   /**
    * Members
    */
-  members: Array<CleaningMonthlyMemberResponse>
+  members: Array<ChoreMonthlyMemberResponse>
   /**
    * Month
    */
   month: string
-  summary: CleaningMonthlySummaryResponse
+  summary: ChoreMonthlySummaryResponse
   /**
    * Tasks
    */
-  tasks: Array<CleaningMonthlyTaskResponse>
+  tasks: Array<ChoreMonthlyTaskResponse>
   /**
    * Timezone
    */
@@ -626,9 +626,9 @@ export type CleaningMonthlyReportResponse = {
 }
 
 /**
- * CleaningMonthlySummaryResponse
+ * ChoreMonthlySummaryResponse
  */
-export type CleaningMonthlySummaryResponse = {
+export type ChoreMonthlySummaryResponse = {
   /**
    * Category Count
    */
@@ -648,9 +648,9 @@ export type CleaningMonthlySummaryResponse = {
 }
 
 /**
- * CleaningMonthlyTaskMemberResponse
+ * ChoreMonthlyTaskMemberResponse
  */
-export type CleaningMonthlyTaskMemberResponse = {
+export type ChoreMonthlyTaskMemberResponse = {
   /**
    * Completion Count
    */
@@ -666,9 +666,9 @@ export type CleaningMonthlyTaskMemberResponse = {
 }
 
 /**
- * CleaningMonthlyTaskResponse
+ * ChoreMonthlyTaskResponse
  */
-export type CleaningMonthlyTaskResponse = {
+export type ChoreMonthlyTaskResponse = {
   /**
    * Category Id
    */
@@ -684,7 +684,7 @@ export type CleaningMonthlyTaskResponse = {
   /**
    * Members
    */
-  members: Array<CleaningMonthlyTaskMemberResponse>
+  members: Array<ChoreMonthlyTaskMemberResponse>
   /**
    * Name
    */
@@ -700,9 +700,9 @@ export type CleaningMonthlyTaskResponse = {
 }
 
 /**
- * CleaningTaskCreate
+ * ChoreTaskCreate
  */
-export type CleaningTaskCreate = {
+export type ChoreTaskCreate = {
   /**
    * Category Id
    */
@@ -718,19 +718,19 @@ export type CleaningTaskCreate = {
 }
 
 /**
- * CleaningTaskListResponse
+ * ChoreTaskListResponse
  */
-export type CleaningTaskListResponse = {
+export type ChoreTaskListResponse = {
   /**
    * Items
    */
-  items: Array<CleaningTaskResponse>
+  items: Array<ChoreTaskResponse>
 }
 
 /**
- * CleaningTaskResponse
+ * ChoreTaskResponse
  */
-export type CleaningTaskResponse = {
+export type ChoreTaskResponse = {
   /**
    * Category Id
    */
@@ -760,7 +760,7 @@ export type CleaningTaskResponse = {
    * Is Active
    */
   is_active: boolean
-  last_completion: CleaningCompletionResponse | null
+  last_completion: ChoreCompletionResponse | null
   /**
    * Name
    */
@@ -776,9 +776,9 @@ export type CleaningTaskResponse = {
 }
 
 /**
- * CleaningTaskUpdate
+ * ChoreTaskUpdate
  */
-export type CleaningTaskUpdate = {
+export type ChoreTaskUpdate = {
   /**
    * Category Id
    */
@@ -810,9 +810,9 @@ export type GroupAdministrationOverviewResponse = {
    */
   album_count: number
   /**
-   * Cleaning Task Count
+   * Chore Task Count
    */
-  cleaning_task_count: number
+  chore_task_count: number
   /**
    * Shared Photo Count
    */
@@ -961,9 +961,9 @@ export type GroupMemberRemovalImpactResponse = {
    */
   created_album_count: number
   /**
-   * Created Cleaning Task Count
+   * Created Chore Task Count
    */
-  created_cleaning_task_count: number
+  created_chore_task_count: number
   /**
    * Created Shopping Item Count
    */
@@ -1385,7 +1385,7 @@ export type NotificationPreferenceUpdate = {
 /**
  * NotificationType
  */
-export type NotificationType = 'photo_shared' | 'cleaning_due' | 'shopping_added'
+export type NotificationType = 'photo_shared' | 'chore_due' | 'shopping_added'
 
 /**
  * PasswordChangeRequest
@@ -2967,7 +2967,7 @@ export type RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses = {
 export type RevokeSessionApiV1AuthSessionsSessionIdDeleteResponse =
   RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses[keyof RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses]
 
-export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteData = {
+export type DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteData = {
   body?: never
   headers?: {
     /**
@@ -2982,31 +2982,31 @@ export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteData = 
     category_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/categories/{category_id}'
+  url: '/api/v1/chores/categories/{category_id}'
 }
 
-export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors = {
+export type DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteError =
-  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors[keyof DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors]
+export type DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteError =
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors[keyof DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors]
 
-export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses = {
+export type DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses = {
   /**
    * Successful Response
    */
   204: void
 }
 
-export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponse =
-  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses[keyof DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses]
+export type DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponse =
+  DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses[keyof DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses]
 
-export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchData = {
-  body: CleaningCategoryUpdate
+export type UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchData = {
+  body: ChoreCategoryUpdate
   headers?: {
     /**
      * X-Csrf-Token
@@ -3020,30 +3020,30 @@ export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchData = {
     category_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/categories/{category_id}'
+  url: '/api/v1/chores/categories/{category_id}'
 }
 
-export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors = {
+export type UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchError =
-  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors[keyof UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors]
+export type UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchError =
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors[keyof UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchErrors]
 
-export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses = {
+export type UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses = {
   /**
    * Successful Response
    */
-  200: CleaningCategoryResponse
+  200: ChoreCategoryResponse
 }
 
-export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponse =
-  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses[keyof UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses]
+export type UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponse =
+  UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses[keyof UpdateChoreCategoryApiV1ChoresCategoriesCategoryIdPatchResponses]
 
-export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetData = {
+export type ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetData = {
   body?: never
   path: {
     /**
@@ -3052,31 +3052,31 @@ export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetData = 
     group_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/groups/{group_id}/categories'
+  url: '/api/v1/chores/groups/{group_id}/categories'
 }
 
-export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors = {
+export type ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetError =
-  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors[keyof ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors]
+export type ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetError =
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors[keyof ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetErrors]
 
-export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses = {
+export type ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses = {
   /**
    * Successful Response
    */
-  200: CleaningCategoryListResponse
+  200: ChoreCategoryListResponse
 }
 
-export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponse =
-  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses[keyof ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses]
+export type ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponse =
+  ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses[keyof ListChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesGetResponses]
 
-export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostData = {
-  body: CleaningCategoryCreate
+export type CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostData = {
+  body: ChoreCategoryCreate
   headers?: {
     /**
      * X-Csrf-Token
@@ -3090,31 +3090,31 @@ export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostData =
     group_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/groups/{group_id}/categories'
+  url: '/api/v1/chores/groups/{group_id}/categories'
 }
 
-export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors = {
+export type CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostError =
-  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors]
+export type CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostError =
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors[keyof CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostErrors]
 
-export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses = {
+export type CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses = {
   /**
    * Successful Response
    */
-  201: CleaningCategoryResponse
+  201: ChoreCategoryResponse
 }
 
-export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponse =
-  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses]
+export type CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponse =
+  CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses[keyof CreateChoreCategoryApiV1ChoresGroupsGroupIdCategoriesPostResponses]
 
-export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchData = {
-  body: CleaningCategoryOrderUpdate
+export type ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchData = {
+  body: ChoreCategoryOrderUpdate
   headers?: {
     /**
      * X-Csrf-Token
@@ -3128,30 +3128,30 @@ export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPa
     group_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/groups/{group_id}/categories/order'
+  url: '/api/v1/chores/groups/{group_id}/categories/order'
 }
 
-export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors = {
+export type ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchError =
-  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors[keyof ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors]
+export type ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchError =
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors[keyof ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors]
 
-export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses = {
+export type ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses = {
   /**
    * Successful Response
    */
-  200: CleaningCategoryListResponse
+  200: ChoreCategoryListResponse
 }
 
-export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponse =
-  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses[keyof ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses]
+export type ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponse =
+  ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses[keyof ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses]
 
-export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetData = {
+export type GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetData = {
   body?: never
   path: {
     /**
@@ -3165,30 +3165,30 @@ export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetD
      */
     month: string
   }
-  url: '/api/v1/cleaning/groups/{group_id}/reports/monthly'
+  url: '/api/v1/chores/groups/{group_id}/reports/monthly'
 }
 
-export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors = {
+export type GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetError =
-  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors[keyof GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors]
+export type GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetError =
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors[keyof GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetErrors]
 
-export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses = {
+export type GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses = {
   /**
    * Successful Response
    */
-  200: CleaningMonthlyReportResponse
+  200: ChoreMonthlyReportResponse
 }
 
-export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponse =
-  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses[keyof GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses]
+export type GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponse =
+  GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses[keyof GetChoreMonthlyReportApiV1ChoresGroupsGroupIdReportsMonthlyGetResponses]
 
-export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData = {
+export type ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetData = {
   body?: never
   path: {
     /**
@@ -3197,31 +3197,31 @@ export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData = {
     group_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/groups/{group_id}/tasks'
+  url: '/api/v1/chores/groups/{group_id}/tasks'
 }
 
-export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors = {
+export type ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetError =
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors[keyof ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors]
+export type ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetError =
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors[keyof ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetErrors]
 
-export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses = {
+export type ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses = {
   /**
    * Successful Response
    */
-  200: CleaningTaskListResponse
+  200: ChoreTaskListResponse
 }
 
-export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponse =
-  ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses[keyof ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses]
+export type ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponse =
+  ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses[keyof ListChoreTasksApiV1ChoresGroupsGroupIdTasksGetResponses]
 
-export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostData = {
-  body: CleaningTaskCreate
+export type CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostData = {
+  body: ChoreTaskCreate
   headers?: {
     /**
      * X-Csrf-Token
@@ -3235,30 +3235,30 @@ export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostData = {
     group_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/groups/{group_id}/tasks'
+  url: '/api/v1/chores/groups/{group_id}/tasks'
 }
 
-export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors = {
+export type CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostError =
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors[keyof CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors]
+export type CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostError =
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors[keyof CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostErrors]
 
-export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses = {
+export type CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses = {
   /**
    * Successful Response
    */
-  201: CleaningTaskResponse
+  201: ChoreTaskResponse
 }
 
-export type CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponse =
-  CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses[keyof CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses]
+export type CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponse =
+  CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses[keyof CreateChoreTaskApiV1ChoresGroupsGroupIdTasksPostResponses]
 
-export type GetCleaningTaskApiV1CleaningTasksTaskIdGetData = {
+export type GetChoreTaskApiV1ChoresTasksTaskIdGetData = {
   body?: never
   path: {
     /**
@@ -3267,31 +3267,31 @@ export type GetCleaningTaskApiV1CleaningTasksTaskIdGetData = {
     task_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/tasks/{task_id}'
+  url: '/api/v1/chores/tasks/{task_id}'
 }
 
-export type GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors = {
+export type GetChoreTaskApiV1ChoresTasksTaskIdGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type GetCleaningTaskApiV1CleaningTasksTaskIdGetError =
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors[keyof GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors]
+export type GetChoreTaskApiV1ChoresTasksTaskIdGetError =
+  GetChoreTaskApiV1ChoresTasksTaskIdGetErrors[keyof GetChoreTaskApiV1ChoresTasksTaskIdGetErrors]
 
-export type GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses = {
+export type GetChoreTaskApiV1ChoresTasksTaskIdGetResponses = {
   /**
    * Successful Response
    */
-  200: CleaningTaskResponse
+  200: ChoreTaskResponse
 }
 
-export type GetCleaningTaskApiV1CleaningTasksTaskIdGetResponse =
-  GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses[keyof GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses]
+export type GetChoreTaskApiV1ChoresTasksTaskIdGetResponse =
+  GetChoreTaskApiV1ChoresTasksTaskIdGetResponses[keyof GetChoreTaskApiV1ChoresTasksTaskIdGetResponses]
 
-export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchData = {
-  body: CleaningTaskUpdate
+export type UpdateChoreTaskApiV1ChoresTasksTaskIdPatchData = {
+  body: ChoreTaskUpdate
   headers?: {
     /**
      * X-Csrf-Token
@@ -3305,30 +3305,30 @@ export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchData = {
     task_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/tasks/{task_id}'
+  url: '/api/v1/chores/tasks/{task_id}'
 }
 
-export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors = {
+export type UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchError =
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors[keyof UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors]
+export type UpdateChoreTaskApiV1ChoresTasksTaskIdPatchError =
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors[keyof UpdateChoreTaskApiV1ChoresTasksTaskIdPatchErrors]
 
-export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses = {
+export type UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses = {
   /**
    * Successful Response
    */
-  200: CleaningTaskResponse
+  200: ChoreTaskResponse
 }
 
-export type UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponse =
-  UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses[keyof UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses]
+export type UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponse =
+  UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses[keyof UpdateChoreTaskApiV1ChoresTasksTaskIdPatchResponses]
 
-export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostData = {
+export type CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostData = {
   body?: never
   headers?: {
     /**
@@ -3343,28 +3343,28 @@ export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostData = {
     task_id: string
   }
   query?: never
-  url: '/api/v1/cleaning/tasks/{task_id}/completions'
+  url: '/api/v1/chores/tasks/{task_id}/completions'
 }
 
-export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors = {
+export type CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostError =
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors[keyof CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostErrors]
+export type CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostError =
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors[keyof CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostErrors]
 
-export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses = {
+export type CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses = {
   /**
    * Successful Response
    */
-  201: CleaningTaskResponse
+  201: ChoreTaskResponse
 }
 
-export type CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponse =
-  CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses[keyof CompleteCleaningTaskApiV1CleaningTasksTaskIdCompletionsPostResponses]
+export type CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponse =
+  CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses[keyof CompleteChoreTaskApiV1ChoresTasksTaskIdCompletionsPostResponses]
 
 export type ListGroupsApiV1GroupsGetData = {
   body?: never

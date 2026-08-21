@@ -22,9 +22,9 @@ export const queryKeys = {
   photoTimeline: (year: number) => ['photos', 'timeline', year] as const,
   photoActivity: (userId: string) => ['photos', 'activity', userId] as const,
   photoTrash: ['photos', 'trash'] as const,
-  cleaningCategories: (groupId: string) => ['groups', groupId, 'cleaning-categories'] as const,
-  cleaningTasks: (groupId: string) => ['groups', groupId, 'cleaning-tasks'] as const,
-  cleaningReports: (groupId: string) => ['groups', groupId, 'cleaning-reports'] as const,
-  cleaningReport: (groupId: string, month: string) => ['groups', groupId, 'cleaning-reports', month] as const,
+  choreCategories: (groupId: string) => ['groups', groupId, 'chore-categories'] as const,
+  choreTasks: (groupId: string) => ['groups', groupId, 'chore-tasks'] as const,
+  choreReports: (groupId: string) => ['groups', groupId, 'chores-reports'] as const,
+  choreReport: (groupId: string, month: string) => ['groups', groupId, 'chores-reports', month] as const,
   shoppingItems: (groupId: string) => ['groups', groupId, 'shopping-items'] as const,
 }

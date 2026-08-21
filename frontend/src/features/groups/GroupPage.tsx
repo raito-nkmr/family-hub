@@ -131,8 +131,8 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                     <dd>{administrationQuery.data.shared_photo_count}</dd>
                   </div>
                   <div>
-                    <dt>{t('cleaning.title')}</dt>
-                    <dd>{administrationQuery.data.cleaning_task_count}</dd>
+                    <dt>{t('chores.title')}</dt>
+                    <dd>{administrationQuery.data.chore_task_count}</dd>
                   </div>
                   <div>
                     <dt>{t('shopping.title')}</dt>

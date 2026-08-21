@@ -15,7 +15,7 @@ from app.features.auth.admin_router import router as admin_router
 from app.features.auth.invitation_router import admin_router as admin_invitation_router
 from app.features.auth.invitation_router import public_router as invitation_router
 from app.features.auth.router import router as auth_router
-from app.features.cleaning.router import router as cleaning_router
+from app.features.chores.router import router as chores_router
 from app.features.groups.router import router as groups_router
 from app.features.health.router import root_router
 from app.features.health.router import router as health_router
@@ -66,7 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(upload_batches_router, prefix="/api/v1/upload-batches")
     app.include_router(albums_router, prefix="/api/v1/albums")
     app.include_router(groups_router, prefix="/api/v1/groups")
-    app.include_router(cleaning_router, prefix="/api/v1/cleaning")
+    app.include_router(chores_router, prefix="/api/v1/chores")
     app.include_router(shopping_router, prefix="/api/v1/shopping")
     app.include_router(maintenance_router, prefix="/api/v1/admin/maintenance")
     app.include_router(notifications_router, prefix="/api/v1/notifications")

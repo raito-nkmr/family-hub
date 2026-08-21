@@ -11,7 +11,7 @@ import CancelSymbol from './icons/material-symbols/cancel.svg?react'
 import CategorySymbol from './icons/material-symbols/category.svg?react'
 import CheckSymbol from './icons/material-symbols/check.svg?react'
 import CheckCircleSymbol from './icons/material-symbols/check-circle.svg?react'
-import CleaningSymbol from './icons/material-symbols/cleaning.svg?react'
+import ChoreSymbol from './icons/material-symbols/chores.svg?react'
 import CloseSymbol from './icons/material-symbols/close.svg?react'
 import DeleteSymbol from './icons/material-symbols/delete.svg?react'
 import EditSymbol from './icons/material-symbols/edit.svg?react'
@@ -219,8 +219,8 @@ export function PersonAddIcon() {
   return <PersonAddSymbol className="material-symbol-icon" />
 }
 
-export function CleaningIcon() {
-  return <CleaningSymbol className="material-symbol-icon" />
+export function ChoreIcon() {
+  return <ChoreSymbol className="material-symbol-icon" />
 }
 
 export function ShoppingCartIcon() {

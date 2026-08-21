@@ -81,7 +81,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
       updateGroupTimezone(groupId, timezone),
     onSuccess: (updated) => {
       updateGroupCaches(queryClient, updated)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.cleaningReports(updated.id) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.choreReports(updated.id) })
     },
   })
 
@@ -140,8 +140,8 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     const impactSummary = [
       impact.shared_photo_count && i18n.t('groups.removalImpact.sharedPhotos', { count: impact.shared_photo_count }),
       impact.created_album_count && i18n.t('groups.removalImpact.albums', { count: impact.created_album_count }),
-      impact.created_cleaning_task_count &&
-        i18n.t('groups.removalImpact.cleaningTasks', { count: impact.created_cleaning_task_count }),
+      impact.created_chore_task_count &&
+        i18n.t('groups.removalImpact.choreTasks', { count: impact.created_chore_task_count }),
       impact.created_shopping_item_count &&
         i18n.t('groups.removalImpact.shoppingItems', { count: impact.created_shopping_item_count }),
     ]

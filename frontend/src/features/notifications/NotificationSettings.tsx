@@ -10,7 +10,7 @@ interface NotificationSettingsProps {
   onUnauthorized: () => void
 }
 
-const NOTIFICATION_TYPES: NotificationType[] = ['photo_shared', 'cleaning_due', 'shopping_added']
+const NOTIFICATION_TYPES: NotificationType[] = ['photo_shared', 'chore_due', 'shopping_added']
 
 export function NotificationSettings({
   showInstallGuide,

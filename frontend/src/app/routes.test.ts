@@ -10,8 +10,8 @@ describe('app routes', () => {
     expect(getAppView('/unknown')).toBeNull()
   })
 
-  it('keeps cleaning navigation active on the report subpage', () => {
-    expect(getAppView('/cleaning/reports')).toBe('cleaning-reports')
-    expect(getAppView('/cleaning/daily')).toBe('cleaning-daily')
+  it('keeps chore navigation active on the report subpage', () => {
+    expect(getAppView('/chores/reports')).toBe('chores-reports')
+    expect(getAppView('/chores/daily')).toBe('chores-daily')
   })
 })

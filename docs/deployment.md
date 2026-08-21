@@ -66,7 +66,7 @@ maintenance units must declare this service in `Requires` and `After`; they must
 construction and cutover procedures.
 
 Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
-startup requirement. The backend remains available for authentication, cleaning, shopping, groups, and other database-backed
+startup requirement. The backend remains available for authentication, chore, shopping, groups, and other database-backed
 features when the photo HDD is unavailable; photo operations that need the HDD return `503` or an equivalent unavailable
 status.
 
@@ -181,7 +181,7 @@ Do not store API responses whose contents depend on authentication or authorizat
 - Set Cloudflare Browser Cache TTL to `Respect Existing Headers` so it does not override Caddy's purpose-specific headers.
 - Bypass `/sw.js` in Cache Rules as well, so Service Worker update checks are not delayed.
 - Return `Cache-Control: private, no-store` for authenticated binaries such as originals, thumbnails, and ZIP exports.
-- Apply `private, no-store` consistently to dynamic authentication, group, album, cleaning, and shopping APIs.
+- Apply `private, no-store` consistently to dynamic authentication, group, album, chore, and shopping APIs.
 - Hashed `/assets/*` files may use `public, max-age=31536000, immutable`.
 - Do not long-cache `index.html`.
 
@@ -220,7 +220,7 @@ the verification and current timer state in the host operational record.
 
 ## Dead-man monitoring for maintenance jobs
 
-The systemd units for database backup, photo integrity, trash purge, notification delivery, cleaning-due notifications,
+The systemd units for database backup, photo integrity, trash purge, notification delivery, chore-due notifications,
 and secondary-storage backup can send start, success, and failure pings to any Healthchecks-compatible URL. Configure each
 job's `MONITORING_PING_URL_*` in the production `backend.env`; never store actual URLs or check identifiers in the
 repository. Require HTTPS, allowing loopback HTTP only for a self-hosted monitor on the same host. Unconfigured jobs do

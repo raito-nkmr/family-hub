@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
-import { appPaths, cleaningViews, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
+import { appPaths, choreViews, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
 import {
   AlbumIcon,
   BarChartIcon,
@@ -27,8 +27,8 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
   const { t } = useTranslation()
   const location = useLocation()
   const activeView = getAppView(location.pathname)
-  const cleaningSearch = activeView && cleaningViews.includes(activeView) ? location.search : ''
-  const cleaningTo = (view: (typeof cleaningViews)[number]) => ({ pathname: appPaths[view], search: cleaningSearch })
+  const choreSearch = activeView && choreViews.includes(activeView) ? location.search : ''
+  const choreTo = (view: (typeof choreViews)[number]) => ({ pathname: appPaths[view], search: choreSearch })
   const itemClass = (view: AppView, extra = '') =>
     `${activeView === view ? 'app-navigation__item app-navigation__item--active' : 'app-navigation__item'} ${extra}`.trim()
   const sectionClass = (views: AppView[], extra = '') =>
@@ -85,32 +85,32 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
       </NavLink>
       <span className="app-navigation__section app-navigation__desktop-only">
         <TaskAltIcon />
-        {t('navigation.cleaning')}
+        {t('navigation.chores')}
       </span>
       <NavLink
-        className={itemClass('cleaning', 'app-navigation__desktop-only app-navigation__item--nested')}
-        to={cleaningTo('cleaning')}
+        className={itemClass('chores', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={choreTo('chores')}
       >
         <TaskAltIcon />
-        {t('navigation.cleaning')}
+        {t('navigation.chores')}
       </NavLink>
       <NavLink
-        className={itemClass('cleaning-daily', 'app-navigation__desktop-only app-navigation__item--nested')}
-        to={cleaningTo('cleaning-daily')}
+        className={itemClass('chores-daily', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={choreTo('chores-daily')}
       >
         <CalendarMonthIcon />
-        {t('navigation.cleaningDaily')}
+        {t('navigation.choresDaily')}
       </NavLink>
       <NavLink
-        className={itemClass('cleaning-reports', 'app-navigation__desktop-only app-navigation__item--nested')}
-        to={cleaningTo('cleaning-reports')}
+        className={itemClass('chores-reports', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={choreTo('chores-reports')}
       >
         <BarChartIcon />
-        {t('navigation.cleaningMonthly')}
+        {t('navigation.choresMonthly')}
       </NavLink>
-      <NavLink className={sectionClass(cleaningViews, 'app-navigation__mobile-only')} to={cleaningTo('cleaning')}>
+      <NavLink className={sectionClass(choreViews, 'app-navigation__mobile-only')} to={choreTo('chores')}>
         <TaskAltIcon />
-        {t('navigation.cleaning')}
+        {t('navigation.chores')}
       </NavLink>
       <NavLink className={itemClass('shopping')} to={appPaths.shopping}>
         <ShoppingCartIcon />
@@ -151,7 +151,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
   const { t } = useTranslation()
   const location = useLocation()
   const activeView = getAppView(location.pathname)
-  const cleaningSearch = activeView && cleaningViews.includes(activeView) ? location.search : ''
+  const choreSearch = activeView && choreViews.includes(activeView) ? location.search : ''
   const tabs =
     activeView && photoViews.includes(activeView)
       ? [
@@ -165,18 +165,18 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
           { view: 'albums' as const, label: t('navigation.albums'), count: 0, icon: <AlbumIcon /> },
           { view: 'photo-trash' as const, label: t('navigation.photoTrash'), count: 0, icon: <DeleteIcon /> },
         ]
-      : activeView && cleaningViews.includes(activeView)
+      : activeView && choreViews.includes(activeView)
         ? [
-            { view: 'cleaning' as const, label: t('navigation.cleaning'), count: 0, icon: <TaskAltIcon /> },
+            { view: 'chores' as const, label: t('navigation.chores'), count: 0, icon: <TaskAltIcon /> },
             {
-              view: 'cleaning-daily' as const,
-              label: t('navigation.cleaningDaily'),
+              view: 'chores-daily' as const,
+              label: t('navigation.choresDaily'),
               count: 0,
               icon: <CalendarMonthIcon />,
             },
             {
-              view: 'cleaning-reports' as const,
-              label: t('navigation.cleaningMonthly'),
+              view: 'chores-reports' as const,
+              label: t('navigation.choresMonthly'),
               count: 0,
               icon: <BarChartIcon />,
             },
@@ -211,9 +211,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
               : 'section-navigation__item'
           }
           to={
-            cleaningViews.includes(tab.view)
-              ? { pathname: appPaths[tab.view], search: cleaningSearch }
-              : appPaths[tab.view]
+            choreViews.includes(tab.view) ? { pathname: appPaths[tab.view], search: choreSearch } : appPaths[tab.view]
           }
           key={tab.view}
         >

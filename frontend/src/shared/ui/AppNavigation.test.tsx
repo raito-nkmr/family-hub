@@ -59,28 +59,28 @@ describe('AppNavigation', () => {
     expect(screen.getByLabelText('current path')).toHaveTextContent('/account')
   })
 
-  it('groups cleaning destinations and preserves report filters', async () => {
+  it('groups chore destinations and preserves report filters', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/cleaning/daily?group=group-1&month=2026-07&view=chart']}>
+      <MemoryRouter initialEntries={['/chores/daily?group=group-1&month=2026-07&view=chart']}>
         <AppNavigation showInvitations={false} photoUnseenCount={0} />
         <SectionNavigation showInvitations={false} photoUnseenCount={0} />
         <LocationProbe />
       </MemoryRouter>,
     )
 
-    expect(screen.getAllByText('掃除').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('家事').length).toBeGreaterThan(0)
     expect(
       screen
         .getAllByRole('link', { name: '日別' })
-        .some((link) => link.getAttribute('href') === '/cleaning/daily?group=group-1&month=2026-07&view=chart'),
+        .some((link) => link.getAttribute('href') === '/chores/daily?group=group-1&month=2026-07&view=chart'),
     ).toBe(true)
     const monthlyLink = screen
       .getAllByRole('link', { name: '月次' })
       .find((link) => link.closest('.section-navigation') !== null)
     expect(monthlyLink).toBeDefined()
     await user.click(monthlyLink!)
-    expect(screen.getByLabelText('current path')).toHaveTextContent('/cleaning/reports')
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/chores/reports')
     expect(screen.getByLabelText('current search')).toHaveTextContent('?group=group-1&month=2026-07&view=chart')
   })
 

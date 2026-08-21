@@ -3,7 +3,7 @@
 ## Overview
 
 Family Hub provides several household web applications on shared authentication and family groups: a photo application
-that stores and displays photos from an iPhone, a cleaning application for sharing tasks and schedules, and a shopping list
+that stores and displays photos from an iPhone, a chores application for sharing tasks and schedules, and a shopping list
 for household purchases. The primary client is Safari 17 or later on iPhone; support for other devices and browsers may be
 considered later.
 
@@ -16,14 +16,14 @@ starting as a full-featured photo-management service.
 The following scope is implemented: the core MVP; authentication; invitation-based account creation by a system
 administrator; private photo use and sharing with multiple family groups; per-photo shared memos editable by viewers;
 per-user favorites; group albums with cover selection; a new-photo activity view and read state; bulk sharing of up to 100
-owned photos; group membership management; group-scoped cleaning; and group-scoped shopping lists.
+owned photos; group membership management; group-scoped chore; and group-scoped shopping lists.
 
-Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
+Chores supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
 a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
-completion action so the task card remains compact. Family-group members can create shared cleaning categories, and the
-cleaning screen can filter the visible tasks by category or show all categories. Members can change the shared category
+completion action so the task card remains compact. Family-group members can create shared chore categories, and the
+chore screen can filter the visible tasks by category or show all categories. Members can change the shared category
 order from the category manager, and that order is used by the filter and task forms.
-Cleaning and shopping remember the last selected family group in browser storage and use it when a page opens without an
+Chores and shopping remember the last selected family group in browser storage and use it when a page opens without an
 explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
 state kept for 24 hours, and partial success. JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V are supported. A WebP
@@ -39,7 +39,7 @@ Automated frontend and backend tests, CI, and TypeScript API generation from Ope
 group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
 the unpurchased state.
 
-The home screen aggregates recent photos, unread photo updates, active cleaning tasks across all groups, and unpurchased
+The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
 content mismatches, and orphaned files using the database as the reference. Original SHA-256 recalculation is optional.
 Photo details can download an accessible original by its original filename. The library can select up to 100 visible photos
@@ -59,8 +59,8 @@ A public bilingual privacy page is available from the shared footer before and a
 purposes, group visibility, retention, deletion, backup, external services, cookies, browser storage, and how to contact an
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
-The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Cleaning, Shopping, and Other appear in bottom
-navigation. New, Library, Albums, and Trash are tabs inside Photos; Cleaning, Daily, and Monthly are tabs inside Cleaning;
+The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chore, Shopping, and Other appear in bottom
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Chore, Daily, and Monthly are tabs inside Chore;
 Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
@@ -270,7 +270,7 @@ Members cannot perform administrative actions. Every group must retain at least 
 administrator cannot be demoted or removed. Only accounts created by invitation acceptance or management command can be added.
 
 Group physical deletion is available only as an operator management command, not through the web API or UI. Before deletion,
-show counts for members, invitations, albums, cleaning history, shopping items, photo shares, activity events, and upload
+show counts for members, invitations, albums, chore history, shopping items, photo shares, activity events, and upload
 batch targets. Require an exact group-name confirmation. Delete related data only with an explicit option. Preserve photo
 records, originals, and thumbnails, and synchronize affected JSON sidecars with the remaining share state.
 
@@ -284,18 +284,18 @@ Favorites are independent of sharing and albums and belong only to each user.
 Batch uploads verify group membership both when the batch is created and when each file is finalized. If membership is
 removed after batch creation, unfinished items are stopped so the old permission cannot share new photos.
 
-## Cleaning application
+## Chores application
 
-Household members share cleaning locations and completion state for areas such as the kitchen, bathroom, and living room.
-Cleaning data belongs to a family group and is independent of the photo `family` visibility scope.
+Household members share chore locations and completion state for areas such as the kitchen, bathroom, and living room.
+Chore data belongs to a family group and is independent of the photo `family` visibility scope.
 
 - Group members manage shared category names; group administrators manage task names, category assignment, intervals of
   1–3650 days, and active or paused state.
 - All group members can view active tasks and record completion.
-- The cleaning screen provides an all-categories view and category filters.
-- Group members can move shared categories up or down; the saved order is used consistently across cleaning controls.
+- The chore screen provides an all-categories view and category filters.
+- Group members can move shared categories up or down; the saved order is used consistently across chore controls.
 - Completion records the server time and user without overwriting history.
-- Cleaning is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
+- Chores is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
   Sunday-first calendar and can switch to the existing daily bar chart; the selected group, month, and daily view are
   retained in the URL.
 - The monthly report page shows a group-shared report with summary counts, category bars, member rankings, and task-level
@@ -418,7 +418,7 @@ configured on the browser or server operating system.
 - Tags
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
-- Calendar cleaning schedules, assignees, notifications, and completion undo
+- Calendar chore schedules, assignees, notifications, and completion undo
 - Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
 
 ## Open decisions

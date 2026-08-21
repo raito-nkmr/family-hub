@@ -48,14 +48,14 @@ class GroupMemberRemovalImpactResponse(BaseModel):
     username: str
     shared_photo_count: int
     created_album_count: int
-    created_cleaning_task_count: int
+    created_chore_task_count: int
     created_shopping_item_count: int
 
 
 class GroupAdministrationOverviewResponse(BaseModel):
     album_count: int
     shared_photo_count: int
-    cleaning_task_count: int
+    chore_task_count: int
     shopping_item_count: int
     active_admin_count: int
 

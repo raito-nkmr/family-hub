@@ -12,7 +12,7 @@ from app.core.config import get_management_settings
 from app.database.session import create_database_engine
 from app.features.albums.models import Album, AlbumPhoto
 from app.features.audit.public import record_administrative_event
-from app.features.cleaning.models import CleaningCompletion, CleaningTask
+from app.features.chores.models import ChoreCompletion, ChoreTask
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation
 from app.features.photos.models import (
     Photo,
@@ -52,8 +52,8 @@ class GroupDeletionImpact:
     member_count: int
     album_count: int
     album_photo_count: int
-    cleaning_task_count: int
-    cleaning_completion_count: int
+    chore_task_count: int
+    chore_completion_count: int
     shopping_item_count: int
     photo_share_count: int
     photo_activity_group_count: int
@@ -66,8 +66,8 @@ class GroupDeletionImpact:
             (
                 self.album_count,
                 self.album_photo_count,
-                self.cleaning_task_count,
-                self.cleaning_completion_count,
+                self.chore_task_count,
+                self.chore_completion_count,
                 self.shopping_item_count,
                 self.photo_share_count,
                 self.photo_activity_group_count,
@@ -83,12 +83,12 @@ def get_group_deletion_impact(session: Session, group_id: UUID, *, lock: bool = 
         _count(FamilyGroupMember, FamilyGroupMember.group_id == group_id).label("member_count"),
         _count(Album, Album.group_id == group_id).label("album_count"),
         _count(AlbumPhoto, AlbumPhoto.album_id == Album.id, Album.group_id == group_id).label("album_photo_count"),
-        _count(CleaningTask, CleaningTask.group_id == group_id).label("cleaning_task_count"),
+        _count(ChoreTask, ChoreTask.group_id == group_id).label("chore_task_count"),
         _count(
-            CleaningCompletion,
-            CleaningCompletion.task_id == CleaningTask.id,
-            CleaningTask.group_id == group_id,
-        ).label("cleaning_completion_count"),
+            ChoreCompletion,
+            ChoreCompletion.task_id == ChoreTask.id,
+            ChoreTask.group_id == group_id,
+        ).label("chore_completion_count"),
         _count(ShoppingItem, ShoppingItem.group_id == group_id).label("shopping_item_count"),
         _count(PhotoShare, PhotoShare.group_id == group_id).label("photo_share_count"),
         _count(PhotoActivityEventGroup, PhotoActivityEventGroup.group_id == group_id).label(
@@ -191,8 +191,8 @@ def print_deletion_impact(impact: GroupDeletionImpact) -> None:
     print(f"  Members: {impact.member_count}")
     print(f"  Albums: {impact.album_count}")
     print(f"  Album photo associations: {impact.album_photo_count}")
-    print(f"  Cleaning tasks: {impact.cleaning_task_count}")
-    print(f"  Cleaning completions: {impact.cleaning_completion_count}")
+    print(f"  Chore tasks: {impact.chore_task_count}")
+    print(f"  Chore completions: {impact.chore_completion_count}")
     print(f"  Shopping items: {impact.shopping_item_count}")
     print(f"  Photo shares: {impact.photo_share_count}")
     print(f"  Photo activity group associations: {impact.photo_activity_group_count}")

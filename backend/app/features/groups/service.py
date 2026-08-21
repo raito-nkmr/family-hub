@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, aliased
 from app.features.albums.public import Album
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.public import PublicUser, UserDirectory
-from app.features.cleaning.public import CleaningTask
+from app.features.chores.public import ChoreTask
 from app.features.groups.models import (
     FamilyGroup,
     FamilyGroupMember,
@@ -260,7 +260,7 @@ class GroupService:
         return {
             "album_count": self._count(Album, Album.group_id == group_id),
             "shared_photo_count": self._count(PhotoShare, PhotoShare.group_id == group_id),
-            "cleaning_task_count": self._count(CleaningTask, CleaningTask.group_id == group_id),
+            "chore_task_count": self._count(ChoreTask, ChoreTask.group_id == group_id),
             "shopping_item_count": self._count(ShoppingItem, ShoppingItem.group_id == group_id),
             "active_admin_count": sum(user.is_active for user in users.values()),
         }
@@ -330,10 +330,10 @@ class GroupService:
                 Album.group_id == group_id,
                 Album.created_by_user_id == target_user_id,
             ),
-            "created_cleaning_task_count": self._count(
-                CleaningTask,
-                CleaningTask.group_id == group_id,
-                CleaningTask.created_by_user_id == target_user_id,
+            "created_chore_task_count": self._count(
+                ChoreTask,
+                ChoreTask.group_id == group_id,
+                ChoreTask.created_by_user_id == target_user_id,
             ),
             "created_shopping_item_count": self._count(
                 ShoppingItem,

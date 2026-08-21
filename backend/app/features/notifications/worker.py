@@ -24,12 +24,12 @@ from app.features.notifications.service import DEFAULT_PREFERENCES
 MESSAGES = {
     "en": {
         NotificationType.PHOTO_SHARED: ("Family Hub", "New photos were shared with your family."),
-        NotificationType.CLEANING_DUE: ("Family Hub", "A cleaning task is due."),
+        NotificationType.CHORE_DUE: ("Family Hub", "A chore task is due."),
         NotificationType.SHOPPING_ADDED: ("Family Hub", "The shopping list was updated."),
     },
     "ja": {
         NotificationType.PHOTO_SHARED: ("Family Hub", "家族に新しい写真が共有されました。"),
-        NotificationType.CLEANING_DUE: ("Family Hub", "期限になった掃除があります。"),
+        NotificationType.CHORE_DUE: ("Family Hub", "期限になった家事タスクがあります。"),
         NotificationType.SHOPPING_ADDED: ("Family Hub", "買い物リストが更新されました。"),
     },
 }

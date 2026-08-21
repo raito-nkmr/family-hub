@@ -1,7 +1,7 @@
 # Family Hub
 
 Family Hub is a self-hosted web application for sharing family photos and coordinating household tasks. It combines
-photo storage, group-based access control, cleaning schedules, and shopping lists in one family workspace.
+photo storage, group-based access control, chore schedules, and shopping lists in one family workspace.
 
 The project is designed primarily for mobile Safari, while also supporting larger screens through a responsive desktop
 layout.
@@ -18,10 +18,10 @@ layout.
   - Individual downloads and streamed ZIP exports for photos the user can view
   - Trash, restore, permanent deletion, and storage integrity checks
 - **Household coordination**
-  - Categorized cleaning tasks with configurable intervals, completion history, pause, and resume
-  - Cleaning task, daily completion calendar/chart, and monthly report pages with category, member, and task statistics
+  - Categorized chore tasks with configurable intervals, completion history, pause, and resume
+  - Chore task, daily completion calendar/chart, and monthly report pages with category, member, and task statistics
   - Shared shopping lists with purchased and unpurchased states
-  - Home dashboard aggregating recent photos, due cleaning tasks, and shopping items
+  - Home dashboard aggregating recent photos, due chore tasks, and shopping items
 - **Family and account management**
   - Invitation-based account creation
   - Family groups, membership management, and group administration

@@ -43,7 +43,7 @@ describe('notification API', () => {
     }
     const preferences = [
       { notification_type: 'photo_shared' as const, enabled: true },
-      { notification_type: 'cleaning_due' as const, enabled: true },
+      { notification_type: 'chore_due' as const, enabled: true },
       { notification_type: 'shopping_added' as const, enabled: false },
     ] as const
 
