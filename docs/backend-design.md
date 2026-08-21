@@ -141,7 +141,8 @@ video containers with `ffprobe`;
 catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
 content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `registration.py` handles
 finalized photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
-`export_service.py` validates ZIP-export selections. Batch uploads remain in `uploads.py`.
+`export_service.py` validates ZIP-export selections. `metadata_persistence.py` coordinates sidecar writes, transaction
+commit, and sidecar restoration when metadata persistence fails. Batch uploads remain in `uploads.py`.
 
 ### `features.albums`
 
