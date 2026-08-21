@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import i18n from '../../i18n'
 import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { useGroupSelection } from '../../shared/routing/useGroupSelection'
+import { usePendingIds } from '../../shared/lib/usePendingIds'
 import { useConfirmation } from '../../shared/ui/confirmation'
 import { getGroups } from '../groups/api'
 import {
@@ -31,12 +32,11 @@ function sortTasks(tasks: CleaningTask[]): CleaningTask[] {
 export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
   const queryClient = useQueryClient()
   const confirm = useConfirmation()
-  const [pendingTaskIds, setPendingTaskIds] = useState<ReadonlySet<string>>(() => new Set())
+  const { pendingIds: pendingTaskIds, start: startTask, finish: finishTask } = usePendingIds()
   const [editingTask, setEditingTask] = useState<CleaningTask | null>(null)
   const [showTaskDialog, setShowTaskDialog] = useState(false)
   const [pageMutationError, setPageMutationError] = useState<string | null>(null)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  const pendingTaskIdsRef = useRef(new Set<string>())
 
   const groupsQuery = useQuery({
     queryKey: queryKeys.groups,
@@ -86,9 +86,7 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
   }
 
   const updateTask = async (task: CleaningTask, operation: () => Promise<CleaningTask>, fallback: string) => {
-    if (pendingTaskIdsRef.current.has(task.id)) return
-    pendingTaskIdsRef.current.add(task.id)
-    setPendingTaskIds((current) => new Set(current).add(task.id))
+    if (!startTask(task.id)) return
     setPageMutationError(null)
     try {
       const updated = await operation()
@@ -99,12 +97,7 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setPageMutationError(fallback)
     } finally {
-      pendingTaskIdsRef.current.delete(task.id)
-      setPendingTaskIds((current) => {
-        const next = new Set(current)
-        next.delete(task.id)
-        return next
-      })
+      finishTask(task.id)
     }
   }
 

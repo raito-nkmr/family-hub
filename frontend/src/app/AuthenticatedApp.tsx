@@ -1,16 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useRef } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
+import { Suspense, useCallback, useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { logout, type AuthUser } from '../features/auth/api'
 import { RequiredPasswordChangeScreen } from '../features/auth/RequiredPasswordChangeScreen'
-import { PhotoModal } from '../features/photos/components/PhotoModal'
 import { PhotoMediaCacheProvider } from '../features/photos/components/PhotoMediaCacheProvider'
 import { StorageStatusPill } from '../features/photos/components/StorageStatusPill'
-import { usePhotoActivity } from '../features/photos/usePhotoActivity'
-import { usePhotoDashboard } from '../features/photos/usePhotoDashboard'
-import { PwaInstallGuide } from '../features/pwa/PwaInstallGuide'
-import { usePwaInstallGuide } from '../features/pwa/usePwaInstallGuide'
-import { useNotificationLocaleSync } from '../features/notifications/useNotificationLocaleSync'
 import { isUnauthorizedError } from '../shared/api/errors'
 import { queryClient } from '../shared/api/queryClient'
 import type { Theme } from '../shared/types/theme'
@@ -18,37 +12,10 @@ import { AppFooter } from '../shared/ui/AppFooter'
 import { AppHeader } from '../shared/ui/AppHeader'
 import { AppNavigation, SectionNavigation } from '../shared/ui/AppNavigation'
 import { PullToRefreshIndicator } from '../shared/ui/PullToRefreshIndicator'
-import { usePullToRefresh } from '../shared/ui/usePullToRefresh'
+import { AuthenticatedAppOverlays } from './AuthenticatedAppOverlays'
+import { AuthenticatedAppRoutes } from './AuthenticatedAppRoutes'
+import { useAuthenticatedAppState } from './useAuthenticatedAppState'
 import { appPaths, getAppView, photoViews } from './routes'
-import { RequireAdmin } from './routeGuards'
-
-const AccountPage = lazy(() =>
-  import('../features/auth/AccountPage').then((module) => ({ default: module.AccountPage })),
-)
-const AlbumPage = lazy(() => import('../features/albums/AlbumPage').then((module) => ({ default: module.AlbumPage })))
-const CleaningPage = lazy(() =>
-  import('../features/cleaning/CleaningPage').then((module) => ({ default: module.CleaningPage })),
-)
-const GroupPage = lazy(() => import('../features/groups/GroupPage').then((module) => ({ default: module.GroupPage })))
-const HomeRoute = lazy(() => import('../features/home/HomeRoute').then((module) => ({ default: module.HomeRoute })))
-const InvitationAdminPage = lazy(() =>
-  import('../features/invitations/InvitationAdminPage').then((module) => ({ default: module.InvitationAdminPage })),
-)
-const PhotoActivityRoute = lazy(() =>
-  import('../features/photos/PhotoRoutes').then((module) => ({ default: module.PhotoActivityRoute })),
-)
-const PhotoRoute = lazy(() =>
-  import('../features/photos/PhotoRoutes').then((module) => ({ default: module.PhotoRoute })),
-)
-const PhotoTrashPage = lazy(() =>
-  import('../features/photos/PhotoTrashPage').then((module) => ({ default: module.PhotoTrashPage })),
-)
-const ShoppingPage = lazy(() =>
-  import('../features/shopping/ShoppingPage').then((module) => ({ default: module.ShoppingPage })),
-)
-const SystemStatusPage = lazy(() =>
-  import('../features/maintenance/SystemStatusPage').then((module) => ({ default: module.SystemStatusPage })),
-)
 
 interface AuthenticatedAppProps {
   currentUser: AuthUser
@@ -96,7 +63,7 @@ function AuthenticatedAppShell({
   onCurrentUserChanged,
   onToggleTheme,
 }: AuthenticatedAppProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const activeView = getAppView(location.pathname)
@@ -110,28 +77,10 @@ function AuthenticatedAppShell({
     onSessionEnded()
     navigate(appPaths.home, { replace: true })
   }, [navigate, onSessionEnded])
-  useNotificationLocaleSync({
-    locale: i18n.resolvedLanguage === 'ja' ? 'ja' : 'en',
+  const { photoDashboard, photoActivity, pwaInstall, pullToRefresh } = useAuthenticatedAppState({
+    currentUserId: currentUser.id,
+    activeView,
     onUnauthorized: handleUnauthorized,
-  })
-
-  const photoDashboard = usePhotoDashboard({
-    libraryEnabled: activeView === 'photos',
-    storageEnabled: activeView !== null && ['home', ...photoViews].includes(activeView),
-    groupsEnabled: activeView === 'home' || activeView === 'photos' || activeView === 'albums',
-    onUnauthorized: handleUnauthorized,
-  })
-  const photoActivity = usePhotoActivity({
-    userId: currentUser.id,
-    active: activeView === 'photo-activity',
-    onUnauthorized: handleUnauthorized,
-  })
-  const pwaInstall = usePwaInstallGuide()
-  const pullToRefresh = usePullToRefresh({
-    onRefresh: () => {
-      if (queryClient.isMutating() > 0) return
-      return queryClient.invalidateQueries()
-    },
   })
 
   useEffect(() => {
@@ -187,115 +136,24 @@ function AuthenticatedAppShell({
             showInvitations={currentUser.system_role === 'admin'}
             photoUnseenCount={photoActivity.unseenCount}
           />
-          <Routes>
-            <Route
-              path={appPaths.home}
-              element={
-                <HomeRoute
-                  userId={currentUser.id}
-                  active={activeView === 'home'}
-                  onUnauthorized={handleUnauthorized}
-                  photoActivity={photoActivity}
-                  photoDashboard={photoDashboard}
-                  pwaInstall={pwaInstall}
-                />
-              }
-            />
-            <Route
-              path={appPaths['photo-activity']}
-              element={<PhotoActivityRoute activity={photoActivity} onSelectPhoto={photoDashboard.selectPhoto} />}
-            />
-            <Route
-              path={appPaths.photos}
-              element={<PhotoRoute currentUserId={currentUser.id} dashboard={photoDashboard} />}
-            />
-            <Route
-              path={appPaths.albums}
-              element={<AlbumPage onUnauthorized={handleUnauthorized} onSelectPhoto={photoDashboard.selectPhoto} />}
-            />
-            <Route
-              path={appPaths['photo-trash']}
-              element={
-                <PhotoTrashPage
-                  onUnauthorized={handleUnauthorized}
-                  onLibraryChanged={() => void photoDashboard.refresh()}
-                />
-              }
-            />
-            <Route path={appPaths.cleaning} element={<CleaningPage onUnauthorized={handleUnauthorized} />} />
-            <Route path={appPaths.shopping} element={<ShoppingPage onUnauthorized={handleUnauthorized} />} />
-            <Route
-              path={appPaths.groups}
-              element={<GroupPage currentUserId={currentUser.id} onUnauthorized={handleUnauthorized} />}
-            />
-            <Route
-              path={appPaths.account}
-              element={
-                <AccountPage
-                  username={currentUser.username}
-                  onSessionEnded={handleUnauthorized}
-                  showPwaInstallGuideEntry={pwaInstall.installGuideAvailable}
-                  onShowPwaInstallGuide={pwaInstall.openGuide}
-                />
-              }
-            />
-            <Route
-              path={appPaths.invitations}
-              element={
-                <RequireAdmin role={currentUser.system_role}>
-                  <InvitationAdminPage onUnauthorized={handleUnauthorized} />
-                </RequireAdmin>
-              }
-            />
-            <Route
-              path={appPaths.system}
-              element={
-                <RequireAdmin role={currentUser.system_role}>
-                  <SystemStatusPage
-                    currentUserId={currentUser.id}
-                    onUnauthorized={handleUnauthorized}
-                    onCurrentUserChanged={onCurrentUserChanged}
-                  />
-                </RequireAdmin>
-              }
-            />
-            <Route path="*" element={<Navigate to={appPaths.home} replace />} />
-          </Routes>
+          <AuthenticatedAppRoutes
+            currentUser={currentUser}
+            activeView={activeView}
+            onUnauthorized={handleUnauthorized}
+            onCurrentUserChanged={onCurrentUserChanged}
+            photoActivity={photoActivity}
+            photoDashboard={photoDashboard}
+            pwaInstall={pwaInstall}
+          />
           <AppFooter privacyReturnTo={`${location.pathname}${location.search}`} />
         </div>
       </div>
 
-      {(photoDashboard.selectedPhoto || photoDashboard.selectedPhotoSummary) && (
-        <PhotoModal
-          key={(photoDashboard.selectedPhoto ?? photoDashboard.selectedPhotoSummary)!.id}
-          photo={photoDashboard.selectedPhoto ?? photoDashboard.selectedPhotoSummary!}
-          photoDetailLoading={photoDashboard.photoDetailLoading}
-          photoDetailError={photoDashboard.photoDetailError}
-          currentUserId={currentUser.id}
-          updatingMetadata={photoDashboard.updatingMetadata}
-          error={photoDashboard.metadataError}
-          groups={photoDashboard.groups}
-          onClose={photoDashboard.closePhoto}
-          onSharingChange={(groupIds) => void photoDashboard.changeSharing(groupIds)}
-          onToggleFavorite={() => void photoDashboard.toggleFavorite()}
-          onMemoSave={(memo) => void photoDashboard.savePhotoMetadata({ memo })}
-          onCaptureDateSave={(capturedAt) =>
-            void photoDashboard.savePhotoMetadata({ captured_at_override: capturedAt })
-          }
-          onTrash={() => void photoDashboard.moveSelectedPhotoToTrash()}
-          onRetryPhotoDetail={() => void photoDashboard.retryPhotoDetail()}
-          onModerateGroupShare={(groupId, password) => void photoDashboard.moderateGroupShare(groupId, password)}
-          onPreviousPhoto={
-            photoDashboard.previousPhoto
-              ? () => void photoDashboard.selectPhoto(photoDashboard.previousPhoto!)
-              : undefined
-          }
-          onNextPhoto={
-            photoDashboard.nextPhoto ? () => void photoDashboard.selectPhoto(photoDashboard.nextPhoto!) : undefined
-          }
-        />
-      )}
-      {pwaInstall.guideOpen && <PwaInstallGuide onClose={pwaInstall.closeGuide} />}
+      <AuthenticatedAppOverlays
+        currentUserId={currentUser.id}
+        photoDashboard={photoDashboard}
+        pwaInstall={pwaInstall}
+      />
     </div>
   )
 
