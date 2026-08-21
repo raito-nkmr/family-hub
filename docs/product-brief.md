@@ -21,7 +21,8 @@ owned photos; group membership management; group-scoped cleaning; and group-scop
 Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
 a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
 completion action so the task card remains compact. Family-group members can create shared cleaning categories, and the
-cleaning screen can filter the visible tasks by category or show all categories.
+cleaning screen can filter the visible tasks by category or show all categories. Members can change the shared category
+order from the category manager, and that order is used by the filter and task forms.
 Cleaning and shopping remember the last selected family group in browser storage and use it when a page opens without an
 explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
@@ -292,6 +293,7 @@ Cleaning data belongs to a family group and is independent of the photo `family`
   1–3650 days, and active or paused state.
 - All group members can view active tasks and record completion.
 - The cleaning screen provides an all-categories view and category filters.
+- Group members can move shared categories up or down; the saved order is used consistently across cleaning controls.
 - Completion records the server time and user without overwriting history.
 - The cleaning report page shows a group-shared monthly report with summary counts, daily and category bars, member
   rankings, and task-level member breakdowns. Month boundaries use the group's IANA time zone; group administrators can

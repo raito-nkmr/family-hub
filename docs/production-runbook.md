@@ -160,7 +160,7 @@ sudo systemd-run --wait --pipe --collect \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
 
-The current resettable schema chain has five revisions, ending at `20260821_05_cleaning_reports`. The upgrade contains
+The current resettable schema chain has six revisions, ending at `20260821_06_category_order`. The upgrade contains
 schema DDL only; it does not create users, groups, categories, tasks, or completion history. Run `create_user` and any
 other bootstrap commands separately. Development reset and production-like reset are independent procedures: never run
 the development `docker compose down --volumes` command against the production-like service or volume.

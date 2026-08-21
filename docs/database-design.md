@@ -133,9 +133,10 @@ task and category lists.
 
 ### `cleaning_categories`
 
-Stores group-shared category names. Names are trimmed, limited to 40 characters, and unique within a group without regard to
-case. Every group member may create, rename, and delete an unused category. Categories referenced by a cleaning task cannot
-be deleted.
+Stores group-shared category names and their non-negative `sort_order`. Names are trimmed, limited to 40 characters, and
+unique within a group without regard to case. Every group member may create, rename, reorder, and delete an unused category.
+Categories referenced by a cleaning task cannot be deleted. The `(group_id, sort_order, id)` index supports the shared
+display order; ties are resolved by normalized name and ID for legacy rows.
 
 ### `cleaning_completions`
 
@@ -349,6 +350,7 @@ The development and pre-production history is reset and rebuilt as the following
 - `20260821_03_household` — cleaning, shopping, notifications, maintenance, and audit
 - `20260821_04_cleaning_categories` — group-owned cleaning categories and task category references
 - `20260821_05_cleaning_reports` — group time zones, completion label snapshots, and monthly report index
+- `20260821_06_category_order` — persisted group-shared category ordering
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, and required cleaning category references, are included in the current chain.

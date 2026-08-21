@@ -119,7 +119,8 @@ group-admin membership changes cannot leave an administrator invariant broken by
 
 Owns group-scoped cleaning categories, tasks, day intervals, and append-only completion history. Every group member may
 create, rename, and delete unused categories; members may list and complete active tasks; group administrators may create,
-edit, categorize, pause, and resume them. Mutations lock the group, recheck membership, then lock the category or task.
+edit, categorize, pause, and resume them. Category order is group-shared and updated through a complete ordered ID list.
+Mutations lock the group, recheck membership, then lock the category or task.
 Completion time always comes from the server's current UTC time. Completion rows store task and category name snapshots,
 while their nullable category reference uses `ON DELETE SET NULL`. The monthly report endpoint aggregates completion rows
 in SQL after converting the UTC range to the group's IANA time zone. It returns daily, category, member, and task/member
