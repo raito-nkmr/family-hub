@@ -9,13 +9,14 @@ import {
   EditIcon,
   FamilyGroupIcon,
   GroupIcon,
+  HouseholdSuppliesIcon,
+  ListIcon,
   PersonAddIcon,
   PhotoActivityIcon,
   PhotoIcon,
   PhotoLibraryIcon,
   ShoppingCartIcon,
   SaveIcon,
-  TaskAltIcon,
 } from './icons'
 
 interface NavigationProps {
@@ -84,15 +85,15 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         {t('navigation.photoTrash')}
       </NavLink>
       <span className="app-navigation__section app-navigation__desktop-only">
-        <TaskAltIcon />
+        <HouseholdSuppliesIcon />
         {t('navigation.chores')}
       </span>
       <NavLink
         className={itemClass('chores', 'app-navigation__desktop-only app-navigation__item--nested')}
         to={choreTo('chores')}
       >
-        <TaskAltIcon />
-        {t('navigation.chores')}
+        <ListIcon />
+        {t('navigation.choresList')}
       </NavLink>
       <NavLink
         className={itemClass('chores-daily', 'app-navigation__desktop-only app-navigation__item--nested')}
@@ -109,7 +110,7 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         {t('navigation.choresMonthly')}
       </NavLink>
       <NavLink className={sectionClass(choreViews, 'app-navigation__mobile-only')} to={choreTo('chores')}>
-        <TaskAltIcon />
+        <HouseholdSuppliesIcon />
         {t('navigation.chores')}
       </NavLink>
       <NavLink className={itemClass('shopping')} to={appPaths.shopping}>
@@ -167,7 +168,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
         ]
       : activeView && choreViews.includes(activeView)
         ? [
-            { view: 'chores' as const, label: t('navigation.chores'), count: 0, icon: <TaskAltIcon /> },
+            { view: 'chores' as const, label: t('navigation.choresList'), count: 0, icon: <ListIcon /> },
             {
               view: 'chores-daily' as const,
               label: t('navigation.choresDaily'),

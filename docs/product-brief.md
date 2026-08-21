@@ -60,7 +60,7 @@ purposes, group visibility, retention, deletion, backup, external services, cook
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chore, Shopping, and Other appear in bottom
-navigation. New, Library, Albums, and Trash are tabs inside Photos; Chore, Daily, and Monthly are tabs inside Chore;
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chore;
 Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.

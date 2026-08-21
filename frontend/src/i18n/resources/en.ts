@@ -42,6 +42,7 @@ export const en = {
     albums: 'Albums',
     photoTrash: 'Trash',
     chores: 'Chores',
+    choresList: 'Task list',
     choresDaily: 'Daily',
     choresMonthly: 'Monthly',
     shopping: 'Shopping',

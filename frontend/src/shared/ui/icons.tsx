@@ -24,6 +24,8 @@ import FilterSymbol from './icons/material-symbols/filter.svg?react'
 import GroupAddSymbol from './icons/material-symbols/group-add.svg?react'
 import GroupsSymbol from './icons/material-symbols/groups.svg?react'
 import GridViewSymbol from './icons/material-symbols/grid-view.svg?react'
+import HouseholdSuppliesSymbol from './icons/material-symbols/household-supplies.svg?react'
+import ListSymbol from './icons/material-symbols/list.svg?react'
 import NotificationsSymbol from './icons/material-symbols/notifications.svg?react'
 import NotificationsActiveSymbol from './icons/material-symbols/notifications-active.svg?react'
 import PersonAddSymbol from './icons/material-symbols/person-add.svg?react'
@@ -221,6 +223,14 @@ export function PersonAddIcon() {
 
 export function ChoreIcon() {
   return <ChoreSymbol className="material-symbol-icon" />
+}
+
+export function HouseholdSuppliesIcon() {
+  return <HouseholdSuppliesSymbol className="material-symbol-icon" />
+}
+
+export function ListIcon() {
+  return <ListSymbol className="material-symbol-icon" />
 }
 
 export function ShoppingCartIcon() {

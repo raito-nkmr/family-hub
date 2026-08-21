@@ -70,6 +70,7 @@ describe('AppNavigation', () => {
     )
 
     expect(screen.getAllByText('家事').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: '一覧' })).toHaveLength(2)
     expect(
       screen
         .getAllByRole('link', { name: '日別' })

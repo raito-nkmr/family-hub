@@ -46,6 +46,7 @@ export const ja: TranslationShape = {
     albums: 'アルバム',
     photoTrash: 'ゴミ箱',
     chores: '家事',
+    choresList: '一覧',
     choresDaily: '日別',
     choresMonthly: '月次',
     shopping: '買い物',
