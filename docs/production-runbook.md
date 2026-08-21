@@ -330,16 +330,15 @@ sudo systemctl enable --now family-hub-notifications.timer family-hub-cleaning-n
 sudo systemctl list-timers 'family-hub-*notifications*' --all --no-pager
 ```
 
-## One-time full data reset and migration rebuild
+## One-time development database reset and migration rebuild
 
-The following procedure is a one-time rebuild for environments that contain only disposable dummy data. It resets the
-development and production-like databases and all primary, derivative, and backup data so the new five-revision Alembic
-baseline can be created consistently. Do not use it after real family data is stored; use database and storage restoration
-instead.
+The following procedure rebuilds the development database for disposable dummy data. It does not reset the production-like
+database and does not replace the separate production reset procedure below. Do not use it after real family data is stored;
+use database and storage restoration instead.
 
 Before deleting anything:
 
-- Stop the development backend, production backend, workers, and maintenance timers.
+- Stop the development backend and any development workers.
 - Verify development PostgreSQL is `127.0.0.1:15432` and production PostgreSQL is `127.0.0.1:5433`.
 - Verify the development Compose volume and `family-hub-production-postgres-data` are separate volumes.
 - Verify each `PHOTO_STORAGE_ROOT`, its `.photo-storage-marker`, each derivative root, and the separate backup marker.
@@ -354,7 +353,15 @@ docker compose down --volumes
 docker compose up --detach --wait db
 ```
 
-Reset the production-like database only after confirming the named external volume:
+Apply the three-revision schema and create development bootstrap data:
+
+```bash
+cd backend
+uv run --locked alembic upgrade head
+uv run --locked python -m app.commands.create_user --username owner --system-role admin
+```
+
+Reset the production-like database only as a separate, explicitly approved operation after confirming the named external volume:
 
 ```bash
 sudo systemctl stop family-hub-backend.service
@@ -365,14 +372,20 @@ sudo docker volume create family-hub-production-postgres-data
 sudo systemctl start family-hub-database.service
 ```
 
-For each primary photo root, remove only the contents of `originals/`, `incoming/`, and `database-backups/`. For each
-derivative root, remove only the contents of `thumbnails/` and `incoming/`. For the separate backup root, remove only its
-snapshot and database-backup contents. Preserve each root directory, storage marker, and backup marker. Resolve and review
-the absolute paths before deletion; never use an unset or broad environment variable as a deletion target.
+The production-like database and storage reset is a separate operation. Do not continue with its database, photo-storage,
+derivative, or backup deletion commands as part of the development reset above. When that operation is approved, repeat the
+schema, bootstrap, and storage steps against the production-like service and its explicitly verified paths.
 
-Recreate the empty directories, apply the new migrations to both databases, and recreate the initial administrator in each
-environment. Run the photo-integrity command against the empty primary storage and verify that the first test upload creates
-one original, one sidecar, and one thumbnail. After this rebuild, use backup restoration instead of this reset procedure.
+For the development storage reset only, remove the contents of each development primary photo root's `originals/`,
+`incoming/`, and `database-backups/`. For each development derivative root, remove only the contents of `thumbnails/` and
+`incoming/`. For the separate development backup root, remove only its snapshot and database-backup contents. Preserve each
+root directory, storage marker, and backup marker. Resolve and review the absolute paths before deletion; never use an unset
+or broad environment variable as a deletion target.
+
+Recreate only the development directories that are intentionally part of the local reset, apply the new migrations to the
+development database, and recreate its initial administrator. Run the photo-integrity command against the empty development
+primary storage and verify that the first test upload creates one original, one sidecar, and one thumbnail. After a real-data
+rebuild, use backup restoration instead of this reset procedure.
 
 ## Release update
 

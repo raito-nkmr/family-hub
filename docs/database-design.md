@@ -7,10 +7,10 @@ and shopping. Image files are stored on the internal photo-storage HDD; PostgreS
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema is represented by a short linear baseline chain because the development and pre-production
-databases are reset when the baseline is rebuilt. The chain is divided by feature and dependency boundaries so each
-revision remains readable. Future approved schema changes should be added as new migrations. Tables for future features
-such as person detection are not created until the feature is approved and its requirements are known.
+The current application schema is represented by a short three-revision linear baseline because the development and
+pre-production databases are reset when the baseline is rebuilt. The revisions are divided by dependency boundaries so
+each remains readable. Future approved schema changes should be added as new migrations. Tables for future features such
+as person detection are not created until the feature is approved and its requirements are known.
 
 ```text
 family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
@@ -124,10 +124,11 @@ Acceptance creates membership in the same transaction; group deletion cascades.
 
 ### `cleaning_tasks`
 
-Stores group-scoped cleaning locations and day intervals. `interval_days` is 1–3650, `is_active` defaults to true, and
-creator and timestamps are retained. Index `(group_id, is_active)` as `ix_cleaning_tasks_group_id_is_active`. Do not store a
-countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
-state change and preserves history.
+Stores group-scoped cleaning locations, required fixed categories (`watering`, `cleaning`, or `children`), and day
+intervals. `interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index
+`(group_id, is_active)` as `ix_cleaning_tasks_group_id_is_active`. Do not store a countdown or `next_due_at`; calculate it
+from the latest completion or `created_at` plus the interval. Pausing is a logical state change and preserves history.
+Category filtering is performed by the authenticated client after loading the group task list.
 
 ### `cleaning_completions`
 
@@ -320,21 +321,20 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history was reset and rebuilt as the following immutable baseline chain:
+The development and pre-production history is reset and rebuilt as the following immutable baseline chain:
 
-- `20260820_01` — extensions, identity, and family groups
-- `20260820_02` — photos, activity, and uploads
-- `20260820_03` — albums
-- `20260820_04` — cleaning and shopping
-- `20260820_05` — notifications, maintenance, and audit
+- `20260821_01_core` — extensions, identity, and family groups
+- `20260821_02_media` — photos, activity, uploads, and albums
+- `20260821_03_household` — cleaning, shopping, notifications, maintenance, and audit
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, and required positive photo
-dimensions, are included in the baseline chain. Never rewrite these revisions after the rebuild; future approved schema
-changes must be added as new migrations.
+dimensions, effective photo capture time, and cleaning categories, are included in the baseline chain. Never rewrite these
+revisions after the rebuild; future approved schema changes must be added as new migrations.
 
-Development databases may be reset, so do not add compatibility backfills solely to preserve local dummy data. Environments
-with real data require explicit backfill and downgrade or restore procedures. Do not create schema implicitly with
-application startup `create_all()`; every schema change must be an Alembic migration that can be applied and rolled back in
-a controlled unit.
+Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
+update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate
+bootstrap or management commands. Development and pre-production resets are separate operations; do not use the
+development reset procedure against a real-data environment. Do not create schema implicitly with application startup
+`create_all()`; every schema change must be an Alembic migration that can be applied and rolled back in a controlled unit.
 
 日本語版: [database-design.ja.md](./database-design.ja.md)
