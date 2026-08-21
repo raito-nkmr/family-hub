@@ -1,7 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from app.features.cleaning.schemas import CleaningCategoryCreate, CleaningTaskCreate, CleaningTaskUpdate
+from app.features.cleaning.schemas import (
+    CleaningCategoryCreate,
+    CleaningCategoryOrderUpdate,
+    CleaningTaskCreate,
+    CleaningTaskUpdate,
+)
 
 
 def test_cleaning_task_create_normalizes_name() -> None:
@@ -21,6 +26,12 @@ def test_cleaning_category_create_normalizes_name() -> None:
 def test_cleaning_category_create_rejects_blank_name() -> None:
     with pytest.raises(ValidationError):
         CleaningCategoryCreate(name="   ")
+
+
+def test_cleaning_category_order_accepts_category_ids() -> None:
+    category_id = "8d2f5c7a-8d25-4fa7-9c3c-17fdd7fd7a1e"
+
+    assert str(CleaningCategoryOrderUpdate(category_ids=[category_id]).category_ids[0]) == category_id
 
 
 @pytest.mark.parametrize("name", ["a" * 41])

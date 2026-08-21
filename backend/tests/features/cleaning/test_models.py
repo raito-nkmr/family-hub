@@ -8,7 +8,9 @@ def test_cleaning_category_constraints_and_indexes_are_named() -> None:
     assert "pk_cleaning_categories" in constraint_names
     assert "ck_cleaning_categories_name_trimmed" in constraint_names
     assert "ck_cleaning_categories_name_length" in constraint_names
+    assert "ck_cleaning_categories_sort_order" in constraint_names
     assert "ix_cleaning_categories_group_id" in index_names
+    assert "ix_cleaning_categories_group_sort_order" in index_names
     assert "uq_cleaning_categories_group_name_ci" in index_names
     assert CleaningCategory.__table__.c.name.nullable is False
 

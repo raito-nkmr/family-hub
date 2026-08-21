@@ -15,9 +15,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260821_05_cleaning_reports"]
+    assert scripts.get_heads() == ["20260821_06_category_order"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260821_06_category_order",
         "20260821_05_cleaning_reports",
         "20260821_04_cleaning_categories",
         "20260821_03_household",
@@ -56,6 +57,8 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "task_name_snapshot VARCHAR(120) NOT NULL" in sql
     assert "category_name_snapshot VARCHAR(40) NOT NULL" in sql
     assert "ix_cleaning_completions_completed_at_task_id" in sql
+    assert "sort_order INTEGER DEFAULT 0 NOT NULL" in sql
+    assert "ix_cleaning_categories_group_sort_order" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 

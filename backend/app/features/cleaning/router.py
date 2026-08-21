@@ -20,6 +20,7 @@ from app.features.cleaning.reporting import (
 from app.features.cleaning.schemas import (
     CleaningCategoryCreate,
     CleaningCategoryListResponse,
+    CleaningCategoryOrderUpdate,
     CleaningCategoryResponse,
     CleaningCategoryUpdate,
     CleaningMonthlyCategoryResponse,
@@ -38,6 +39,7 @@ from app.features.cleaning.service import (
     CleaningCategoryDuplicateError,
     CleaningCategoryInUseError,
     CleaningCategoryNotFoundError,
+    CleaningCategoryOrderInvalidError,
     CleaningCategorySummary,
     CleaningForbiddenError,
     CleaningInactiveTaskError,
@@ -139,6 +141,11 @@ def _raise_cleaning_error(error: Exception) -> NoReturn:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cleaning category already exists") from error
     if isinstance(error, CleaningCategoryInUseError):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cleaning category is in use") from error
+    if isinstance(error, CleaningCategoryOrderInvalidError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid category order",
+        ) from error
     if isinstance(error, CleaningReportNotFoundError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cleaning report not found") from error
     if isinstance(error, CleaningReportInvalidMonthError):
@@ -178,6 +185,32 @@ def list_cleaning_categories(
             ]
         )
     except (CleaningCategoryNotFoundError, CleaningNotFoundError) as error:
+        _raise_cleaning_error(error)
+
+
+@router.patch(
+    "/groups/{group_id}/categories/order",
+    response_model=CleaningCategoryListResponse,
+    dependencies=[Depends(require_csrf_token)],
+)
+def reorder_cleaning_categories(
+    group_id: UUID,
+    body: CleaningCategoryOrderUpdate,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[CleaningService, Depends(get_cleaning_service)],
+) -> CleaningCategoryListResponse:
+    try:
+        return CleaningCategoryListResponse(
+            items=[
+                _category_response(category)
+                for category in service.reorder_categories(group_id, authenticated_user.id, body.category_ids)
+            ]
+        )
+    except (
+        CleaningCategoryOrderInvalidError,
+        CleaningCategoryNotFoundError,
+        CleaningNotFoundError,
+    ) as error:
         _raise_cleaning_error(error)
 
 

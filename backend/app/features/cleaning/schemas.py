@@ -32,6 +32,7 @@ class CleaningCategoryResponse(BaseModel):
     id: UUID
     group_id: UUID
     name: str
+    sort_order: int
     created_at: datetime
     updated_at: datetime
 
@@ -45,6 +46,10 @@ class CleaningCategoryResponse(BaseModel):
 
 class CleaningCategoryListResponse(BaseModel):
     items: list[CleaningCategoryResponse]
+
+
+class CleaningCategoryOrderUpdate(BaseModel):
+    category_ids: list[UUID]
 
 
 class CleaningTaskCreate(BaseModel):

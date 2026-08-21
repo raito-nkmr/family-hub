@@ -11,6 +11,7 @@ from app.features.cleaning.models import CleaningCategory, CleaningCompletion, C
 from app.features.cleaning.service import (
     CleaningCategoryDuplicateError,
     CleaningCategoryInUseError,
+    CleaningCategoryOrderInvalidError,
     CleaningForbiddenError,
     CleaningInactiveTaskError,
     CleaningNotFoundError,
@@ -58,6 +59,45 @@ def test_duplicate_cleaning_category_is_rejected() -> None:
         service.create_category(group_id, user_id, "掃除")
 
     session.add.assert_not_called()
+
+
+def test_member_can_reorder_cleaning_categories() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    first = make_cleaning_category(group_id=group_id, name="1階", sort_order=0)
+    second = make_cleaning_category(group_id=group_id, name="2階", sort_order=1)
+    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    session.scalars.side_effect = [
+        MagicMock(all=MagicMock(return_value=[group_id])),
+        MagicMock(all=MagicMock(return_value=[first, second])),
+    ]
+    service, _ = make_service(session)
+
+    result = service.reorder_categories(group_id, user_id, [second.id, first.id])
+
+    assert [category.id for category in result] == [second.id, first.id]
+    assert second.sort_order == 0
+    assert first.sort_order == 1
+    session.commit.assert_called_once_with()
+
+
+def test_reorder_rejects_category_from_another_group() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    category = make_cleaning_category(group_id=group_id)
+    session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
+    session.scalars.side_effect = [
+        MagicMock(all=MagicMock(return_value=[group_id])),
+        MagicMock(all=MagicMock(return_value=[category])),
+    ]
+    service, _ = make_service(session)
+
+    with pytest.raises(CleaningCategoryOrderInvalidError):
+        service.reorder_categories(group_id, user_id, [uuid4()])
+
+    session.commit.assert_not_called()
 
 
 def test_used_cleaning_category_cannot_be_deleted() -> None:

@@ -39,11 +39,16 @@ class CleaningCategoryInUseError(Exception):
     pass
 
 
+class CleaningCategoryOrderInvalidError(Exception):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class CleaningCategorySummary:
     id: UUID
     group_id: UUID
     name: str
+    sort_order: int
     created_at: datetime
     updated_at: datetime
 
@@ -82,7 +87,7 @@ class CleaningService:
         categories = self._session.scalars(
             select(CleaningCategory)
             .where(CleaningCategory.group_id == group_id)
-            .order_by(func.lower(CleaningCategory.name), CleaningCategory.id)
+            .order_by(CleaningCategory.sort_order, func.lower(CleaningCategory.name), CleaningCategory.id)
         ).all()
         return [self._category_summary(category) for category in categories]
 
@@ -91,11 +96,15 @@ class CleaningService:
         normalized_name = name.strip()
         if self._category_exists(group_id, normalized_name):
             raise CleaningCategoryDuplicateError
+        last_sort_order = self._session.scalar(
+            select(func.max(CleaningCategory.sort_order)).where(CleaningCategory.group_id == group_id)
+        )
         now = datetime.now(UTC)
         category = CleaningCategory(
             id=uuid4(),
             group_id=group_id,
             name=normalized_name,
+            sort_order=int(last_sort_order if last_sort_order is not None else -1) + 1,
             created_at=now,
             updated_at=now,
         )
@@ -116,6 +125,34 @@ class CleaningService:
         category.updated_at = datetime.now(UTC)
         self._commit_category("Could not update cleaning category")
         return self._category_summary(category)
+
+    def reorder_categories(
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        category_ids: list[UUID],
+    ) -> list[CleaningCategorySummary]:
+        self._lock_membership(group_id, user_id)
+        categories = list(
+            self._session.scalars(
+                select(CleaningCategory)
+                .where(CleaningCategory.group_id == group_id)
+                .order_by(CleaningCategory.sort_order, func.lower(CleaningCategory.name), CleaningCategory.id)
+                .with_for_update()
+            ).all()
+        )
+        category_by_id = {category.id: category for category in categories}
+        if len(category_ids) != len(categories) or len(set(category_ids)) != len(category_ids):
+            raise CleaningCategoryOrderInvalidError
+        if set(category_ids) != set(category_by_id):
+            raise CleaningCategoryOrderInvalidError
+        now = datetime.now(UTC)
+        for sort_order, category_id in enumerate(category_ids):
+            category = category_by_id[category_id]
+            category.sort_order = sort_order
+            category.updated_at = now
+        self._commit_category("Could not reorder cleaning categories")
+        return [self._category_summary(category_by_id[category_id]) for category_id in category_ids]
 
     def delete_category(self, category_id: UUID, user_id: UUID) -> None:
         group_id = self._category_group_id(category_id)
@@ -376,6 +413,7 @@ class CleaningService:
             id=category.id,
             group_id=category.group_id,
             name=category.name,
+            sort_order=category.sort_order,
             created_at=category.created_at,
             updated_at=category.updated_at,
         )

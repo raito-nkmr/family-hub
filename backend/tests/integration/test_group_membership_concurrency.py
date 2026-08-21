@@ -197,6 +197,7 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                     id=category_id,
                     group_id=group_id,
                     name="掃除",
+                    sort_order=0,
                     created_at=datetime.now(UTC),
                     updated_at=datetime.now(UTC),
                 )

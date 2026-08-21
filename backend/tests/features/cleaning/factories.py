@@ -9,12 +9,14 @@ def make_cleaning_category(
     category_id: UUID | None = None,
     group_id: UUID | None = None,
     name: str = "掃除",
+    sort_order: int = 0,
 ) -> CleaningCategory:
     now = datetime(2026, 7, 15, 3, tzinfo=UTC)
     return CleaningCategory(
         id=category_id or uuid4(),
         group_id=group_id or uuid4(),
         name=name,
+        sort_order=sort_order,
         created_at=now,
         updated_at=now,
     )

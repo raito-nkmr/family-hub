@@ -20,11 +20,18 @@ from app.features.cleaning.router import (
     get_cleaning_monthly_report,
     list_cleaning_categories,
     list_cleaning_tasks,
+    reorder_cleaning_categories,
     update_cleaning_category,
 )
-from app.features.cleaning.schemas import CleaningCategoryCreate, CleaningCategoryUpdate, CleaningTaskCreate
+from app.features.cleaning.schemas import (
+    CleaningCategoryCreate,
+    CleaningCategoryOrderUpdate,
+    CleaningCategoryUpdate,
+    CleaningTaskCreate,
+)
 from app.features.cleaning.service import (
     CleaningCategoryInUseError,
+    CleaningCategoryOrderInvalidError,
     CleaningCategorySummary,
     CleaningForbiddenError,
     CleaningInactiveTaskError,
@@ -56,7 +63,9 @@ def make_summary() -> CleaningTaskSummary:
 
 def make_category_summary() -> CleaningCategorySummary:
     now = datetime(2026, 7, 15, 3, tzinfo=UTC)
-    return CleaningCategorySummary(id=uuid4(), group_id=uuid4(), name="2階", created_at=now, updated_at=now)
+    return CleaningCategorySummary(
+        id=uuid4(), group_id=uuid4(), name="2階", sort_order=0, created_at=now, updated_at=now
+    )
 
 
 class CleaningServiceStub:
@@ -102,6 +111,17 @@ class CleaningServiceStub:
             raise self.error
         assert user_id == TEST_USER.id
         return make_category_summary()
+
+    def reorder_categories(
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        category_ids: list[UUID],
+    ) -> list[CleaningCategorySummary]:
+        if self.error:
+            raise self.error
+        assert user_id == TEST_USER.id
+        return [make_category_summary() for _ in category_ids]
 
     def delete_category(self, category_id: UUID, user_id: UUID) -> None:
         if self.error:
@@ -195,6 +215,30 @@ def test_update_cleaning_category_returns_category() -> None:
     )
 
     assert response.name == "2階"
+
+
+def test_reorder_cleaning_categories_returns_ordered_categories() -> None:
+    category_ids = [uuid4(), uuid4()]
+    response = reorder_cleaning_categories(
+        uuid4(),
+        CleaningCategoryOrderUpdate(category_ids=category_ids),
+        TEST_USER,
+        CleaningServiceStub(),
+    )
+
+    assert len(response.items) == 2
+
+
+def test_reorder_cleaning_categories_maps_invalid_order() -> None:
+    with pytest.raises(HTTPException) as error:
+        reorder_cleaning_categories(
+            uuid4(),
+            CleaningCategoryOrderUpdate(category_ids=[uuid4()]),
+            TEST_USER,
+            CleaningServiceStub(error=CleaningCategoryOrderInvalidError()),
+        )
+
+    assert error.value.status_code == 422
 
 
 def test_delete_used_cleaning_category_returns_conflict() -> None:

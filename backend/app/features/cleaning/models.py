@@ -24,6 +24,7 @@ class CleaningCategory(Base):
         PrimaryKeyConstraint("id", name="pk_cleaning_categories"),
         CheckConstraint("name = btrim(name)", name="ck_cleaning_categories_name_trimmed"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 40", name="ck_cleaning_categories_name_length"),
+        CheckConstraint("sort_order >= 0", name="ck_cleaning_categories_sort_order"),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -32,6 +33,7 @@ class CleaningCategory(Base):
         ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_cleaning_categories_group_id_family_groups"),
     )
     name: Mapped[str] = mapped_column(String(40))
+    sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
@@ -114,6 +116,12 @@ class CleaningCompletion(Base):
 
 
 Index("ix_cleaning_categories_group_id", CleaningCategory.group_id)
+Index(
+    "ix_cleaning_categories_group_sort_order",
+    CleaningCategory.group_id,
+    CleaningCategory.sort_order,
+    CleaningCategory.id,
+)
 Index(
     "uq_cleaning_categories_group_name_ci",
     CleaningCategory.group_id,
