@@ -60,10 +60,10 @@ purposes, group visibility, retention, deletion, backup, external services, cook
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Cleaning, Shopping, and Other appear in bottom
-navigation. New, Library, Albums, and Trash are tabs inside Photos; Groups, invitation administration, Account, and the
-administrator-only System screen are under Other. Screens wider than 900 px switch to a left sidebar and expand the photo
-area and other features. On mobile, pulling down from the top of an authenticated page far enough and releasing refreshes
-the currently active data queries.
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Cleaning, Daily, and Monthly are tabs inside Cleaning;
+Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
+900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
+authenticated page far enough and releasing refreshes the currently active data queries.
 
 The photo list uses 50-item cursor pagination with infinite scrolling, a year/month timeline, date range, uploader, shared
 group, favorite, capture-time presence, and memo/original-filename search. The album photo picker uses the same pagination,
@@ -295,9 +295,12 @@ Cleaning data belongs to a family group and is independent of the photo `family`
 - The cleaning screen provides an all-categories view and category filters.
 - Group members can move shared categories up or down; the saved order is used consistently across cleaning controls.
 - Completion records the server time and user without overwriting history.
-- The cleaning report page shows a group-shared monthly report with summary counts, daily and category bars, member
-  rankings, and task-level member breakdowns. Month boundaries use the group's IANA time zone; group administrators can
-  change it and new groups default to `Asia/Tokyo`.
+- Cleaning is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
+  Sunday-first calendar and can switch to the existing daily bar chart; the selected group, month, and daily view are
+  retained in the URL.
+- The monthly report page shows a group-shared report with summary counts, category bars, member rankings, and task-level
+  member breakdowns. Month boundaries use the group's IANA time zone; group administrators can change it and new groups
+  default to `Asia/Tokyo`.
 - Report history stores the task and category names at completion time, so reports remain readable after a category is
   renamed or removed.
 - The next due time adds the interval to the latest completion, or to task creation time when no completion exists.
