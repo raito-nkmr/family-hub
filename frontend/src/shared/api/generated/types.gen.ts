@@ -453,6 +453,16 @@ export type CleaningCategoryListResponse = {
 }
 
 /**
+ * CleaningCategoryOrderUpdate
+ */
+export type CleaningCategoryOrderUpdate = {
+  /**
+   * Category Ids
+   */
+  category_ids: Array<string>
+}
+
+/**
  * CleaningCategoryResponse
  */
 export type CleaningCategoryResponse = {
@@ -472,6 +482,10 @@ export type CleaningCategoryResponse = {
    * Name
    */
   name: string
+  /**
+   * Sort Order
+   */
+  sort_order: number
   /**
    * Updated At
    */
@@ -3098,6 +3112,44 @@ export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostRespon
 
 export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponse =
   CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses]
+
+export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchData = {
+  body: CleaningCategoryOrderUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/cleaning/groups/{group_id}/categories/order'
+}
+
+export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchError =
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors[keyof ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors]
+
+export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: CleaningCategoryListResponse
+}
+
+export type ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponse =
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses[keyof ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses]
 
 export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetData = {
   body?: never

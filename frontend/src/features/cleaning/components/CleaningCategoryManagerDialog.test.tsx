@@ -9,8 +9,15 @@ const category: CleaningCategory = {
   id: 'category-id',
   group_id: 'group-id',
   name: '2階',
+  sort_order: 0,
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
+}
+const secondCategory: CleaningCategory = {
+  ...category,
+  id: 'second-category-id',
+  name: '1階',
+  sort_order: 1,
 }
 
 function renderDialog(overrides: Partial<ComponentProps<typeof CleaningCategoryManagerDialog>> = {}) {
@@ -23,6 +30,7 @@ function renderDialog(overrides: Partial<ComponentProps<typeof CleaningCategoryM
       onCreate={vi.fn().mockResolvedValue(true)}
       onRename={vi.fn().mockResolvedValue(true)}
       onDelete={vi.fn().mockResolvedValue(true)}
+      onReorder={vi.fn().mockResolvedValue(true)}
       onClose={vi.fn()}
       {...overrides}
     />,
@@ -63,5 +71,15 @@ describe('CleaningCategoryManagerDialog', () => {
 
     expect(screen.getByText('カテゴリーはまだありません。')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('使用中のカテゴリーは削除できません。')
+  })
+
+  it('reorders categories with accessible move buttons', async () => {
+    const user = userEvent.setup()
+    const onReorder = vi.fn().mockResolvedValue(true)
+    renderDialog({ categories: [category, secondCategory], onReorder })
+
+    await user.click(screen.getByRole('button', { name: '2階を下へ移動' }))
+
+    expect(onReorder).toHaveBeenCalledWith(['second-category-id', 'category-id'])
   })
 })

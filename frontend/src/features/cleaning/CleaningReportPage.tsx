@@ -218,6 +218,28 @@ function MemberReport({ report, t }: ReportSectionProps) {
           </tbody>
         </table>
       </div>
+      <div className="cleaning-report-member-cards" role="list" aria-label={t('cleaning.reportMembers')}>
+        {report.members.map((member, index) => (
+          <article className="cleaning-report-member-card" role="listitem" key={member.user_id}>
+            <div className="cleaning-report-member-card__heading">
+              <strong>
+                {index + 1}. {member.username}
+              </strong>
+              <b>{Math.round(member.completion_ratio * 100)}%</b>
+            </div>
+            <dl>
+              <div>
+                <dt>{t('cleaning.reportCompletions')}</dt>
+                <dd>{member.completion_count}</dd>
+              </div>
+              <div>
+                <dt>{t('cleaning.reportUniqueTasks')}</dt>
+                <dd>{member.unique_task_count}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
     </section>
   )
 }

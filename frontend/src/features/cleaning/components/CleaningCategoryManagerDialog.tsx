@@ -12,6 +12,7 @@ interface CleaningCategoryManagerDialogProps {
   onCreate: (name: string) => Promise<boolean>
   onRename: (categoryId: string, name: string) => Promise<boolean>
   onDelete: (category: CleaningCategory) => Promise<boolean>
+  onReorder: (categoryIds: string[]) => Promise<boolean>
   onClose: () => void
 }
 
@@ -23,6 +24,7 @@ export function CleaningCategoryManagerDialog({
   onCreate,
   onRename,
   onDelete,
+  onReorder,
   onClose,
 }: CleaningCategoryManagerDialogProps) {
   const { t } = useTranslation()
@@ -54,6 +56,14 @@ export function CleaningCategoryManagerDialog({
     const name = editingName.trim()
     if (!name || submitting) return
     if (await onRename(category.id, name)) cancelRename()
+  }
+
+  const moveCategory = async (index: number, offset: -1 | 1) => {
+    const targetIndex = index + offset
+    if (targetIndex < 0 || targetIndex >= categories.length || submitting) return
+    const categoryIds = categories.map((category) => category.id)
+    ;[categoryIds[index], categoryIds[targetIndex]] = [categoryIds[targetIndex], categoryIds[index]]
+    await onReorder(categoryIds)
   }
 
   return (
@@ -90,7 +100,7 @@ export function CleaningCategoryManagerDialog({
 
       {categories.length > 0 ? (
         <ul className="cleaning-category-list">
-          {categories.map((category) => {
+          {categories.map((category, index) => {
             const isEditing = editingId === category.id
             const busy = actionId === category.id
             return (
@@ -131,6 +141,26 @@ export function CleaningCategoryManagerDialog({
                   <>
                     <strong>{category.name}</strong>
                     <div className="cleaning-category-list__actions">
+                      <div className="cleaning-category-list__move-actions">
+                        <button
+                          className="secondary-button icon-button cleaning-category-list__move"
+                          type="button"
+                          disabled={submitting || busy || index === 0}
+                          aria-label={t('cleaning.moveCategoryUp', { name: category.name })}
+                          onClick={() => void moveCategory(index, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="secondary-button icon-button cleaning-category-list__move"
+                          type="button"
+                          disabled={submitting || busy || index === categories.length - 1}
+                          aria-label={t('cleaning.moveCategoryDown', { name: category.name })}
+                          onClick={() => void moveCategory(index, 1)}
+                        >
+                          ↓
+                        </button>
+                      </div>
                       <button
                         className="secondary-button icon-button"
                         type="button"

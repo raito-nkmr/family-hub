@@ -603,6 +603,8 @@ export const ja: TranslationShape = {
     categoryName: 'カテゴリー名',
     categoryNamePlaceholder: '例：2階',
     categoryCreate: 'カテゴリーを追加',
+    moveCategoryUp: '{{name}}を上へ移動',
+    moveCategoryDown: '{{name}}を下へ移動',
     noCategories: 'カテゴリーはまだありません。',
     noCategoriesForTask: '掃除タスクを追加する前にカテゴリーを作成してください。',
     board: '掃除する場所',
@@ -805,6 +807,7 @@ export const ja: TranslationShape = {
     cleaningCategoryCreate: '掃除カテゴリーを追加できませんでした。',
     cleaningCategoryUpdate: '掃除カテゴリー名を変更できませんでした。',
     cleaningCategoryDelete: '掃除カテゴリーを削除できませんでした。',
+    cleaningCategoryReorder: '掃除カテゴリーの並び順を変更できませんでした。',
     cleaningCategoryDuplicate: '同名の掃除カテゴリーがこの家族グループに既に存在します。',
     cleaningCategoryInUse: 'このカテゴリーは掃除タスクで使用中です。別のカテゴリーへ変更してから削除してください。',
     cleaningCategoryDeleteConfirm:

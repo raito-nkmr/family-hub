@@ -14,6 +14,7 @@ vi.mock('./api', () => ({
   deleteCleaningCategory: vi.fn(),
   getCleaningCategories: vi.fn(),
   getCleaningTasks: vi.fn(),
+  reorderCleaningCategories: vi.fn(),
   updateCleaningCategory: vi.fn(),
   updateCleaningTask: vi.fn(),
 }))

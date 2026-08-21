@@ -210,6 +210,9 @@ import type {
   RenameGroupApiV1GroupsGroupIdPatchData,
   RenameGroupApiV1GroupsGroupIdPatchErrors,
   RenameGroupApiV1GroupsGroupIdPatchResponses,
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchData,
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors,
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses,
   RestorePhotoApiV1PhotosPhotoIdRestorePostData,
   RestorePhotoApiV1PhotosPhotoIdRestorePostErrors,
   RestorePhotoApiV1PhotosPhotoIdRestorePostResponses,
@@ -783,6 +786,31 @@ export const createCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPost = <T
     ThrowOnError
   >({
     url: '/api/v1/cleaning/groups/{group_id}/categories',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Reorder Cleaning Categories
+ */
+export const reorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatch = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchData, ThrowOnError>,
+): RequestResult<
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses,
+  ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchResponses,
+    ReorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/cleaning/groups/{group_id}/categories/order',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -73,6 +73,8 @@ describe('CleaningReportPage', () => {
     expect(screen.getByRole('heading', { name: '掃除の月次レポート' })).toBeInTheDocument()
     expect(screen.getAllByText('完了回数').length).toBeGreaterThan(0)
     expect(screen.getByText('ユーザー別ランキング')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'ユーザー別ランキング' })).toBeInTheDocument()
+    expect(screen.getByText('1. 太郎')).toBeInTheDocument()
     expect(screen.getByText('掃除箇所別の実績')).toBeInTheDocument()
     expect(screen.getAllByText('お風呂').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: '掃除一覧へ戻る' })).toHaveAttribute('href', '/cleaning')

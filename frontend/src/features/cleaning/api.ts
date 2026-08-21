@@ -6,6 +6,7 @@ import {
   getCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGet,
   listCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGet,
   listCleaningTasksApiV1CleaningGroupsGroupIdTasksGet,
+  reorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatch,
   updateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatch,
   updateCleaningTaskApiV1CleaningTasksTaskIdPatch,
   type CleaningCategoryResponse,
@@ -52,6 +53,17 @@ export function deleteCleaningCategory(categoryId: string): Promise<void> {
       path: { category_id: categoryId },
     }),
   )
+}
+
+export async function reorderCleaningCategories(groupId: string, categoryIds: string[]): Promise<CleaningCategory[]> {
+  return (
+    await sdkData(
+      reorderCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesOrderPatch({
+        path: { group_id: groupId },
+        body: { category_ids: categoryIds },
+      }),
+    )
+  ).items
 }
 
 export async function getCleaningTasks(groupId: string, signal?: AbortSignal): Promise<CleaningTask[]> {

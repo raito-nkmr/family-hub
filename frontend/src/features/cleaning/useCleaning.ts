@@ -15,6 +15,7 @@ import {
   deleteCleaningCategory,
   getCleaningCategories,
   getCleaningTasks,
+  reorderCleaningCategories,
   updateCleaningCategory,
   updateCleaningTask,
   type CleaningCategory,
@@ -36,7 +37,10 @@ function sortTasks(tasks: CleaningTask[]): CleaningTask[] {
 
 function sortCategories(categories: CleaningCategory[]): CleaningCategory[] {
   return [...categories].sort(
-    (left, right) => left.name.localeCompare(right.name, 'ja') || left.id.localeCompare(right.id),
+    (left, right) =>
+      left.sort_order - right.sort_order ||
+      left.name.localeCompare(right.name, 'ja') ||
+      left.id.localeCompare(right.id),
   )
 }
 
@@ -111,6 +115,13 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
       )
     },
   })
+  const reorderCategoryMutation = useMutation({
+    mutationFn: ({ groupId, categoryIds }: { groupId: string; categoryIds: string[] }) =>
+      reorderCleaningCategories(groupId, categoryIds),
+    onSuccess: (ordered, { groupId }) => {
+      queryClient.setQueryData<CleaningCategory[]>(queryKeys.cleaningCategories(groupId), sortCategories(ordered))
+    },
+  })
 
   const selectGroup = async (groupId: string) => {
     setPageMutationError(null)
@@ -183,6 +194,22 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
     }
   }
 
+  const reorderCategories = async (categoryIds: string[]) => {
+    if (!selectedGroupId) return false
+    setCategoryDialogError(null)
+    setCategoryActionId('reorder')
+    try {
+      await reorderCategoryMutation.mutateAsync({ groupId: selectedGroupId, categoryIds })
+      return true
+    } catch (error) {
+      if (isUnauthorizedError(error)) onUnauthorized()
+      else setCategoryDialogError(i18n.t('errors.cleaningCategoryReorder'))
+      return false
+    } finally {
+      setCategoryActionId(null)
+    }
+  }
+
   const updateTask = async (task: CleaningTask, operation: () => Promise<CleaningTask>, fallback: string) => {
     if (!startTask(task.id)) return
     setPageMutationError(null)
@@ -246,7 +273,8 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
       saveMutation.isPending ||
       createCategoryMutation.isPending ||
       updateCategoryMutation.isPending ||
-      deleteCategoryMutation.isPending,
+      deleteCategoryMutation.isPending ||
+      reorderCategoryMutation.isPending,
     pendingTaskIds,
     editingTask,
     showTaskDialog,
@@ -264,6 +292,7 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
     createCategory,
     renameCategory,
     removeCategory,
+    reorderCategories,
     openCategoryDialog,
     closeTaskDialog: () => {
       setShowTaskDialog(false)

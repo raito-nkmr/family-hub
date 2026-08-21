@@ -52,8 +52,8 @@ describe('CleaningPage', () => {
       selectedGroupId: 'group-id',
       selectedGroup: { id: 'group-id', current_user_role: 'admin' },
       categories: [
-        { id: 'cleaning-id', group_id: 'group-id', name: '掃除', created_at: '', updated_at: '' },
-        { id: 'watering-id', group_id: 'group-id', name: '水やり', created_at: '', updated_at: '' },
+        { id: 'cleaning-id', group_id: 'group-id', name: '掃除', sort_order: 0, created_at: '', updated_at: '' },
+        { id: 'watering-id', group_id: 'group-id', name: '水やり', sort_order: 1, created_at: '', updated_at: '' },
       ],
       tasks: [makeTask(), makeTask({ id: 'watering-task-id', name: '花', category_id: 'watering-id' })],
       loading: false,
@@ -78,6 +78,7 @@ describe('CleaningPage', () => {
       createCategory: vi.fn(),
       renameCategory: vi.fn(),
       removeCategory: vi.fn(),
+      reorderCategories: vi.fn(),
     })
   })
 

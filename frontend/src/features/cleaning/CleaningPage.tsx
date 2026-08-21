@@ -244,6 +244,7 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
           onCreate={state.createCategory}
           onRename={state.renameCategory}
           onDelete={state.removeCategory}
+          onReorder={state.reorderCategories}
           onClose={state.closeCategoryDialog}
         />
       )}
