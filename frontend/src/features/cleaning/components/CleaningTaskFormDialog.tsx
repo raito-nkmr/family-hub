@@ -3,31 +3,40 @@ import { useTranslation } from 'react-i18next'
 import { Dialog } from '../../../shared/ui/Dialog'
 import { DialogActions } from '../../../shared/ui/DialogActions'
 import { SaveIcon } from '../../../shared/ui/icons'
-import type { CleaningTask, CleaningTaskCategory } from '../api'
+import type { CleaningCategory, CleaningTask } from '../api'
 
 interface CleaningTaskFormDialogProps {
   task: CleaningTask | null
+  categories: CleaningCategory[]
   submitting: boolean
   error: string | null
-  onSubmit: (name: string, intervalDays: number, category: CleaningTaskCategory) => Promise<void>
+  onSubmit: (name: string, intervalDays: number, categoryId: string) => Promise<void>
   onClose: () => void
 }
 
-export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onClose }: CleaningTaskFormDialogProps) {
+export function CleaningTaskFormDialog({
+  task,
+  categories,
+  submitting,
+  error,
+  onSubmit,
+  onClose,
+}: CleaningTaskFormDialogProps) {
   const { t } = useTranslation()
   const headingId = useId()
   const nameId = useId()
   const intervalId = useId()
-  const categoryId = useId()
+  const categoryFieldId = useId()
   const errorId = useId()
   const [name, setName] = useState(task?.name ?? '')
   const [intervalDays, setIntervalDays] = useState(task?.interval_days ?? 1)
-  const [category, setCategory] = useState<CleaningTaskCategory>(task?.category ?? 'cleaning')
+  const [categoryId, setCategoryId] = useState(task?.category_id ?? categories[0]?.id ?? '')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (submitting || !name.trim() || intervalDays < 1 || intervalDays > 3650) return
-    await onSubmit(name.trim(), intervalDays, category)
+    if (!categoryId) return
+    await onSubmit(name.trim(), intervalDays, categoryId)
   }
 
   return (
@@ -50,17 +59,23 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
           aria-describedby={error ? errorId : undefined}
           onChange={(event) => setName(event.target.value)}
         />
-        <label htmlFor={categoryId}>{t('cleaning.category')}</label>
-        <select
-          className="form-control form-control--subtle"
-          id={categoryId}
-          value={category}
-          onChange={(event) => setCategory(event.currentTarget.value as CleaningTaskCategory)}
-        >
-          <option value="watering">{t('cleaning.categories.watering')}</option>
-          <option value="cleaning">{t('cleaning.categories.cleaning')}</option>
-          <option value="children">{t('cleaning.categories.children')}</option>
-        </select>
+        <label htmlFor={categoryFieldId}>{t('cleaning.category')}</label>
+        {categories.length > 0 ? (
+          <select
+            className="form-control form-control--subtle"
+            id={categoryFieldId}
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.currentTarget.value)}
+          >
+            {categories.map((category) => (
+              <option value={category.id} key={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="form-help">{t('cleaning.noCategoriesForTask')}</p>
+        )}
         <label htmlFor={intervalId}>{t('cleaning.frequency')}</label>
         <div className="cleaning-task-form__interval">
           <input
@@ -85,7 +100,7 @@ export function CleaningTaskFormDialog({ task, submitting, error, onSubmit, onCl
           <button
             className="success-button icon-button"
             type="submit"
-            disabled={submitting || !name.trim() || !Number.isFinite(intervalDays)}
+            disabled={submitting || !name.trim() || !Number.isFinite(intervalDays) || !categoryId}
           >
             <SaveIcon />
             {submitting ? t('common.saving') : t('common.save')}

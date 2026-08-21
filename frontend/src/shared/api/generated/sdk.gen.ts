@@ -36,6 +36,9 @@ import type {
   CreateAlbumApiV1AlbumsPostData,
   CreateAlbumApiV1AlbumsPostErrors,
   CreateAlbumApiV1AlbumsPostResponses,
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostData,
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors,
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses,
   CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostData,
   CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostErrors,
   CreateCleaningTaskApiV1CleaningGroupsGroupIdTasksPostResponses,
@@ -60,6 +63,9 @@ import type {
   DeleteAlbumApiV1AlbumsAlbumIdDeleteData,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteErrors,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteResponses,
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteData,
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors,
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteErrors,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses,
@@ -125,6 +131,9 @@ import type {
   ListAuditEventsApiV1AdminAuditEventsGetData,
   ListAuditEventsApiV1AdminAuditEventsGetErrors,
   ListAuditEventsApiV1AdminAuditEventsGetResponses,
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetData,
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors,
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses,
   ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData,
   ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetErrors,
   ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetResponses,
@@ -216,6 +225,9 @@ import type {
   UpdateAlbumApiV1AlbumsAlbumIdPatchData,
   UpdateAlbumApiV1AlbumsAlbumIdPatchErrors,
   UpdateAlbumApiV1AlbumsAlbumIdPatchResponses,
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchData,
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors,
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses,
   UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchData,
   UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchErrors,
   UpdateCleaningTaskApiV1CleaningTasksTaskIdPatchResponses,
@@ -693,6 +705,84 @@ export const revokeSessionApiV1AuthSessionsSessionIdDelete = <ThrowOnError exten
     RevokeSessionApiV1AuthSessionsSessionIdDeleteErrors,
     ThrowOnError
   >({ url: '/api/v1/auth/sessions/{session_id}', ...options })
+
+/**
+ * Delete Cleaning Category
+ */
+export const deleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteData, ThrowOnError>,
+): RequestResult<
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses,
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses,
+    DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors,
+    ThrowOnError
+  >({ url: '/api/v1/cleaning/categories/{category_id}', ...options })
+
+/**
+ * Update Cleaning Category
+ */
+export const updateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses,
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses,
+    UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/cleaning/categories/{category_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * List Cleaning Categories
+ */
+export const listCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetData, ThrowOnError>,
+): RequestResult<
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses,
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses,
+    ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/cleaning/groups/{group_id}/categories', ...options })
+
+/**
+ * Create Cleaning Category
+ */
+export const createCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostData, ThrowOnError>,
+): RequestResult<
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses,
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses,
+    CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/cleaning/groups/{group_id}/categories',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
 
 /**
  * List Cleaning Tasks

@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LAST_SELECTED_GROUP_STORAGE_KEY } from '../../shared/routing/useGroupSelection'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { getGroups, type FamilyGroup } from '../groups/api'
-import { getCleaningTasks, type CleaningTask } from './api'
+import { getCleaningCategories, getCleaningTasks, type CleaningTask } from './api'
 import { useCleaning } from './useCleaning'
 
 vi.mock('../groups/api', () => ({ getGroups: vi.fn() }))
 vi.mock('./api', () => ({
   completeCleaningTask: vi.fn(),
+  createCleaningCategory: vi.fn(),
   createCleaningTask: vi.fn(),
+  deleteCleaningCategory: vi.fn(),
+  getCleaningCategories: vi.fn(),
   getCleaningTasks: vi.fn(),
+  updateCleaningCategory: vi.fn(),
   updateCleaningTask: vi.fn(),
 }))
 
@@ -24,7 +28,7 @@ function makeTask(groupId: string): CleaningTask {
     id: `task-${groupId}`,
     group_id: groupId,
     name: groupId,
-    category: 'cleaning',
+    category_id: 'cleaning-id',
     interval_days: 1,
     is_active: true,
     created_by_user_id: 'user-1',
@@ -41,6 +45,7 @@ describe('useCleaning', () => {
     vi.clearAllMocks()
     localStorage.removeItem(LAST_SELECTED_GROUP_STORAGE_KEY)
     vi.mocked(getGroups).mockResolvedValue(groups)
+    vi.mocked(getCleaningCategories).mockResolvedValue([])
     vi.mocked(getCleaningTasks).mockResolvedValue([])
   })
 

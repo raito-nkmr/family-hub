@@ -1,12 +1,12 @@
 import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AddTaskIcon, CleaningIcon, UndoIcon } from '../../shared/ui/icons'
+import { AddTaskIcon, CleaningIcon, EditIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
+import { CleaningCategoryManagerDialog } from './components/CleaningCategoryManagerDialog'
 import { CleaningTaskCard } from './components/CleaningTaskCard'
 import { CleaningTaskFormDialog } from './components/CleaningTaskFormDialog'
-import type { CleaningTaskCategory } from './api'
 import { getCleaningDueStatus, getCleaningProgress } from './status'
 import { useCleaning } from './useCleaning'
 
@@ -14,20 +14,27 @@ interface CleaningPageProps {
   onUnauthorized: () => void
 }
 
-const CATEGORY_FILTERS = ['all', 'watering', 'cleaning', 'children'] as const
-type CategoryFilter = (typeof CATEGORY_FILTERS)[number]
+const ALL_CATEGORIES = 'all'
 
 export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
   const { t } = useTranslation()
   const state = useCleaning({ onUnauthorized })
   const [now, setNow] = useState(() => new Date())
   const [swipeOpenTaskId, setSwipeOpenTaskId] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all')
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
   const activeTasks = state.tasks.filter((task) => task.is_active)
   const inactiveTasks = state.tasks.filter((task) => !task.is_active)
   const isAdmin = state.selectedGroup?.current_user_role === 'admin'
-  const visibleActiveTasks = activeTasks.filter((task) => matchesCategory(task.category, selectedCategory))
-  const visibleInactiveTasks = inactiveTasks.filter((task) => matchesCategory(task.category, selectedCategory))
+  const effectiveSelectedCategory =
+    selectedCategory === ALL_CATEGORIES || state.categories.some((category) => category.id === selectedCategory)
+      ? selectedCategory
+      : ALL_CATEGORIES
+  const visibleActiveTasks = activeTasks.filter((task) => matchesCategory(task.category_id, effectiveSelectedCategory))
+  const visibleInactiveTasks = inactiveTasks.filter((task) =>
+    matchesCategory(task.category_id, effectiveSelectedCategory),
+  )
+  const selectedCategoryName =
+    state.categories.find((category) => category.id === effectiveSelectedCategory)?.name ?? ''
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000)
@@ -82,20 +89,39 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
             onRefresh={state.refresh}
           />
 
-          {state.groups.length > 0 && (
-            <nav className="cleaning-category-filter" aria-label={t('cleaning.categoryFilter')}>
-              {CATEGORY_FILTERS.map((category) => (
+          {state.selectedGroup && (
+            <div className="cleaning-category-toolbar">
+              <nav className="cleaning-category-filter" aria-label={t('cleaning.categoryFilter')}>
                 <button
-                  className={`cleaning-category-filter__button${selectedCategory === category ? ' cleaning-category-filter__button--active' : ''}`}
-                  key={category}
+                  className={`cleaning-category-filter__button${effectiveSelectedCategory === ALL_CATEGORIES ? ' cleaning-category-filter__button--active' : ''}`}
                   type="button"
-                  aria-pressed={selectedCategory === category}
-                  onClick={() => setSelectedCategory(category)}
+                  aria-pressed={effectiveSelectedCategory === ALL_CATEGORIES}
+                  onClick={() => setSelectedCategory(ALL_CATEGORIES)}
                 >
-                  {t(`cleaning.categories.${category}`)}
+                  {t('cleaning.allCategories')}
                 </button>
-              ))}
-            </nav>
+                {state.categories.map((category) => (
+                  <button
+                    className={`cleaning-category-filter__button${effectiveSelectedCategory === category.id ? ' cleaning-category-filter__button--active' : ''}`}
+                    key={category.id}
+                    type="button"
+                    aria-pressed={effectiveSelectedCategory === category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </nav>
+              <button
+                className="secondary-button icon-button"
+                type="button"
+                disabled={state.submitting}
+                onClick={state.openCategoryDialog}
+              >
+                <EditIcon />
+                {t('cleaning.categoryManage')}
+              </button>
+            </div>
           )}
 
           <div className="section-heading cleaning-board__heading">
@@ -128,14 +154,16 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
               className="cleaning-empty-state"
               icon={<CleaningIcon />}
               title={
-                selectedCategory === 'all'
+                effectiveSelectedCategory === ALL_CATEGORIES
                   ? t('cleaning.empty')
-                  : t('cleaning.emptyCategory', { category: t(`cleaning.categories.${selectedCategory}`) })
+                  : t('cleaning.emptyCategory', { category: selectedCategoryName })
               }
               description={
-                selectedCategory === 'all'
-                  ? t(isAdmin ? 'cleaning.emptyAdmin' : 'cleaning.emptyMember')
-                  : t('cleaning.emptyCategoryHelp')
+                state.categories.length === 0
+                  ? t('cleaning.emptyNoCategoriesHelp')
+                  : effectiveSelectedCategory === ALL_CATEGORIES
+                    ? t(isAdmin ? 'cleaning.emptyAdmin' : 'cleaning.emptyMember')
+                    : t('cleaning.emptyCategoryHelp')
               }
             />
           ) : (
@@ -194,16 +222,29 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
       {state.showTaskDialog && (
         <CleaningTaskFormDialog
           task={state.editingTask}
+          categories={state.categories}
           submitting={state.submitting}
           error={state.dialogError}
           onSubmit={state.saveTask}
           onClose={state.closeTaskDialog}
         />
       )}
+      {state.showCategoryDialog && (
+        <CleaningCategoryManagerDialog
+          categories={state.categories}
+          submitting={state.submitting}
+          actionId={state.categoryActionId}
+          error={state.categoryDialogError}
+          onCreate={state.createCategory}
+          onRename={state.renameCategory}
+          onDelete={state.removeCategory}
+          onClose={state.closeCategoryDialog}
+        />
+      )}
     </>
   )
 }
 
-function matchesCategory(category: CleaningTaskCategory, selectedCategory: CategoryFilter): boolean {
-  return selectedCategory === 'all' || category === selectedCategory
+function matchesCategory(categoryId: string, selectedCategory: string): boolean {
+  return selectedCategory === ALL_CATEGORIES || categoryId === selectedCategory
 }

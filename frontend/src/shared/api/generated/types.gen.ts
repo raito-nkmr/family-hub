@@ -433,6 +433,62 @@ export type BulkPhotoSharingResponse = {
 }
 
 /**
+ * CleaningCategoryCreate
+ */
+export type CleaningCategoryCreate = {
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * CleaningCategoryListResponse
+ */
+export type CleaningCategoryListResponse = {
+  /**
+   * Items
+   */
+  items: Array<CleaningCategoryResponse>
+}
+
+/**
+ * CleaningCategoryResponse
+ */
+export type CleaningCategoryResponse = {
+  /**
+   * Created At
+   */
+  created_at: string
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Updated At
+   */
+  updated_at: string
+}
+
+/**
+ * CleaningCategoryUpdate
+ */
+export type CleaningCategoryUpdate = {
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
  * CleaningCompletionResponse
  */
 export type CleaningCompletionResponse = {
@@ -455,15 +511,13 @@ export type CleaningCompletionResponse = {
 }
 
 /**
- * CleaningTaskCategory
- */
-export type CleaningTaskCategory = 'watering' | 'cleaning' | 'children'
-
-/**
  * CleaningTaskCreate
  */
 export type CleaningTaskCreate = {
-  category?: CleaningTaskCategory
+  /**
+   * Category Id
+   */
+  category_id: string
   /**
    * Interval Days
    */
@@ -488,7 +542,10 @@ export type CleaningTaskListResponse = {
  * CleaningTaskResponse
  */
 export type CleaningTaskResponse = {
-  category: CleaningTaskCategory
+  /**
+   * Category Id
+   */
+  category_id: string
   /**
    * Created At
    */
@@ -533,7 +590,10 @@ export type CleaningTaskResponse = {
  * CleaningTaskUpdate
  */
 export type CleaningTaskUpdate = {
-  category?: CleaningTaskCategory | null
+  /**
+   * Category Id
+   */
+  category_id?: string | null
   /**
    * Interval Days
    */
@@ -2699,6 +2759,152 @@ export type RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses = {
 
 export type RevokeSessionApiV1AuthSessionsSessionIdDeleteResponse =
   RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses[keyof RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses]
+
+export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Category Id
+     */
+    category_id: string
+  }
+  query?: never
+  url: '/api/v1/cleaning/categories/{category_id}'
+}
+
+export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteError =
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors[keyof DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteErrors]
+
+export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponse =
+  DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses[keyof DeleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDeleteResponses]
+
+export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchData = {
+  body: CleaningCategoryUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Category Id
+     */
+    category_id: string
+  }
+  query?: never
+  url: '/api/v1/cleaning/categories/{category_id}'
+}
+
+export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchError =
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors[keyof UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchErrors]
+
+export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: CleaningCategoryResponse
+}
+
+export type UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponse =
+  UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses[keyof UpdateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatchResponses]
+
+export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/cleaning/groups/{group_id}/categories'
+}
+
+export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetError =
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors[keyof ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetErrors]
+
+export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: CleaningCategoryListResponse
+}
+
+export type ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponse =
+  ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses[keyof ListCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGetResponses]
+
+export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostData = {
+  body: CleaningCategoryCreate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/cleaning/groups/{group_id}/categories'
+}
+
+export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostError =
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostErrors]
+
+export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: CleaningCategoryResponse
+}
+
+export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponse =
+  CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses]
 
 export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData = {
   body?: never
