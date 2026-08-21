@@ -18,7 +18,9 @@ administrator; private photo use and sharing with multiple family groups; per-ph
 per-user favorites; group albums with cover selection; a new-photo activity view and read state; bulk sharing of up to 100
 owned photos; group membership management; group-scoped cleaning; and group-scoped shopping lists.
 
-Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, and next-due display.
+Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
+a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
+completion action so the task card remains compact.
 Cleaning and shopping remember the last selected family group in browser storage and use it when a page opens without an
 explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable

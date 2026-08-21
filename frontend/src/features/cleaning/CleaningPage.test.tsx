@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CleaningPage } from './CleaningPage'
@@ -72,10 +72,51 @@ describe('CleaningPage', () => {
     render(<CleaningPage onUnauthorized={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'お風呂' })).toBeInTheDocument()
-    expect(screen.getByText('family-member')).toBeInTheDocument()
+    expect(screen.getByText(/family-member/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '掃除完了' }))
 
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-id' }))
+  })
+
+  it('reveals completion after a right swipe and waits for the action tap', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CleaningPage onUnauthorized={vi.fn()} />)
+    const card = container.querySelector('.cleaning-card-swipe')
+    const swipeAction = container.querySelector('.cleaning-card__swipe-complete')
+
+    expect(card).not.toBeNull()
+    expect(swipeAction).not.toBeNull()
+    fireEvent.touchStart(card!, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(card!, { changedTouches: [{ clientX: 180, clientY: 100 }] })
+
+    expect(card).toHaveClass('cleaning-card-swipe--open')
+    expect(complete).not.toHaveBeenCalled()
+
+    await user.click(swipeAction!)
+
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-id' }))
+  })
+
+  it('does not open for a left swipe or vertical movement', () => {
+    const { container } = render(<CleaningPage onUnauthorized={vi.fn()} />)
+    const card = container.querySelector('.cleaning-card-swipe')
+
+    expect(card).not.toBeNull()
+    fireEvent.touchStart(card!, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(card!, { changedTouches: [{ clientX: 20, clientY: 100 }] })
+    expect(card).not.toHaveClass('cleaning-card-swipe--open')
+
+    fireEvent.touchStart(card!, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchEnd(card!, { changedTouches: [{ clientX: 180, clientY: 180 }] })
+    expect(card).not.toHaveClass('cleaning-card-swipe--open')
+  })
+
+  it('renders an accessible progressbar and compact completion metadata', () => {
+    render(<CleaningPage onUnauthorized={vi.fn()} />)
+
+    expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemin', '0')
+    expect(screen.getByRole('progressbar', { name: 'お風呂の掃除の進捗' })).toHaveAttribute('aria-valuemax', '100')
+    expect(screen.getByText(/前回: .*family-member/)).toBeInTheDocument()
   })
 })

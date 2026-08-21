@@ -43,12 +43,52 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+  align-items: start;
+}
+
+.cleaning-card-swipe {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  touch-action: pan-y;
+}
+
+.cleaning-card__swipe-action {
+  position: absolute;
+  z-index: 0;
+  inset: 0 auto 0 0;
+  display: none;
+  width: 96px;
+  place-items: stretch;
+  background: var(--cleaning-progress-healthy);
+}
+
+.cleaning-card__swipe-complete {
+  display: grid;
+  width: 96px;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  color: var(--color-button-success-text);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+  place-content: center;
+  place-items: center;
+}
+
+.cleaning-card__swipe-complete svg {
+  width: 22px;
 }
 
 .cleaning-card {
   display: flex;
   min-width: 0;
-  min-height: 400px;
+  position: relative;
+  z-index: 1;
   padding: 1.15rem;
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border-default);
@@ -56,21 +96,38 @@
   border-radius: 14px;
   box-shadow: 0 10px 28px rgb(16 42 67 / 8%);
   flex-direction: column;
+  transition: transform 180ms ease;
 }
 
 .cleaning-card--overdue {
-  border-top-color: var(--color-text-error);
+  border-top-color: var(--cleaning-progress-overdue);
 }
 
 .cleaning-card--due-soon {
-  border-top-color: #b9782c;
+  border-top-color: var(--cleaning-progress-warning);
 }
 
 .cleaning-card__heading {
   display: flex;
+  gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
-  min-height: 40px;
+  min-width: 0;
+}
+
+.cleaning-card__heading h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-display);
+  font-size: 1.55rem;
+  font-weight: 650;
+}
+
+.cleaning-card__actions {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
 }
 
 .cleaning-card__status {
@@ -83,15 +140,15 @@
 }
 
 .cleaning-card__status--overdue {
-  color: var(--color-text-error);
+  color: var(--cleaning-progress-overdue);
 }
 
 .cleaning-card__status--due-soon {
-  color: #8b571e;
+  color: var(--cleaning-progress-warning);
 }
 
 :root[data-theme='dark'] .cleaning-card__status--due-soon {
-  color: #f3c98b;
+  color: var(--cleaning-progress-warning);
 }
 
 .cleaning-card__edit {
@@ -115,52 +172,67 @@
   width: 18px;
 }
 
-.cleaning-card__body {
-  padding: 1.25rem 0 1rem;
+.cleaning-card__progress {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.8rem;
 }
 
-.cleaning-card__body h3 {
-  margin: 0;
-  overflow-wrap: anywhere;
-  font-family: var(--font-family-display);
-  font-size: 1.55rem;
-  font-weight: 650;
-}
-
-.cleaning-card__body p {
-  margin: 0.45rem 0 0;
+.cleaning-card__progress-labels {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
+.cleaning-card__progress-labels span:last-child {
+  text-align: right;
+}
+
+.cleaning-card__progress-track {
+  height: 0.45rem;
+  overflow: hidden;
+  background: var(--cleaning-progress-track);
+  border-radius: 999px;
+}
+
+.cleaning-card__progress-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  transition:
+    width 300ms ease,
+    background-color 180ms ease;
+}
+
+.cleaning-card__progress--scheduled .cleaning-card__progress-fill {
+  background: var(--cleaning-progress-healthy);
+}
+
+.cleaning-card__progress--due-soon .cleaning-card__progress-fill {
+  background: var(--cleaning-progress-warning);
+}
+
+.cleaning-card__progress--overdue .cleaning-card__progress-fill {
+  background: var(--cleaning-progress-overdue);
+}
+
+.cleaning-card__progress--inactive .cleaning-card__progress-fill {
+  background: var(--cleaning-progress-inactive);
+}
+
 .cleaning-card__history {
-  display: grid;
-  gap: 0.7rem;
-  margin: 0 0 1.25rem;
-  padding: 1rem 0;
-  border-top: 1px solid var(--color-border-default);
-}
-
-.cleaning-card__history > div {
-  display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
-  gap: 0.5rem;
-}
-
-.cleaning-card__history dt,
-.cleaning-card__history dd {
-  margin: 0;
-  font-size: 0.7rem;
-}
-
-.cleaning-card__history dt {
+  min-width: 0;
+  margin: 0 0 1rem;
+  overflow: hidden;
   color: var(--color-text-secondary);
-}
-
-.cleaning-card__history dd {
-  overflow-wrap: anywhere;
+  font-size: 0.7rem;
   font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cleaning-card__complete {
@@ -181,6 +253,10 @@
   font-weight: 750;
 }
 
+.cleaning-card__complete--desktop {
+  margin-top: auto;
+}
+
 .cleaning-card__complete:hover:not(:disabled) {
   background: var(--color-button-success-bg-hover);
   border-color: var(--color-button-success-bg-hover);
@@ -197,19 +273,18 @@
 }
 
 .cleaning-card__stop {
-  height: var(--control-height-default);
+  width: 40px;
+  height: 40px;
   padding: 0;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  font-size: 0.68rem;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  border-color: transparent;
+}
+
+.cleaning-card__stop svg {
+  width: 18px;
 }
 
 .cleaning-card--skeleton {
+  min-height: 280px;
   border-top-color: transparent;
   background: linear-gradient(
     100deg,
@@ -316,7 +391,19 @@
   }
 
   .cleaning-card {
-    min-height: 390px;
+    min-height: 0;
+  }
+
+  .cleaning-card__swipe-action {
+    display: grid;
+  }
+
+  .cleaning-card-swipe--open .cleaning-card {
+    transform: translateX(96px);
+  }
+
+  .cleaning-card__complete--desktop {
+    display: none;
   }
 
   .cleaning-task-dialog {

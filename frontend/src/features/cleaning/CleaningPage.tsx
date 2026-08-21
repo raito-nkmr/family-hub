@@ -1,11 +1,12 @@
+import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatDateTime } from '../../shared/lib/format'
-import { AddTaskIcon, CancelIcon, CheckCircleIcon, CleaningIcon, EditIcon, UndoIcon } from '../../shared/ui/icons'
+import { AddTaskIcon, CleaningIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
+import { CleaningTaskCard } from './components/CleaningTaskCard'
 import { CleaningTaskFormDialog } from './components/CleaningTaskFormDialog'
-import { getCleaningDueStatus } from './status'
+import { getCleaningDueStatus, getCleaningProgress } from './status'
 import { useCleaning } from './useCleaning'
 
 interface CleaningPageProps {
@@ -15,9 +16,28 @@ interface CleaningPageProps {
 export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
   const { t } = useTranslation()
   const state = useCleaning({ onUnauthorized })
+  const [now, setNow] = useState(() => new Date())
+  const [swipeOpenTaskId, setSwipeOpenTaskId] = useState<string | null>(null)
   const activeTasks = state.tasks.filter((task) => task.is_active)
   const inactiveTasks = state.tasks.filter((task) => !task.is_active)
   const isAdmin = state.selectedGroup?.current_user_role === 'admin'
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const handleGridPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const card = target.closest<HTMLElement>('[data-cleaning-task-id]')
+    if (card?.dataset.cleaningTaskId !== swipeOpenTaskId) setSwipeOpenTaskId(null)
+  }
+
+  const handleSelectGroup = async (groupId: string) => {
+    setSwipeOpenTaskId(null)
+    await state.selectGroup(groupId)
+  }
 
   return (
     <>
@@ -50,7 +70,7 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
               state.loading || state.submitting || state.pendingTaskIds.size > 0 || state.groups.length === 0
             }
             refreshDisabled={state.loading || state.submitting || state.pendingTaskIds.size > 0}
-            onSelectGroup={state.selectGroup}
+            onSelectGroup={handleSelectGroup}
             onRefresh={state.refresh}
           />
 
@@ -87,75 +107,29 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
               description={t(isAdmin ? 'cleaning.emptyAdmin' : 'cleaning.emptyMember')}
             />
           ) : (
-            <div className="cleaning-grid">
+            <div className="cleaning-grid" onPointerDown={handleGridPointerDown}>
               {activeTasks.map((task) => {
-                const due = getCleaningDueStatus(task)
+                const due = getCleaningDueStatus(task, now)
+                const progress = getCleaningProgress(task, now)
                 const busy = state.pendingTaskIds.has(task.id)
                 return (
-                  <article className={`cleaning-card cleaning-card--${due.state}`} key={task.id}>
-                    <div className="cleaning-card__heading">
-                      <span className={`cleaning-card__status cleaning-card__status--${due.state}`}>{due.label}</span>
-                      {isAdmin && (
-                        <button
-                          className="cleaning-card__edit"
-                          type="button"
-                          aria-label={t('cleaning.editLabel', { name: task.name })}
-                          disabled={busy}
-                          onClick={() => state.openTaskDialog(task)}
-                        >
-                          <EditIcon />
-                        </button>
-                      )}
-                    </div>
-                    <div className="cleaning-card__body">
-                      <h3>{task.name}</h3>
-                      <p>
-                        {task.interval_days === 1
-                          ? t('cleaning.everyDay')
-                          : t('cleaning.everyDays', { count: task.interval_days })}
-                      </p>
-                    </div>
-                    <dl className="cleaning-card__history">
-                      <div>
-                        <dt>{t('cleaning.previous')}</dt>
-                        <dd>
-                          {task.last_completion
-                            ? formatDateTime(task.last_completion.completed_at)
-                            : t('cleaning.never')}
-                        </dd>
-                      </div>
-                      {task.last_completion && (
-                        <div>
-                          <dt>{t('cleaning.completedBy')}</dt>
-                          <dd>{task.last_completion.completed_by_username}</dd>
-                        </div>
-                      )}
-                      <div>
-                        <dt>{t('cleaning.nextDue')}</dt>
-                        <dd>{formatDateTime(task.next_due_at)}</dd>
-                      </div>
-                    </dl>
-                    <button
-                      className="cleaning-card__complete"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void state.complete(task)}
-                    >
-                      <CheckCircleIcon />
-                      {t(busy ? 'cleaning.recording' : 'cleaning.complete')}
-                    </button>
-                    {isAdmin && (
-                      <button
-                        className="danger-button icon-button cleaning-card__stop"
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void state.setTaskActive(task, false)}
-                      >
-                        <CancelIcon />
-                        {t('cleaning.stop')}
-                      </button>
-                    )}
-                  </article>
+                  <CleaningTaskCard
+                    key={task.id}
+                    task={task}
+                    due={due}
+                    progress={progress}
+                    isAdmin={isAdmin}
+                    busy={busy}
+                    swipeOpen={swipeOpenTaskId === task.id}
+                    onSwipeOpen={() => setSwipeOpenTaskId(task.id)}
+                    onSwipeClose={() => setSwipeOpenTaskId(null)}
+                    onComplete={() => {
+                      setSwipeOpenTaskId(null)
+                      void state.complete(task)
+                    }}
+                    onEdit={() => state.openTaskDialog(task)}
+                    onPause={() => void state.setTaskActive(task, false)}
+                  />
                 )
               })}
             </div>
