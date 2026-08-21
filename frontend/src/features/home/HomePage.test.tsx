@@ -15,6 +15,7 @@ const group: FamilyGroup = {
   updated_at: '2026-07-14T00:00:00Z',
   current_user_role: 'admin',
   member_count: 2,
+  timezone: 'Asia/Tokyo',
 }
 
 const task: CleaningTask = {

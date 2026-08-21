@@ -24,5 +24,7 @@ export const queryKeys = {
   photoTrash: ['photos', 'trash'] as const,
   cleaningCategories: (groupId: string) => ['groups', groupId, 'cleaning-categories'] as const,
   cleaningTasks: (groupId: string) => ['groups', groupId, 'cleaning-tasks'] as const,
+  cleaningReports: (groupId: string) => ['groups', groupId, 'cleaning-reports'] as const,
+  cleaningReport: (groupId: string, month: string) => ['groups', groupId, 'cleaning-reports', month] as const,
   shoppingItems: (groupId: string) => ['groups', groupId, 'shopping-items'] as const,
 }

@@ -3,11 +3,13 @@ import {
   createCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPost,
   createCleaningTaskApiV1CleaningGroupsGroupIdTasksPost,
   deleteCleaningCategoryApiV1CleaningCategoriesCategoryIdDelete,
+  getCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGet,
   listCleaningCategoriesApiV1CleaningGroupsGroupIdCategoriesGet,
   listCleaningTasksApiV1CleaningGroupsGroupIdTasksGet,
   updateCleaningCategoryApiV1CleaningCategoriesCategoryIdPatch,
   updateCleaningTaskApiV1CleaningTasksTaskIdPatch,
   type CleaningCategoryResponse,
+  type CleaningMonthlyReportResponse,
   type CleaningTaskResponse,
   type CleaningTaskUpdate,
 } from '../../shared/api/generated'
@@ -15,6 +17,7 @@ import { sdkData } from '../../shared/api/sdkClient'
 
 export type CleaningTask = CleaningTaskResponse
 export type CleaningCategory = CleaningCategoryResponse
+export type CleaningMonthlyReport = CleaningMonthlyReportResponse
 export type CleaningTaskChanges = CleaningTaskUpdate
 
 export async function getCleaningCategories(groupId: string, signal?: AbortSignal): Promise<CleaningCategory[]> {
@@ -83,6 +86,20 @@ export function completeCleaningTask(taskId: string): Promise<CleaningTask> {
   return sdkData(
     completeCleaningTaskApiV1CleaningTasksTaskIdCompletionsPost({
       path: { task_id: taskId },
+    }),
+  )
+}
+
+export function getCleaningMonthlyReport(
+  groupId: string,
+  month: string,
+  signal?: AbortSignal,
+): Promise<CleaningMonthlyReport> {
+  return sdkData(
+    getCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGet({
+      path: { group_id: groupId },
+      query: { month },
+      signal,
     }),
   )
 }

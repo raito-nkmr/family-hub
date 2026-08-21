@@ -511,6 +511,181 @@ export type CleaningCompletionResponse = {
 }
 
 /**
+ * CleaningMonthlyCategoryResponse
+ */
+export type CleaningMonthlyCategoryResponse = {
+  /**
+   * Category Id
+   */
+  category_id: string | null
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Unique Task Count
+   */
+  unique_task_count: number
+}
+
+/**
+ * CleaningMonthlyDailyResponse
+ */
+export type CleaningMonthlyDailyResponse = {
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * Day
+   */
+  day: string
+  /**
+   * Unique Task Count
+   */
+  unique_task_count: number
+}
+
+/**
+ * CleaningMonthlyMemberResponse
+ */
+export type CleaningMonthlyMemberResponse = {
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * Completion Ratio
+   */
+  completion_ratio: number
+  /**
+   * Unique Task Count
+   */
+  unique_task_count: number
+  /**
+   * User Id
+   */
+  user_id: string
+  /**
+   * Username
+   */
+  username: string
+}
+
+/**
+ * CleaningMonthlyReportResponse
+ */
+export type CleaningMonthlyReportResponse = {
+  /**
+   * Categories
+   */
+  categories: Array<CleaningMonthlyCategoryResponse>
+  /**
+   * Daily
+   */
+  daily: Array<CleaningMonthlyDailyResponse>
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Members
+   */
+  members: Array<CleaningMonthlyMemberResponse>
+  /**
+   * Month
+   */
+  month: string
+  summary: CleaningMonthlySummaryResponse
+  /**
+   * Tasks
+   */
+  tasks: Array<CleaningMonthlyTaskResponse>
+  /**
+   * Timezone
+   */
+  timezone: string
+}
+
+/**
+ * CleaningMonthlySummaryResponse
+ */
+export type CleaningMonthlySummaryResponse = {
+  /**
+   * Category Count
+   */
+  category_count: number
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * Participant Count
+   */
+  participant_count: number
+  /**
+   * Unique Task Count
+   */
+  unique_task_count: number
+}
+
+/**
+ * CleaningMonthlyTaskMemberResponse
+ */
+export type CleaningMonthlyTaskMemberResponse = {
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * User Id
+   */
+  user_id: string
+  /**
+   * Username
+   */
+  username: string
+}
+
+/**
+ * CleaningMonthlyTaskResponse
+ */
+export type CleaningMonthlyTaskResponse = {
+  /**
+   * Category Id
+   */
+  category_id: string | null
+  /**
+   * Category Name
+   */
+  category_name: string
+  /**
+   * Completion Count
+   */
+  completion_count: number
+  /**
+   * Members
+   */
+  members: Array<CleaningMonthlyTaskMemberResponse>
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Participant Count
+   */
+  participant_count: number
+  /**
+   * Task Id
+   */
+  task_id: string
+}
+
+/**
  * CleaningTaskCreate
  */
 export type CleaningTaskCreate = {
@@ -720,6 +895,10 @@ export type GroupDetailResponse = {
    */
   name: string
   /**
+   * Timezone
+   */
+  timezone: string
+  /**
    * Updated At
    */
   updated_at: string
@@ -921,6 +1100,10 @@ export type GroupResponse = {
    */
   name: string
   /**
+   * Timezone
+   */
+  timezone: string
+  /**
    * Updated At
    */
   updated_at: string
@@ -930,6 +1113,16 @@ export type GroupResponse = {
  * GroupRole
  */
 export type GroupRole = 'admin' | 'member'
+
+/**
+ * GroupTimezoneUpdate
+ */
+export type GroupTimezoneUpdate = {
+  /**
+   * Timezone
+   */
+  timezone: string
+}
 
 /**
  * GroupUpdate
@@ -2906,6 +3099,43 @@ export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostRespon
 export type CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponse =
   CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses[keyof CreateCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPostResponses]
 
+export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query: {
+    /**
+     * Month
+     */
+    month: string
+  }
+  url: '/api/v1/cleaning/groups/{group_id}/reports/monthly'
+}
+
+export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetError =
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors[keyof GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors]
+
+export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: CleaningMonthlyReportResponse
+}
+
+export type GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponse =
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses[keyof GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses]
+
 export type ListCleaningTasksApiV1CleaningGroupsGroupIdTasksGetData = {
   body?: never
   path: {
@@ -3511,6 +3741,44 @@ export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponse
 
 export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponse =
   InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses[keyof InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses]
+
+export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData = {
+  body: GroupTimezoneUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/groups/{group_id}/settings'
+}
+
+export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchError =
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors[keyof UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors]
+
+export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: GroupDetailResponse
+}
+
+export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponse =
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses[keyof UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses]
 
 export type GetHealthApiV1HealthGetData = {
   body?: never

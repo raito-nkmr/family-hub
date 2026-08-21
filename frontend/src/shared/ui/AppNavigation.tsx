@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
-import { appPaths, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
+import { appPaths, cleaningViews, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
 import {
   AlbumIcon,
   CleaningIcon,
@@ -78,7 +78,7 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         <DeleteIcon />
         {t('navigation.photoTrash')}
       </NavLink>
-      <NavLink className={itemClass('cleaning')} to={appPaths.cleaning}>
+      <NavLink className={sectionClass(cleaningViews)} to={appPaths.cleaning}>
         <CleaningIcon />
         {t('navigation.cleaning')}
       </NavLink>

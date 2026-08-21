@@ -15,6 +15,7 @@ import {
   getGroups,
   removeGroupMember,
   renameGroup,
+  updateGroupTimezone,
   updateGroupMemberRole,
   type FamilyGroup,
   type GroupDetail,
@@ -74,6 +75,14 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
   const renameMutation = useMutation({
     mutationFn: ({ groupId, name }: { groupId: string; name: string }) => renameGroup(groupId, name),
     onSuccess: (updated) => updateGroupCaches(queryClient, updated),
+  })
+  const timezoneMutation = useMutation({
+    mutationFn: ({ groupId, timezone }: { groupId: string; timezone: string }) =>
+      updateGroupTimezone(groupId, timezone),
+    onSuccess: (updated) => {
+      updateGroupCaches(queryClient, updated)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cleaningReports(updated.id) })
+    },
   })
 
   const create = async (name: string) => {
@@ -194,6 +203,18 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     }
   }
 
+  const updateTimezone = async (timezone: string) => {
+    if (!selectedGroupId) return false
+    setPageMutationError(null)
+    try {
+      await timezoneMutation.mutateAsync({ groupId: selectedGroupId, timezone })
+      return true
+    } catch (error) {
+      handleGroupError(error, i18n.t('errors.groupTimezone'), onUnauthorized, setPageMutationError)
+      return false
+    }
+  }
+
   const refresh = async () => {
     setPageMutationError(null)
     await groupsQuery.refetch()
@@ -216,7 +237,8 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     groups: groupsQuery.data ?? [],
     selectedGroup: detailQuery.data ?? null,
     loading: groupsQuery.isPending || (selectedGroupId !== null && detailQuery.isPending),
-    submitting: createMutation.isPending || addMemberMutation.isPending || renameMutation.isPending,
+    submitting:
+      createMutation.isPending || addMemberMutation.isPending || renameMutation.isPending || timezoneMutation.isPending,
     showCreateDialog,
     showAddMemberDialog,
     memberCandidates: candidatesQuery.data ?? [],
@@ -226,6 +248,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     dialogError,
     create,
     rename,
+    updateTimezone,
     addMember,
     changeRole,
     removeMember,

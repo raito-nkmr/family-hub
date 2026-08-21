@@ -78,6 +78,9 @@ import type {
   GetAlbumApiV1AlbumsAlbumIdGetData,
   GetAlbumApiV1AlbumsAlbumIdGetErrors,
   GetAlbumApiV1AlbumsAlbumIdGetResponses,
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetData,
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors,
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses,
   GetCleaningTaskApiV1CleaningTasksTaskIdGetData,
   GetCleaningTaskApiV1CleaningTasksTaskIdGetErrors,
   GetCleaningTaskApiV1CleaningTasksTaskIdGetResponses,
@@ -234,6 +237,9 @@ import type {
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchData,
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchErrors,
   UpdateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatchResponses,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutData,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutErrors,
   UpdateNotificationPreferencesApiV1NotificationsPreferencesPutResponses,
@@ -785,6 +791,24 @@ export const createCleaningCategoryApiV1CleaningGroupsGroupIdCategoriesPost = <T
   })
 
 /**
+ * Get Cleaning Monthly Report
+ */
+export const getCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetData, ThrowOnError>,
+): RequestResult<
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses,
+  GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetResponses,
+    GetCleaningMonthlyReportApiV1CleaningGroupsGroupIdReportsMonthlyGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/cleaning/groups/{group_id}/reports/monthly', ...options })
+
+/**
  * List Cleaning Tasks
  */
 export const listCleaningTasksApiV1CleaningGroupsGroupIdTasksGet = <ThrowOnError extends boolean = false>(
@@ -1098,6 +1122,29 @@ export const inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost = <Thr
     ThrowOnError
   >({
     url: '/api/v1/groups/{group_id}/membership-invitations',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Update Group Settings
+ */
+export const updateGroupSettingsApiV1GroupsGroupIdSettingsPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
+  UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchResponses,
+    UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/groups/{group_id}/settings',
     ...options,
     headers: {
       'Content-Type': 'application/json',

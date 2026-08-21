@@ -1,5 +1,6 @@
 import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { appPaths } from '../../app/routes'
 import { AddTaskIcon, CleaningIcon, EditIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
@@ -62,17 +63,22 @@ export function CleaningPage({ onUnauthorized }: CleaningPageProps) {
             <h1>{t('cleaning.title')}</h1>
             <p>{t('cleaning.description')}</p>
           </div>
-          {isAdmin && (
-            <button
-              className="primary-button icon-button"
-              type="button"
-              disabled={state.loading}
-              onClick={() => state.openTaskDialog()}
-            >
-              <AddTaskIcon />
-              {t('cleaning.add')}
-            </button>
-          )}
+          <div className="cleaning-hero__actions">
+            <a className="secondary-button" href={appPaths['cleaning-reports']}>
+              {t('cleaning.reportLink')}
+            </a>
+            {isAdmin && (
+              <button
+                className="primary-button icon-button"
+                type="button"
+                disabled={state.loading}
+                onClick={() => state.openTaskDialog()}
+              >
+                <AddTaskIcon />
+                {t('cleaning.add')}
+              </button>
+            )}
+          </div>
         </section>
 
         <section className="cleaning-board" aria-labelledby="cleaning-board-heading">

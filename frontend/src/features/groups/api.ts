@@ -11,6 +11,7 @@ import {
   listMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGet,
   removeGroupMemberApiV1GroupsGroupIdMembersUserIdDelete,
   renameGroupApiV1GroupsGroupIdPatch,
+  updateGroupSettingsApiV1GroupsGroupIdSettingsPatch,
   updateGroupMemberRoleApiV1GroupsGroupIdMembersUserIdPatch,
   type GroupDetailResponse,
   type GroupMemberCandidateResponse,
@@ -65,6 +66,15 @@ export function addGroupMember(groupId: string, userId: string, role: GroupRole)
 
 export function renameGroup(groupId: string, name: string): Promise<GroupDetail> {
   return sdkData(renameGroupApiV1GroupsGroupIdPatch({ path: { group_id: groupId }, body: { name } }))
+}
+
+export function updateGroupTimezone(groupId: string, timezone: string): Promise<GroupDetail> {
+  return sdkData(
+    updateGroupSettingsApiV1GroupsGroupIdSettingsPatch({
+      path: { group_id: groupId },
+      body: { timezone },
+    }),
+  )
 }
 
 export function getGroupAdministration(groupId: string, signal?: AbortSignal): Promise<GroupAdministrationOverview> {

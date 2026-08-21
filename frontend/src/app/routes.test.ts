@@ -9,4 +9,8 @@ describe('app routes', () => {
   it('does not treat an unknown path as home', () => {
     expect(getAppView('/unknown')).toBeNull()
   })
+
+  it('keeps cleaning navigation active on the report subpage', () => {
+    expect(getAppView('/cleaning/reports')).toBe('cleaning-reports')
+  })
 })

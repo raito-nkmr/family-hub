@@ -191,6 +191,7 @@ export function useCleaning({ onUnauthorized }: UseCleaningOptions) {
       queryClient.setQueryData<CleaningTask[]>(queryKeys.cleaningTasks(task.group_id), (current = []) =>
         sortTasks(current.map((item) => (item.id === updated.id ? updated : item))),
       )
+      await queryClient.invalidateQueries({ queryKey: queryKeys.cleaningReports(task.group_id) })
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setPageMutationError(fallback)

@@ -5,6 +5,7 @@ export const appPaths = {
   albums: '/photos/albums',
   'photo-trash': '/photos/trash',
   cleaning: '/cleaning',
+  'cleaning-reports': '/cleaning/reports',
   shopping: '/shopping',
   groups: '/groups',
   invitations: '/invitations',
@@ -15,6 +16,7 @@ export const appPaths = {
 export type AppView = keyof typeof appPaths
 
 export const photoViews: AppView[] = ['photo-activity', 'photos', 'albums', 'photo-trash']
+export const cleaningViews: AppView[] = ['cleaning', 'cleaning-reports']
 export const managementViews: AppView[] = ['groups', 'invitations', 'account', 'system']
 
 export function getAppView(pathname: string): AppView | null {

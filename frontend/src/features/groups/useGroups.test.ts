@@ -8,6 +8,7 @@ import {
   getGroup,
   getGroups,
   renameGroup,
+  updateGroupTimezone,
   updateGroupMemberRole,
   type GroupDetail,
   type GroupMember,
@@ -21,6 +22,7 @@ vi.mock('./api', () => ({
   getGroupMemberCandidates: vi.fn(),
   getGroups: vi.fn(),
   renameGroup: vi.fn(),
+  updateGroupTimezone: vi.fn(),
   removeGroupMember: vi.fn(),
   updateGroupMemberRole: vi.fn(),
 }))
@@ -33,6 +35,7 @@ const group: GroupDetail = {
   updated_at: '2026-07-15T00:00:00Z',
   current_user_role: 'admin',
   member_count: 1,
+  timezone: 'Asia/Tokyo',
   members: [],
 }
 
@@ -180,5 +183,19 @@ describe('useGroups', () => {
 
     expect(renamed).toBe(false)
     expect(result.current.pageError).toBe('グループ名を変更できませんでした。')
+  })
+
+  it('updates the group time zone', async () => {
+    vi.mocked(getGroup).mockResolvedValue(group)
+    vi.mocked(updateGroupTimezone).mockResolvedValue({ ...group, timezone: 'Europe/London' })
+    const { result } = renderHook(() => useGroups({ currentUserId: 'user-1', onUnauthorized: vi.fn() }), {
+      wrapper: createAppWrapper('/groups?group=group-1'),
+    })
+
+    await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
+    await act(() => result.current.updateTimezone('Europe/London'))
+
+    expect(updateGroupTimezone).toHaveBeenCalledWith(group.id, 'Europe/London')
+    expect(result.current.selectedGroup?.timezone).toBe('Europe/London')
   })
 })
