@@ -64,8 +64,9 @@ for feature logic.
 
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
-function or registry for Alembic. The current Alembic baseline has three explicit schema-only revisions (`core`, `media`,
-and `household`); migrations must not write application data, seed rows, or perform backfills.
+function or registry for Alembic. The current Alembic chain starts with three explicit schema-only baseline revisions
+(`core`, `media`, and `household`) and adds later schema-only revisions such as `cleaning_categories`; migrations must not
+write application data, seed rows, or perform backfills.
 
 ### `features.health`
 
@@ -115,10 +116,11 @@ group-admin membership changes cannot leave an administrator invariant broken by
 
 ### `features.cleaning`
 
-Owns group-scoped cleaning tasks, fixed categories, day intervals, and append-only completion history. Members may list and
-complete active tasks; group administrators may create, edit, categorize, pause, and resume them. Mutations lock the group,
-recheck membership, then lock the task. Completion time always comes from the server's current UTC time. Use PostgreSQL
-`DISTINCT ON` to return the latest completion per task without loading all history. Non-members receive `404`.
+Owns group-scoped cleaning categories, tasks, day intervals, and append-only completion history. Every group member may
+create, rename, and delete unused categories; members may list and complete active tasks; group administrators may create,
+edit, categorize, pause, and resume them. Mutations lock the group, recheck membership, then lock the category or task.
+Completion time always comes from the server's current UTC time. Use PostgreSQL `DISTINCT ON` to return the latest
+completion per task without loading all history. Non-members receive `404`.
 
 ### `features.shopping`
 

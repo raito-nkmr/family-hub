@@ -20,7 +20,7 @@ owned photos; group membership management; group-scoped cleaning; and group-scop
 
 Cleaning supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
 a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
-completion action so the task card remains compact. Tasks have fixed watering, cleaning, and children categories; the
+completion action so the task card remains compact. Family-group members can create shared cleaning categories, and the
 cleaning screen can filter the visible tasks by category or show all categories.
 Cleaning and shopping remember the last selected family group in browser storage and use it when a page opens without an
 explicit group in the URL.
@@ -288,8 +288,8 @@ removed after batch creation, unfinished items are stopped so the old permission
 Household members share cleaning locations and completion state for areas such as the kitchen, bathroom, and living room.
 Cleaning data belongs to a family group and is independent of the photo `family` visibility scope.
 
-- Group administrators manage task names, watering, cleaning, or children categories, intervals of 1–3650 days, and active
-  or paused state.
+- Group members manage shared category names; group administrators manage task names, category assignment, intervals of
+  1–3650 days, and active or paused state.
 - All group members can view active tasks and record completion.
 - The cleaning screen provides an all-categories view and category filters.
 - Completion records the server time and user without overwriting history.

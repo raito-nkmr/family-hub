@@ -7,10 +7,10 @@ and shopping. Image files are stored on the internal photo-storage HDD; PostgreS
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema is represented by a short three-revision linear baseline because the development and
-pre-production databases are reset when the baseline is rebuilt. The revisions are divided by dependency boundaries so
-each remains readable. Future approved schema changes should be added as new migrations. Tables for future features such
-as person detection are not created until the feature is approved and its requirements are known.
+The current application schema starts with a short three-revision linear baseline because the development and pre-production
+databases are reset when the baseline is rebuilt. Subsequent approved schema changes extend that chain. Revisions are
+divided by dependency boundaries so each remains readable. Tables for future features such as person detection are not
+created until the feature is approved and its requirements are known.
 
 ```text
 family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
@@ -124,11 +124,18 @@ Acceptance creates membership in the same transaction; group deletion cascades.
 
 ### `cleaning_tasks`
 
-Stores group-scoped cleaning locations, required fixed categories (`watering`, `cleaning`, or `children`), and day
-intervals. `interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index
-`(group_id, is_active)` as `ix_cleaning_tasks_group_id_is_active`. Do not store a countdown or `next_due_at`; calculate it
-from the latest completion or `created_at` plus the interval. Pausing is a logical state change and preserves history.
-Category filtering is performed by the authenticated client after loading the group task list.
+Stores group-scoped cleaning locations, a required reference to a group-owned cleaning category, and day intervals.
+`interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index `(group_id,
+is_active)` as `ix_cleaning_tasks_group_id_is_active` and `category_id` as `ix_cleaning_tasks_category_id`. Do not store a
+countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
+state change and preserves history. Category filtering is performed by the authenticated client after loading the group
+task and category lists.
+
+### `cleaning_categories`
+
+Stores group-shared category names. Names are trimmed, limited to 40 characters, and unique within a group without regard to
+case. Every group member may create, rename, and delete an unused category. Categories referenced by a cleaning task cannot
+be deleted.
 
 ### `cleaning_completions`
 
@@ -326,10 +333,11 @@ The development and pre-production history is reset and rebuilt as the following
 - `20260821_01_core` — extensions, identity, and family groups
 - `20260821_02_media` — photos, activity, uploads, and albums
 - `20260821_03_household` — cleaning, shopping, notifications, maintenance, and audit
+- `20260821_04_cleaning_categories` — group-owned cleaning categories and task category references
 
-The final constraints and indexes, including forced password changes, lifecycle invariants, and required positive photo
-dimensions, effective photo capture time, and cleaning categories, are included in the baseline chain. Never rewrite these
-revisions after the rebuild; future approved schema changes must be added as new migrations.
+The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
+dimensions, effective photo capture time, and required cleaning category references, are included in the current chain.
+Never rewrite these revisions after the rebuild; future approved schema changes must be added as new migrations.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
 update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate

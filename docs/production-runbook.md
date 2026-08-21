@@ -353,7 +353,7 @@ docker compose down --volumes
 docker compose up --detach --wait db
 ```
 
-Apply the three-revision schema and create development bootstrap data:
+Apply the latest schema and create development bootstrap data:
 
 ```bash
 cd backend
