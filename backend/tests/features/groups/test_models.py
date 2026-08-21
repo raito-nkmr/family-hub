@@ -9,11 +9,14 @@ def test_family_group_table_has_expected_constraints_and_indexes() -> None:
     assert set(constraints) == {
         "ck_family_groups_name_length",
         "ck_family_groups_name_trimmed",
+        "ck_family_groups_timezone_length",
+        "ck_family_groups_timezone_trimmed",
         "fk_family_groups_created_by_user_id_users",
         "pk_family_groups",
         "uq_family_groups_name",
     }
     assert isinstance(constraints["ck_family_groups_name_length"], CheckConstraint)
+    assert isinstance(constraints["ck_family_groups_timezone_length"], CheckConstraint)
     assert isinstance(constraints["fk_family_groups_created_by_user_id_users"], ForeignKeyConstraint)
     assert isinstance(constraints["uq_family_groups_name"], UniqueConstraint)
     assert {index.name for index in FamilyGroup.__table__.indexes} == {"ix_family_groups_created_by_user_id"}

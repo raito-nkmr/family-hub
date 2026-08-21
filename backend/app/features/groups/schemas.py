@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,6 +21,22 @@ class GroupCreate(BaseModel):
 
 class GroupMemberRoleUpdate(BaseModel):
     role: GroupRole
+
+
+class GroupTimezoneUpdate(BaseModel):
+    timezone: str = Field(min_length=1, max_length=64)
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("group timezone must not be blank")
+        try:
+            ZoneInfo(normalized)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("group timezone must be a valid IANA timezone") from error
+        return normalized
 
 
 class GroupUpdate(GroupCreate):
@@ -86,6 +103,7 @@ class GroupResponse(BaseModel):
 
     id: UUID
     name: str
+    timezone: str
     created_by_user_id: UUID
     created_at: datetime
     updated_at: datetime

@@ -31,4 +31,12 @@ def test_cleaning_completion_indexes_are_named() -> None:
     index_names = {index.name for index in CleaningCompletion.__table__.indexes}
 
     assert "pk_cleaning_completions" in constraint_names
+    assert "ck_cleaning_completions_task_name_trimmed" in constraint_names
+    assert "ck_cleaning_completions_task_name_length" in constraint_names
+    assert "ck_cleaning_completions_category_name_trimmed" in constraint_names
+    assert "ck_cleaning_completions_category_name_length" in constraint_names
     assert "ix_cleaning_completions_task_id_completed_at" in index_names
+    assert "ix_cleaning_completions_completed_at_task_id" in index_names
+    assert CleaningCompletion.__table__.c.task_name_snapshot.nullable is False
+    assert CleaningCompletion.__table__.c.category_name_snapshot.nullable is False
+    assert CleaningCompletion.__table__.c.category_id.nullable is True

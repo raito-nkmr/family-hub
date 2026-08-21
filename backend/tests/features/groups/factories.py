@@ -9,6 +9,7 @@ def make_group(group_id: UUID | None = None, *, created_by_user_id: UUID | None 
     return FamilyGroup(
         id=group_id or uuid4(),
         name="同居家族",
+        timezone="Asia/Tokyo",
         created_by_user_id=created_by_user_id or uuid4(),
         created_at=now,
         updated_at=now,

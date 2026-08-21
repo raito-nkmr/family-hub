@@ -15,9 +15,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260821_04_cleaning_categories"]
+    assert scripts.get_heads() == ["20260821_05_cleaning_reports"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260821_05_cleaning_reports",
         "20260821_04_cleaning_categories",
         "20260821_03_household",
         "20260821_02_media",
@@ -51,6 +52,10 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "category_id UUID NOT NULL" in sql
     assert "uq_cleaning_categories_group_name_ci" in sql
     assert "fk_cleaning_tasks_category_id_cleaning_categories" in sql
+    assert "timezone VARCHAR(64) DEFAULT 'Asia/Tokyo' NOT NULL" in sql
+    assert "task_name_snapshot VARCHAR(120) NOT NULL" in sql
+    assert "category_name_snapshot VARCHAR(40) NOT NULL" in sql
+    assert "ix_cleaning_completions_completed_at_task_id" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
@@ -68,6 +73,7 @@ def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_pa
     assert "DROP TABLE album_photos" in sql
     assert "DROP TABLE photos" in sql
     assert "DROP TABLE cleaning_categories" in sql
+    assert "DROP COLUMN timezone" in sql
 
 
 MIGRATION_TEST_DATABASE_URL = os.getenv("MIGRATION_TEST_DATABASE_URL")

@@ -216,9 +216,13 @@ class CleaningService:
             raise CleaningNotFoundError
         if not task.is_active:
             raise CleaningInactiveTaskError
+        category = self._require_category(task.category_id, task.group_id)
         completion = CleaningCompletion(
             id=uuid4(),
             task_id=task.id,
+            task_name_snapshot=task.name,
+            category_id=category.id,
+            category_name_snapshot=category.name,
             completed_by_user_id=user_id,
             completed_at=datetime.now(UTC),
         )

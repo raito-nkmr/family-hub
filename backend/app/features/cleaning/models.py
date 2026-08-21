@@ -71,13 +71,41 @@ class CleaningTask(Base):
 
 class CleaningCompletion(Base):
     __tablename__ = "cleaning_completions"
-    __table_args__ = (PrimaryKeyConstraint("id", name="pk_cleaning_completions"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_cleaning_completions"),
+        CheckConstraint(
+            "task_name_snapshot = btrim(task_name_snapshot)",
+            name="ck_cleaning_completions_task_name_trimmed",
+        ),
+        CheckConstraint(
+            "char_length(task_name_snapshot) BETWEEN 1 AND 120",
+            name="ck_cleaning_completions_task_name_length",
+        ),
+        CheckConstraint(
+            "category_name_snapshot = btrim(category_name_snapshot)",
+            name="ck_cleaning_completions_category_name_trimmed",
+        ),
+        CheckConstraint(
+            "char_length(category_name_snapshot) BETWEEN 1 AND 40",
+            name="ck_cleaning_completions_category_name_length",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
     task_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("cleaning_tasks.id", ondelete="CASCADE", name="fk_cleaning_completions_task_id_cleaning_tasks"),
     )
+    task_name_snapshot: Mapped[str] = mapped_column(String(120))
+    category_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey(
+            "cleaning_categories.id",
+            ondelete="SET NULL",
+            name="fk_cleaning_completions_category_id_cleaning_categories",
+        ),
+    )
+    category_name_snapshot: Mapped[str] = mapped_column(String(40))
     completed_by_user_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT", name="fk_cleaning_completions_completed_by_user_id_users"),
@@ -100,4 +128,5 @@ Index(
     CleaningCompletion.completed_at.desc(),
     CleaningCompletion.id.desc(),
 )
+Index("ix_cleaning_completions_completed_at_task_id", CleaningCompletion.completed_at, CleaningCompletion.task_id)
 Index("ix_cleaning_completions_completed_by_user_id", CleaningCompletion.completed_by_user_id)

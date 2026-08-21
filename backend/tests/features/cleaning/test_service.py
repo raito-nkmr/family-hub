@@ -146,8 +146,9 @@ def test_complete_task_records_actor_and_resets_due_at() -> None:
     session = MagicMock(spec=Session)
     user_id = uuid4()
     task = make_cleaning_task(interval_days=3)
+    category = make_cleaning_category(category_id=task.category_id, group_id=task.group_id)
     session.scalar.side_effect = [task.group_id, task]
-    session.get.return_value = make_membership(task.group_id, user_id, role=GroupRole.MEMBER)
+    session.get.side_effect = [make_membership(task.group_id, user_id, role=GroupRole.MEMBER), category]
     lock_result = MagicMock(all=MagicMock(return_value=[task.group_id]))
     session.scalars.return_value = lock_result
     service, directory = make_service(session)
@@ -160,6 +161,9 @@ def test_complete_task_records_actor_and_resets_due_at() -> None:
     completion = session.add.call_args.args[0]
     assert isinstance(completion, CleaningCompletion)
     assert completion.completed_by_user_id == user_id
+    assert completion.task_name_snapshot == task.name
+    assert completion.category_id == category.id
+    assert completion.category_name_snapshot == category.name
     assert result.last_completion is not None
     assert result.next_due_at == completion.completed_at + timedelta(days=3)
 

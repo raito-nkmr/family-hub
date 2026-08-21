@@ -44,10 +44,20 @@ def make_cleaning_task(
     )
 
 
-def make_completion(task_id: UUID, user_id: UUID) -> CleaningCompletion:
+def make_completion(
+    task_id: UUID,
+    user_id: UUID,
+    *,
+    task_name: str = "お風呂",
+    category_id: UUID | None = None,
+    category_name: str = "掃除",
+) -> CleaningCompletion:
     return CleaningCompletion(
         id=uuid4(),
         task_id=task_id,
+        task_name_snapshot=task_name,
+        category_id=category_id,
+        category_name_snapshot=category_name,
         completed_by_user_id=user_id,
         completed_at=datetime(2026, 7, 15, 8, tzinfo=UTC),
     )

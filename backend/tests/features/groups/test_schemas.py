@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.features.groups.models import GroupRole
-from app.features.groups.schemas import GroupCreate, GroupResponse
+from app.features.groups.schemas import GroupCreate, GroupResponse, GroupTimezoneUpdate
 from app.features.groups.service import GroupSummary
 
 
@@ -18,11 +18,21 @@ def test_group_create_rejects_blank_name() -> None:
         GroupCreate(name="   ")
 
 
+def test_group_timezone_accepts_iana_timezone_and_trims() -> None:
+    assert GroupTimezoneUpdate(timezone=" UTC ").timezone == "UTC"
+
+
+def test_group_timezone_rejects_unknown_timezone() -> None:
+    with pytest.raises(ValidationError, match="valid IANA timezone"):
+        GroupTimezoneUpdate(timezone="Not/A_Timezone")
+
+
 def test_group_response_normalizes_datetimes_to_utc() -> None:
     jst = timezone(timedelta(hours=9))
     summary = GroupSummary(
         id=uuid4(),
         name="同居家族",
+        timezone="Asia/Tokyo",
         created_by_user_id=uuid4(),
         created_at=datetime(2026, 7, 15, 12, tzinfo=jst),
         updated_at=datetime(2026, 7, 15, 13, tzinfo=jst),
@@ -34,3 +44,4 @@ def test_group_response_normalizes_datetimes_to_utc() -> None:
 
     assert response.created_at == datetime(2026, 7, 15, 3, tzinfo=UTC)
     assert response.updated_at == datetime(2026, 7, 15, 4, tzinfo=UTC)
+    assert response.timezone == "Asia/Tokyo"

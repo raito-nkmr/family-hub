@@ -6,11 +6,18 @@ from fastapi import HTTPException
 
 from app.core.config import Settings
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
+from app.features.cleaning.reporting import (
+    CleaningMonthlyDaily,
+    CleaningMonthlyReport,
+    CleaningMonthlySummary,
+    CleaningReportInvalidMonthError,
+)
 from app.features.cleaning.router import (
     complete_cleaning_task,
     create_cleaning_category,
     create_cleaning_task,
     delete_cleaning_category,
+    get_cleaning_monthly_report,
     list_cleaning_categories,
     list_cleaning_tasks,
     update_cleaning_category,
@@ -108,6 +115,27 @@ class CleaningServiceStub:
         assert self.summary is not None
         return self.summary
 
+    def monthly(self, group_id: UUID, user_id: UUID, month: str) -> CleaningMonthlyReport:
+        if self.error:
+            raise self.error
+        assert user_id == TEST_USER.id
+        now = datetime(2026, 8, 1, tzinfo=UTC)
+        return CleaningMonthlyReport(
+            group_id=group_id,
+            month=month,
+            timezone="Asia/Tokyo",
+            summary=CleaningMonthlySummary(
+                completion_count=1,
+                unique_task_count=1,
+                participant_count=1,
+                category_count=1,
+            ),
+            daily=[CleaningMonthlyDaily(day=now.date(), completion_count=1, unique_task_count=1)],
+            categories=[],
+            members=[],
+            tasks=[],
+        )
+
 
 def test_list_cleaning_tasks_returns_group_tasks() -> None:
     summary = make_summary()
@@ -180,11 +208,31 @@ def test_delete_used_cleaning_category_returns_conflict() -> None:
     assert error.value.status_code == 409
 
 
+def test_monthly_report_returns_summary() -> None:
+    response = get_cleaning_monthly_report(uuid4(), "2026-08", TEST_USER, CleaningServiceStub())
+
+    assert response.month == "2026-08"
+    assert response.summary.completion_count == 1
+
+
+def test_monthly_report_maps_invalid_month_to_unprocessable_entity() -> None:
+    with pytest.raises(HTTPException) as error:
+        get_cleaning_monthly_report(
+            uuid4(),
+            "2026-08",
+            TEST_USER,
+            CleaningServiceStub(error=CleaningReportInvalidMonthError()),
+        )
+
+    assert error.value.status_code == 422
+
+
 def test_cleaning_routes_are_registered_and_mutations_require_csrf() -> None:
     paths = create_app(Settings(app_env="test")).openapi()["paths"]
 
     assert {"get", "post"} <= set(paths["/api/v1/cleaning/groups/{group_id}/tasks"])
     assert {"get", "post"} <= set(paths["/api/v1/cleaning/groups/{group_id}/categories"])
+    assert "get" in paths["/api/v1/cleaning/groups/{group_id}/reports/monthly"]
     assert {"get", "patch"} <= set(paths["/api/v1/cleaning/tasks/{task_id}"])
     assert {"patch", "delete"} <= set(paths["/api/v1/cleaning/categories/{category_id}"])
     assert "post" in paths["/api/v1/cleaning/tasks/{task_id}/completions"]

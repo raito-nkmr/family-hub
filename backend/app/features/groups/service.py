@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -28,6 +29,10 @@ class GroupNotFoundError(Exception):
 
 
 class GroupPersistenceError(Exception):
+    pass
+
+
+class GroupInvalidTimezoneError(Exception):
     pass
 
 
@@ -63,6 +68,7 @@ class GroupMembershipInvitationError(Exception):
 class GroupSummary:
     id: UUID
     name: str
+    timezone: str
     created_by_user_id: UUID
     created_at: datetime
     updated_at: datetime
@@ -157,6 +163,7 @@ class GroupService:
         group = FamilyGroup(
             id=group_id,
             name=name,
+            timezone="Asia/Tokyo",
             created_by_user_id=creator_user_id,
             created_at=now,
             updated_at=now,
@@ -257,6 +264,43 @@ class GroupService:
             "shopping_item_count": self._count(ShoppingItem, ShoppingItem.group_id == group_id),
             "active_admin_count": sum(user.is_active for user in users.values()),
         }
+
+    def update_timezone(
+        self,
+        group_id: UUID,
+        actor_user_id: UUID,
+        actor_username: str,
+        timezone: str,
+    ) -> GroupDetail:
+        try:
+            normalized = timezone.strip()
+            try:
+                ZoneInfo(normalized)
+            except ZoneInfoNotFoundError as error:
+                raise GroupInvalidTimezoneError from error
+            group = self._get_group_for_admin(group_id, actor_user_id)
+            previous_timezone = group.timezone
+            group.timezone = normalized
+            group.updated_at = datetime.now(UTC)
+            record_administrative_event(
+                self._session,
+                scope="group",
+                action="group.timezone_changed",
+                actor_user_id=actor_user_id,
+                actor_username=actor_username,
+                group_id=group.id,
+                target_type="group",
+                target_id=str(group.id),
+                details={"previous_timezone": previous_timezone, "timezone": normalized},
+            )
+            self._session.commit()
+            return self.get_group(group_id, actor_user_id)
+        except GroupInvalidTimezoneError:
+            self._session.rollback()
+            raise
+        except SQLAlchemyError as error:
+            self._session.rollback()
+            raise GroupPersistenceError("Could not update group timezone") from error
 
     def member_removal_impact(
         self,
@@ -545,6 +589,7 @@ class GroupService:
         return GroupSummary(
             id=group.id,
             name=group.name,
+            timezone=group.timezone,
             created_by_user_id=group.created_by_user_id,
             created_at=group.created_at,
             updated_at=group.updated_at,

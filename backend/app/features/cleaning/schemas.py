@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -126,3 +126,58 @@ class CleaningTaskResponse(BaseModel):
 
 class CleaningTaskListResponse(BaseModel):
     items: list[CleaningTaskResponse]
+
+
+class CleaningMonthlySummaryResponse(BaseModel):
+    completion_count: int
+    unique_task_count: int
+    participant_count: int
+    category_count: int
+
+
+class CleaningMonthlyDailyResponse(BaseModel):
+    day: date
+    completion_count: int
+    unique_task_count: int
+
+
+class CleaningMonthlyCategoryResponse(BaseModel):
+    category_id: UUID | None
+    name: str
+    completion_count: int
+    unique_task_count: int
+
+
+class CleaningMonthlyMemberResponse(BaseModel):
+    user_id: UUID
+    username: str
+    completion_count: int
+    unique_task_count: int
+    completion_ratio: float
+
+
+class CleaningMonthlyTaskMemberResponse(BaseModel):
+    user_id: UUID
+    username: str
+    completion_count: int
+
+
+class CleaningMonthlyTaskResponse(BaseModel):
+    task_id: UUID
+    name: str
+    category_id: UUID | None
+    category_name: str
+    completion_count: int
+    participant_count: int
+    members: list[CleaningMonthlyTaskMemberResponse]
+
+
+class CleaningMonthlyReportResponse(BaseModel):
+    group_id: UUID
+    month: str
+    timezone: str
+    summary: CleaningMonthlySummaryResponse
+    daily: list[CleaningMonthlyDailyResponse]
+    categories: list[CleaningMonthlyCategoryResponse]
+    members: list[CleaningMonthlyMemberResponse]
+    tasks: list[CleaningMonthlyTaskResponse]

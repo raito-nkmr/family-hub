@@ -30,10 +30,13 @@ class FamilyGroup(Base):
         UniqueConstraint("name", name="uq_family_groups_name"),
         CheckConstraint("name = btrim(name)", name="ck_family_groups_name_trimmed"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_family_groups_name_length"),
+        CheckConstraint("timezone = btrim(timezone)", name="ck_family_groups_timezone_trimmed"),
+        CheckConstraint("char_length(timezone) BETWEEN 1 AND 64", name="ck_family_groups_timezone_length"),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
+    timezone: Mapped[str] = mapped_column(String(64), server_default="Asia/Tokyo")
     created_by_user_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT", name="fk_family_groups_created_by_user_id_users"),
