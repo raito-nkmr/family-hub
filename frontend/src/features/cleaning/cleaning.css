@@ -86,7 +86,7 @@
   white-space: nowrap;
 }
 
-.cleaning-category-filter__button:hover {
+.cleaning-category-filter__button:hover:not(.cleaning-category-filter__button--active) {
   color: var(--color-text-primary);
   background: var(--color-bg-surface);
 }
