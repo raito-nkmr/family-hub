@@ -426,7 +426,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     assert all({share.group_id for share in photo.shares} == {group_id} for photo in photos)
     events = [call.args[0] for call in session.add.call_args_list]
     assert len(events) == 2
-    assert {event.operation_id for event in events} == {result.operation_id}
+    assert {event.activity_operation_id for event in events} == {result.activity_operation_id}
     session.commit.assert_called_once_with()
 
 

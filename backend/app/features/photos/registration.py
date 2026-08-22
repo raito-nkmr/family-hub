@@ -64,7 +64,7 @@ def create_photo_activity_event(
     group_ids: set[UUID],
     occurred_at: datetime,
     *,
-    operation_id: UUID | None = None,
+    activity_operation_id: UUID | None = None,
 ) -> PhotoActivityEvent | None:
     if not group_ids:
         return None
@@ -75,7 +75,7 @@ def create_photo_activity_event(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         event_type=event_type,
-        operation_id=operation_id or uuid4(),
+        activity_operation_id=activity_operation_id or uuid4(),
         occurred_at=occurred_at,
         groups=[
             PhotoActivityEventGroup(event_id=event_id, group_id=group_id) for group_id in sorted(group_ids, key=str)
@@ -186,7 +186,7 @@ def register_staged_photo(
             PhotoActivityEventType.UPLOADED,
             group_ids or set(),
             uploaded_at,
-            operation_id=activity_operation_id,
+            activity_operation_id=activity_operation_id,
         )
         return RegisteredPhoto(photo=photo, finalized_upload=finalized, activity_event=activity_event)
     except StorageUnavailableError as error:

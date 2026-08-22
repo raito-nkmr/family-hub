@@ -212,7 +212,7 @@ def bulk_add_photo_sharing(
     try:
         result = service.bulk_add_sharing(
             body.photo_ids,
-            set(body.add_group_ids),
+            set(body.group_ids_to_add),
             authenticated_user.id,
             authenticated_user.username,
         )

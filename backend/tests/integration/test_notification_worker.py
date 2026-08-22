@@ -48,7 +48,7 @@ def add_notification_records(session: Session, *, subscription_count: int = 0) -
         token_hash=uuid4().hex * 2,
         csrf_token="c" * 43,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now,
+        last_used_at=now,
         expires_at=now + timedelta(days=1),
         revoked_at=None,
     )

@@ -53,11 +53,11 @@ class ChoreCategoryOrderUpdate(BaseModel):
 
 
 class ChoreTaskCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    task_name: str = Field(min_length=1, max_length=120)
     category_id: UUID
     interval_days: int = Field(ge=1, le=3650)
 
-    @field_validator("name")
+    @field_validator("task_name")
     @classmethod
     def normalize_name(cls, value: str) -> str:
         normalized = value.strip()
@@ -67,12 +67,12 @@ class ChoreTaskCreate(BaseModel):
 
 
 class ChoreTaskUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
+    task_name: str | None = Field(default=None, min_length=1, max_length=120)
     category_id: UUID | None = None
     interval_days: int | None = Field(default=None, ge=1, le=3650)
     is_active: bool | None = None
 
-    @field_validator("name")
+    @field_validator("task_name")
     @classmethod
     def normalize_name(cls, value: str | None) -> str | None:
         if value is None:
@@ -84,7 +84,12 @@ class ChoreTaskUpdate(BaseModel):
 
     @model_validator(mode="after")
     def require_change(self) -> "ChoreTaskUpdate":
-        if self.name is None and self.category_id is None and self.interval_days is None and self.is_active is None:
+        if (
+            self.task_name is None
+            and self.category_id is None
+            and self.interval_days is None
+            and self.is_active is None
+        ):
             raise ValueError("at least one chore task field must be provided")
         return self
 
@@ -110,7 +115,7 @@ class ChoreTaskResponse(BaseModel):
 
     id: UUID
     group_id: UUID
-    name: str
+    task_name: str
     category_id: UUID
     interval_days: int
     is_active: bool
@@ -169,7 +174,7 @@ class ChoreMonthlyTaskMemberResponse(BaseModel):
 
 class ChoreMonthlyTaskResponse(BaseModel):
     task_id: UUID
-    name: str
+    task_name: str
     category_id: UUID | None
     category_name: str
     completion_count: int

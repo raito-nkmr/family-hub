@@ -72,8 +72,8 @@ def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
                 FamilyGroupMembershipInvitation(
                     id=invitation_id,
                     group_id=group_id,
-                    user_id=target_id,
-                    requested_by_user_id=actor_id,
+                    invitee_user_id=target_id,
+                    invited_by_user_id=actor_id,
                     role=GroupRole.MEMBER,
                     status="pending",
                     created_at=now,
@@ -325,8 +325,8 @@ def test_upload_batch_rechecks_membership_after_group_lock() -> None:
                     [
                         UploadFileCreate(
                             client_id="client-1",
-                            filename="photo.jpg",
-                            content_type="image/jpeg",
+                            original_filename="photo.jpg",
+                            declared_content_type="image/jpeg",
                             size_bytes=5,
                         )
                     ],

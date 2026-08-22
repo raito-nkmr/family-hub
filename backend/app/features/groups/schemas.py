@@ -61,7 +61,7 @@ class GroupAdministrationOverviewResponse(BaseModel):
 
 
 class GroupMembershipInvitationCreate(BaseModel):
-    user_id: UUID
+    invitee_user_id: UUID
     role: GroupRole = GroupRole.MEMBER
 
 
@@ -69,7 +69,7 @@ class GroupMembershipInvitationResponse(BaseModel):
     id: UUID
     group_id: UUID
     group_name: str
-    user_id: UUID
+    invitee_user_id: UUID
     username: str
     role: GroupRole
     status: str

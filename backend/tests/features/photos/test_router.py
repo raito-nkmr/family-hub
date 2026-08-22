@@ -183,7 +183,7 @@ class PhotoRouterStub:
                     event_type=PhotoActivityEventType.UPLOADED,
                     actor_user_id=photo.uploaded_by_user_id,
                     actor_username=photo.uploaded_by_username,
-                    operation_id=uuid4(),
+                    activity_operation_id=uuid4(),
                     occurred_at=photo.uploaded_at,
                     photo=PhotoListItem(
                         id=photo.id,
@@ -211,7 +211,7 @@ class PhotoRouterStub:
     def bulk_add_sharing(
         self,
         photo_ids: list[UUID],
-        add_group_ids: set[UUID],
+        group_ids_to_add: set[UUID],
         acting_user_id: UUID,
         acting_username: str,
     ) -> BulkPhotoSharingResult:
@@ -220,7 +220,7 @@ class PhotoRouterStub:
         assert acting_user_id == TEST_USER.id
         assert acting_username == TEST_USER.username
         return BulkPhotoSharingResult(
-            operation_id=uuid4(),
+            activity_operation_id=uuid4(),
             updated_count=len(photo_ids),
             unchanged_count=0,
         )
@@ -322,7 +322,7 @@ def test_bulk_add_photo_sharing_returns_updated_count() -> None:
     group_id = uuid4()
 
     response = bulk_add_photo_sharing(
-        BulkPhotoSharingAdd(photo_ids=photo_ids, add_group_ids=[group_id]),
+        BulkPhotoSharingAdd(photo_ids=photo_ids, group_ids_to_add=[group_id]),
         TEST_USER,
         PhotoRouterStub([]),
     )
@@ -436,7 +436,7 @@ def test_update_photo_metadata_returns_updated_photo() -> None:
         photo.id,
         PhotoUpdate(
             memo="旅行のメモ",
-            sharing=PhotoSharing(type=PhotoVisibility.SHARED, group_ids=[group_id]),
+            sharing=PhotoSharing(visibility=PhotoVisibility.SHARED, group_ids=[group_id]),
             version=1,
         ),
         TEST_USER,
@@ -456,7 +456,7 @@ def test_update_photo_metadata_rejects_non_owner_sharing_change() -> None:
     with pytest.raises(HTTPException) as error:
         update_photo_metadata(
             photo.id,
-            PhotoUpdate(sharing=PhotoSharing(type=PhotoVisibility.SHARED, group_ids=[group_id]), version=1),
+            PhotoUpdate(sharing=PhotoSharing(visibility=PhotoVisibility.SHARED, group_ids=[group_id]), version=1),
             TEST_USER,
             PhotoRouterStub([photo], upload_error=PhotoUpdateForbiddenError()),
             PhotoRouterStub([photo], upload_error=PhotoUpdateForbiddenError()),

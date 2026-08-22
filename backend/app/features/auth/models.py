@@ -68,7 +68,7 @@ class UserSession(Base):
     token_hash: Mapped[str] = mapped_column(String(64))
     csrf_token: Mapped[str] = mapped_column(String(43))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

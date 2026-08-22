@@ -20,7 +20,7 @@ class PhotoExportEntry:
 
 @dataclass(frozen=True, slots=True)
 class BulkPhotoSharingResult:
-    operation_id: UUID
+    activity_operation_id: UUID
     updated_count: int
     unchanged_count: int
 

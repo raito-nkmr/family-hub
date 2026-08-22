@@ -44,7 +44,7 @@ class PhotoActivityItem:
     event_type: PhotoActivityEventType
     actor_user_id: UUID
     actor_username: str
-    operation_id: UUID
+    activity_operation_id: UUID
     occurred_at: datetime
     photo: PhotoListItem
 
@@ -98,7 +98,7 @@ class PhotoActivityService:
                 PhotoActivityEvent.event_type,
                 PhotoActivityEvent.actor_user_id,
                 PhotoActivityEvent.actor_username,
-                PhotoActivityEvent.operation_id,
+                PhotoActivityEvent.activity_operation_id,
                 PhotoActivityEvent.occurred_at,
                 Photo.id.label("photo_id"),
                 Photo.uploaded_by_user_id,
@@ -126,7 +126,7 @@ class PhotoActivityService:
                 event_type=PhotoActivityEventType(row.event_type),
                 actor_user_id=row.actor_user_id,
                 actor_username=row.actor_username,
-                operation_id=row.operation_id,
+                activity_operation_id=row.activity_operation_id,
                 occurred_at=row.occurred_at,
                 photo=PhotoListItem(
                     id=row.photo_id,

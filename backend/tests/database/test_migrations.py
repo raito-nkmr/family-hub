@@ -15,9 +15,13 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260821_03_household"]
+    assert scripts.get_heads() == ["20260822_04_activity_operation"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260822_04_activity_operation",
+        "20260822_03_session_last_used",
+        "20260822_02_invitation_names",
+        "20260822_01_chore_task_name",
         "20260821_03_household",
         "20260821_02_media",
         "20260821_01_core",

@@ -79,8 +79,18 @@ def test_create_batch_reserves_capacity_and_creates_one_item_per_file() -> None:
     session.scalars.return_value.all.side_effect = [[group_id], []]
     session.scalar.return_value = 7
     files = [
-        UploadFileCreate(client_id="first", filename="first.jpg", content_type="image/jpeg", size_bytes=5),
-        UploadFileCreate(client_id="second", filename="second.png", content_type="image/png", size_bytes=6),
+        UploadFileCreate(
+            client_id="first",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
+        UploadFileCreate(
+            client_id="second",
+            original_filename="second.png",
+            declared_content_type="image/png",
+            size_bytes=6,
+        ),
     ]
 
     batch, items = service.create_batch(owner_id, files, {group_id})
@@ -101,8 +111,18 @@ def test_create_batch_reserves_capacity_and_creates_one_item_per_file() -> None:
 def test_create_batch_rejects_duplicate_client_identifiers() -> None:
     service, session, storage = make_service()
     files = [
-        UploadFileCreate(client_id="same", filename="first.jpg", content_type="image/jpeg", size_bytes=5),
-        UploadFileCreate(client_id="same", filename="second.jpg", content_type="image/jpeg", size_bytes=5),
+        UploadFileCreate(
+            client_id="same",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
+        UploadFileCreate(
+            client_id="same",
+            original_filename="second.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
     ]
 
     with pytest.raises(UploadBatchInvalidError):
@@ -117,7 +137,14 @@ def test_create_batch_preserves_insufficient_storage_status() -> None:
     session.scalars.return_value.all.return_value = []
     session.scalar.return_value = 0
     storage.require_capacity.side_effect = StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE)
-    files = [UploadFileCreate(client_id="first", filename="first.jpg", content_type="image/jpeg", size_bytes=5)]
+    files = [
+        UploadFileCreate(
+            client_id="first",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        )
+    ]
 
     with pytest.raises(UploadBatchStorageError) as caught:
         service.create_batch(uuid4(), files)
@@ -195,7 +222,7 @@ def test_complete_item_enqueues_one_notification_for_the_upload_batch(monkeypatc
     photo = MagicMock()
     photo.id = item.id
     activity = MagicMock(spec=PhotoActivityEvent)
-    activity.operation_id = batch.id
+    activity.activity_operation_id = batch.id
     finalized = MagicMock(spec=FinalizedUpload)
     monkeypatch.setattr(
         "app.features.photos.uploads.register_staged_photo",

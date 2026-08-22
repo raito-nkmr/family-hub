@@ -151,7 +151,7 @@ def list_sessions(
             UserSessionResponse(
                 id=user_session.id,
                 created_at=user_session.created_at,
-                last_seen_at=user_session.last_seen_at,
+                last_used_at=user_session.last_used_at,
                 expires_at=user_session.expires_at,
                 current=user_session.id == context.user_session.id,
             )

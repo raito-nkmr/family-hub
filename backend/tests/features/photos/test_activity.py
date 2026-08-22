@@ -17,7 +17,7 @@ def make_row(*, occurred_at: datetime | None = None) -> SimpleNamespace:
         event_type=PhotoActivityEventType.UPLOADED,
         actor_user_id=uuid4(),
         actor_username="family",
-        operation_id=uuid4(),
+        activity_operation_id=uuid4(),
         occurred_at=occurred_at or datetime(2026, 7, 16, 3, tzinfo=UTC),
         photo_id=uuid4(),
         uploaded_by_user_id=uuid4(),
@@ -69,7 +69,7 @@ def test_mark_seen_stores_exact_event_position() -> None:
         actor_user_id=uuid4(),
         actor_username="family",
         event_type=PhotoActivityEventType.UPLOADED,
-        operation_id=uuid4(),
+        activity_operation_id=uuid4(),
         occurred_at=datetime(2026, 7, 16, 3, tzinfo=UTC),
         groups=[],
     )

@@ -29,7 +29,11 @@ def test_photo_response_normalizes_datetimes_to_utc() -> None:
     assert response.memo_updated_by_username == photo.uploaded_by_username
     assert response.memo_updated_at == photo.uploaded_at
     assert response.metadata_version == 1
-    assert response.sharing.type is PhotoVisibility.PRIVATE
+    assert response.visibility is PhotoVisibility.PRIVATE
+    assert response.sharing.group_ids == []
+    payload = response.model_dump(mode="json")
+    assert payload["sharing"] == {"group_ids": []}
+    assert "type" not in payload["sharing"]
     assert '"captured_at":"2026-07-14T03:00:00Z"' in response.model_dump_json()
 
 
@@ -57,16 +61,19 @@ def test_photo_response_only_contains_share_groups_visible_to_viewer() -> None:
 
     response = photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
 
-    assert response.sharing.type is PhotoVisibility.SHARED
+    assert response.visibility is PhotoVisibility.SHARED
     assert response.sharing.group_ids == []
     assert hidden_group_id not in response.sharing.group_ids
+    payload = response.model_dump(mode="json")
+    assert payload["visibility"] == "shared"
+    assert payload["sharing"] == {"group_ids": []}
 
 
 def test_photo_update_normalizes_memo_and_requires_a_change() -> None:
     update = PhotoUpdate(
         memo="  北海道旅行\n",
         sharing=PhotoSharing(
-            type=PhotoVisibility.SHARED,
+            visibility=PhotoVisibility.SHARED,
             group_ids=["00000000-0000-4000-8000-000000000001"],
         ),
         version=1,
@@ -78,7 +85,7 @@ def test_photo_update_normalizes_memo_and_requires_a_change() -> None:
         PhotoUpdate(version=1)
 
     with pytest.raises(ValidationError, match="shared photos require at least one group"):
-        PhotoSharing(type=PhotoVisibility.SHARED)
+        PhotoSharing(visibility=PhotoVisibility.SHARED)
 
 
 def test_photo_list_query_normalizes_search_and_validates_combinations() -> None:
@@ -102,11 +109,11 @@ def test_bulk_photo_sharing_requires_unique_bounded_photo_ids() -> None:
     group_id = "00000000-0000-4000-8000-000000000002"
 
     with pytest.raises(ValidationError, match="identifiers must not contain duplicates"):
-        BulkPhotoSharingAdd(photo_ids=[photo_id, photo_id], add_group_ids=[group_id])
+        BulkPhotoSharingAdd(photo_ids=[photo_id, photo_id], group_ids_to_add=[group_id])
     with pytest.raises(ValidationError):
         BulkPhotoSharingAdd(
             photo_ids=[str(index).zfill(8) + "-0000-4000-8000-000000000001" for index in range(101)],
-            add_group_ids=[group_id],
+            group_ids_to_add=[group_id],
         )
 
 

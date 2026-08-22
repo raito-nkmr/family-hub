@@ -295,7 +295,7 @@ class PhotoActivityEvent(Base):
     )
     actor_username: Mapped[str] = mapped_column(String(64))
     event_type: Mapped[str] = mapped_column(String(16))
-    operation_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    activity_operation_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     groups: Mapped[list["PhotoActivityEventGroup"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
 
@@ -343,7 +343,7 @@ Index(
     PhotoActivityEvent.id.desc(),
 )
 Index("ix_photo_activity_events_photo_id", PhotoActivityEvent.photo_id)
-Index("ix_photo_activity_events_operation_id", PhotoActivityEvent.operation_id)
+Index("ix_photo_activity_events_activity_operation_id", PhotoActivityEvent.activity_operation_id)
 Index("ix_photo_activity_event_groups_group_id", PhotoActivityEventGroup.group_id, PhotoActivityEventGroup.event_id)
 
 

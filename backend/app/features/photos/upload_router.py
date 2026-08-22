@@ -42,8 +42,8 @@ def _item_response(item: UploadItem) -> UploadItemResponse:
     return UploadItemResponse(
         id=item.id,
         client_id=item.client_id,
-        filename=item.original_filename,
-        content_type=item.declared_content_type,
+        original_filename=item.original_filename,
+        declared_content_type=item.declared_content_type,
         size_bytes=item.size_bytes,
         received_bytes=item.received_bytes,
         status=item.status,

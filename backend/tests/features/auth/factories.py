@@ -27,7 +27,7 @@ def make_user_session(user: User | None = None) -> UserSession:
         token_hash="a" * 64,
         csrf_token="c" * 43,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now,
+        last_used_at=now,
         expires_at=now + timedelta(days=1),
         revoked_at=None,
         user=session_user,

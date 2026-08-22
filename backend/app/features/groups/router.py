@@ -127,7 +127,7 @@ def list_my_group_membership_invitations(
                 id=invitation.id,
                 group_id=invitation.group_id,
                 group_name=group_name,
-                user_id=invitation.user_id,
+                invitee_user_id=invitation.invitee_user_id,
                 username=authenticated_user.username,
                 role=invitation.role,
                 status=invitation.status,

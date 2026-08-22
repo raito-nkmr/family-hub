@@ -360,8 +360,8 @@ class GroupService:
             invitation = FamilyGroupMembershipInvitation(
                 id=uuid4(),
                 group_id=group_id,
-                user_id=user_id,
-                requested_by_user_id=actor_user_id,
+                invitee_user_id=user_id,
+                invited_by_user_id=actor_user_id,
                 role=role,
                 status="pending",
                 created_at=datetime.now(UTC),
@@ -394,7 +394,7 @@ class GroupService:
                 select(FamilyGroupMembershipInvitation, FamilyGroup.name)
                 .join(FamilyGroup, FamilyGroup.id == FamilyGroupMembershipInvitation.group_id)
                 .where(
-                    FamilyGroupMembershipInvitation.user_id == user_id,
+                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                     FamilyGroupMembershipInvitation.status == "pending",
                 )
                 .order_by(FamilyGroupMembershipInvitation.created_at.desc())
@@ -413,7 +413,7 @@ class GroupService:
             invitation_reference = self._session.scalar(
                 select(FamilyGroupMembershipInvitation).where(
                     FamilyGroupMembershipInvitation.id == invitation_id,
-                    FamilyGroupMembershipInvitation.user_id == user_id,
+                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                     FamilyGroupMembershipInvitation.status == "pending",
                 )
             )
@@ -428,7 +428,7 @@ class GroupService:
             select(FamilyGroupMembershipInvitation)
             .where(
                 FamilyGroupMembershipInvitation.id == invitation_id,
-                FamilyGroupMembershipInvitation.user_id == user_id,
+                FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                 FamilyGroupMembershipInvitation.status == "pending",
             )
             .with_for_update()

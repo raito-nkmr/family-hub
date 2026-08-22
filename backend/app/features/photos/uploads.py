@@ -96,7 +96,7 @@ class UploadBatchService:
             raise UploadBatchInvalidError("One or more sharing groups are unavailable")
         maximum = self._storage.maximum_upload_bytes
         if maximum is None or any(
-            file.content_type not in ALLOWED_CONTENT_TYPES or file.size_bytes > maximum for file in files
+            file.declared_content_type not in ALLOWED_CONTENT_TYPES or file.size_bytes > maximum for file in files
         ):
             raise UploadBatchInvalidError("A file is unsupported or exceeds the size limit")
 
@@ -131,8 +131,8 @@ class UploadBatchService:
                 id=uuid4(),
                 batch_id=batch.id,
                 client_id=file.client_id,
-                original_filename=file.filename,
-                declared_content_type=file.content_type,
+                original_filename=file.original_filename,
+                declared_content_type=file.declared_content_type,
                 size_bytes=file.size_bytes,
                 received_bytes=0,
                 status=UploadItemStatus.QUEUED,
@@ -275,10 +275,10 @@ class UploadBatchService:
                 self._session,
                 sharing_group_ids,
                 NotificationType.PHOTO_SHARED,
-                f"photo:{registered.activity_event.operation_id}",
+                f"photo:{registered.activity_event.activity_operation_id}",
                 {
                     "url": "/photos/new",
-                    "operation_id": str(registered.activity_event.operation_id),
+                    "activity_operation_id": str(registered.activity_event.activity_operation_id),
                 },
                 exclude_user_id=owner_user_id,
             )

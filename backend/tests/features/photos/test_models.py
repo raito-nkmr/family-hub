@@ -83,7 +83,7 @@ def test_photo_activity_tables_have_expected_constraints_and_indexes() -> None:
     assert {index.name for index in PhotoActivityEvent.__table__.indexes} == {
         "ix_photo_activity_events_occurred_at_id",
         "ix_photo_activity_events_photo_id",
-        "ix_photo_activity_events_operation_id",
+        "ix_photo_activity_events_activity_operation_id",
     }
     assert {constraint.name for constraint in PhotoActivityEventGroup.__table__.constraints} >= {
         "pk_photo_activity_event_groups",

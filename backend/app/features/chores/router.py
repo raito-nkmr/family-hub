@@ -9,13 +9,13 @@ from app.features.auth.dependencies import (
     require_csrf_token,
     require_password_change_complete,
 )
-from app.features.chores.dependencies import get_chore_report_service, get_chore_service
+from app.features.chores.dependencies import get_chore_monthly_report_service, get_chore_service
 from app.features.chores.reporting import (
     ChoreMonthlyReport,
-    ChoreReportInvalidMonthError,
-    ChoreReportInvalidTimezoneError,
-    ChoreReportNotFoundError,
-    ChoreReportService,
+    ChoreMonthlyReportInvalidMonthError,
+    ChoreMonthlyReportInvalidTimezoneError,
+    ChoreMonthlyReportNotFoundError,
+    ChoreMonthlyReportService,
 )
 from app.features.chores.schemas import (
     ChoreCategoryCreate,
@@ -104,7 +104,7 @@ def _report_response(report: ChoreMonthlyReport) -> ChoreMonthlyReportResponse:
         tasks=[
             ChoreMonthlyTaskResponse(
                 task_id=item.task_id,
-                name=item.name,
+                task_name=item.task_name,
                 category_id=item.category_id,
                 category_name=item.category_name,
                 completion_count=item.completion_count,
@@ -146,11 +146,11 @@ def _raise_chore_error(error: Exception) -> NoReturn:
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid category order",
         ) from error
-    if isinstance(error, ChoreReportNotFoundError):
+    if isinstance(error, ChoreMonthlyReportNotFoundError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chore report not found") from error
-    if isinstance(error, ChoreReportInvalidMonthError):
+    if isinstance(error, ChoreMonthlyReportInvalidMonthError):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid report month") from error
-    if isinstance(error, ChoreReportInvalidTimezoneError):
+    if isinstance(error, ChoreMonthlyReportInvalidTimezoneError):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not determine the group timezone",
@@ -219,14 +219,14 @@ def get_chore_monthly_report(
     group_id: UUID,
     month: Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")],
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[ChoreReportService, Depends(get_chore_report_service)],
+    service: Annotated[ChoreMonthlyReportService, Depends(get_chore_monthly_report_service)],
 ) -> ChoreMonthlyReportResponse:
     try:
         return _report_response(service.monthly(group_id, authenticated_user.id, month))
     except (
-        ChoreReportInvalidMonthError,
-        ChoreReportInvalidTimezoneError,
-        ChoreReportNotFoundError,
+        ChoreMonthlyReportInvalidMonthError,
+        ChoreMonthlyReportInvalidTimezoneError,
+        ChoreMonthlyReportNotFoundError,
     ) as error:
         _raise_chore_error(error)
 
@@ -315,7 +315,7 @@ def create_chore_task(
             service.create_task(
                 group_id,
                 authenticated_user.id,
-                body.name,
+                body.task_name,
                 body.interval_days,
                 body.category_id,
             )
@@ -357,7 +357,7 @@ def update_chore_task(
             service.update_task(
                 task_id,
                 authenticated_user.id,
-                name=body.name,
+                task_name=body.task_name,
                 category_id=body.category_id,
                 interval_days=body.interval_days,
                 is_active=body.is_active,

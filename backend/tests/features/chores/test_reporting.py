@@ -8,9 +8,9 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.features.chores.reporting import (
-    ChoreReportInvalidMonthError,
-    ChoreReportNotFoundError,
-    ChoreReportService,
+    ChoreMonthlyReportInvalidMonthError,
+    ChoreMonthlyReportNotFoundError,
+    ChoreMonthlyReportService,
 )
 from tests.features.groups.factories import make_group
 
@@ -80,7 +80,7 @@ def test_monthly_report_aggregates_daily_category_member_and_task_stats() -> Non
         ),
     ]
 
-    report = ChoreReportService(session).monthly(group.id, user_id, "2026-08")
+    report = ChoreMonthlyReportService(session).monthly(group.id, user_id, "2026-08")
 
     assert report.timezone == "Asia/Tokyo"
     assert report.summary.completion_count == 4
@@ -105,8 +105,8 @@ def test_monthly_report_rejects_invalid_month() -> None:
     group = make_group()
     session.scalar.return_value = group
 
-    with pytest.raises(ChoreReportInvalidMonthError):
-        ChoreReportService(session).monthly(group.id, uuid4(), "2026-13")
+    with pytest.raises(ChoreMonthlyReportInvalidMonthError):
+        ChoreMonthlyReportService(session).monthly(group.id, uuid4(), "2026-13")
 
     session.execute.assert_not_called()
 
@@ -115,5 +115,5 @@ def test_monthly_report_hides_non_members() -> None:
     session = MagicMock(spec=Session)
     session.scalar.return_value = None
 
-    with pytest.raises(ChoreReportNotFoundError):
-        ChoreReportService(session).monthly(uuid4(), uuid4(), "2026-08")
+    with pytest.raises(ChoreMonthlyReportNotFoundError):
+        ChoreMonthlyReportService(session).monthly(uuid4(), uuid4(), "2026-08")
