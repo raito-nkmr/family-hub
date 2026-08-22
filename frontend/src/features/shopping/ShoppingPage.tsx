@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircleIcon, ShoppingCartIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
+import { CheckCircleIcon, StoreIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -61,7 +61,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
         ) : state.groups.length === 0 ? (
           <EmptyState
             className="shopping-empty-state"
-            icon={<ShoppingCartIcon />}
+            icon={<StoreIcon />}
             title={t('shopping.groupNeeded')}
             description={t('shopping.groupNeededHelp')}
           />

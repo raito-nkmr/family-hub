@@ -8,6 +8,7 @@ import {
   PhotoActivityIcon,
   PhotoLibraryIcon,
   ShoppingCartIcon,
+  StoreIcon,
 } from '../../shared/ui/icons'
 import { LoadingState } from '../../shared/ui/LoadingState'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -168,7 +169,7 @@ export function HomePage({
               <p className="home-panel__empty">{groups.length === 0 ? t('home.groupNeeded') : t('home.noShopping')}</p>
             )}
             <Link className="secondary-button icon-button home-panel__action" to={appPaths.shopping}>
-              <ShoppingCartIcon />
+              <StoreIcon />
               {t('home.openShopping')}
             </Link>
           </section>

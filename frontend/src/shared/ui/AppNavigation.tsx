@@ -25,6 +25,7 @@ import {
   PhotoLibraryIcon,
   SaveIcon,
   ShoppingCartIcon,
+  StoreIcon,
 } from './icons'
 
 interface NavigationProps {
@@ -124,18 +125,18 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         {t('navigation.chores')}
       </NavLink>
       <NavLink className={sectionClass(shoppingViews, 'app-navigation__mobile-only')} to={shoppingTo('shopping')}>
-        <ShoppingCartIcon />
+        <StoreIcon />
         {t('navigation.shopping')}
       </NavLink>
       <span className="app-navigation__section app-navigation__desktop-only">
-        <ShoppingCartIcon />
+        <StoreIcon />
         {t('navigation.shopping')}
       </span>
       <NavLink
         className={itemClass('shopping', 'app-navigation__desktop-only app-navigation__item--nested')}
         to={shoppingTo('shopping')}
       >
-        <ShoppingCartIcon />
+        <StoreIcon />
         {t('navigation.shoppingStore')}
       </NavLink>
       <NavLink
@@ -220,7 +221,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
           ]
         : activeView && shoppingViews.includes(activeView)
           ? [
-              { view: 'shopping' as const, label: t('navigation.shoppingStore'), count: 0, icon: <ShoppingCartIcon /> },
+              { view: 'shopping' as const, label: t('navigation.shoppingStore'), count: 0, icon: <StoreIcon /> },
               { view: 'shopping-list' as const, label: t('navigation.shoppingList'), count: 0, icon: <ListIcon /> },
               {
                 view: 'shopping-history' as const,
