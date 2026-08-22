@@ -16,7 +16,7 @@ starting as a full-featured photo-management service.
 The following scope is implemented: the core MVP; authentication; invitation-based account creation by a system
 administrator; private photo use and sharing with multiple family groups; per-photo shared memos editable by viewers;
 per-user favorites; group albums with cover selection; a new-photo activity view and read state; bulk sharing of up to 100
-owned photos; group membership management; group-scoped chore; and group-scoped shopping lists.
+owned photos; group membership management; group-scoped chores; and group-scoped shopping lists.
 
 Chores supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
 a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
@@ -59,8 +59,8 @@ A public bilingual privacy page is available from the shared footer before and a
 purposes, group visibility, retention, deletion, backup, external services, cookies, browser storage, and how to contact an
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
-The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chore, Shopping, and Other appear in bottom
-navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chore;
+The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chores, Shopping, and Other appear in bottom
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chores;
 Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
@@ -286,8 +286,8 @@ removed after batch creation, unfinished items are stopped so the old permission
 
 ## Chores application
 
-Household members share chore locations and completion state for areas such as the kitchen, bathroom, and living room.
-Chore data belongs to a family group and is independent of the photo `family` visibility scope.
+Household members share chore tasks and completion state for areas such as the kitchen, bathroom, and living room.
+Chores data belongs to a family group and is independent of the photo `shared` visibility scope.
 
 - Group members manage shared category names; group administrators manage task names, category assignment, intervals of
   1–3650 days, and active or paused state.
@@ -295,7 +295,7 @@ Chore data belongs to a family group and is independent of the photo `family` vi
 - The chore screen provides an all-categories view and category filters.
 - Group members can move shared categories up or down; the saved order is used consistently across chore controls.
 - Completion records the server time and user without overwriting history.
-- Chores is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
+- The Chores app is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
   Sunday-first calendar and can switch to the existing daily bar chart; the selected group, month, and daily view are
   retained in the URL.
 - The monthly report page shows a group-shared report with summary counts, category bars, member rankings, and task-level

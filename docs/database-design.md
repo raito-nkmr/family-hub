@@ -99,7 +99,7 @@ in the same transaction before inserting the replacement.
 ### `user_sessions`
 
 Stores server-side sessions. The raw cookie token is not stored; only its lowercase SHA-256 hash is stored in the unique
-`token_hash` column. The table also stores a session-bound CSRF token, creation time, last-use time, absolute expiry, and
+`token_hash` column. The table also stores a session-bound CSRF token, creation time, `last_used_at`, absolute expiry, and
 optional revocation time. `expires_at` must be later than `created_at`. Index `user_id` as `ix_user_sessions_user_id` to
 revoke all sessions efficiently.
 
@@ -116,15 +116,16 @@ group during membership and role changes and reject demotion or removal of the l
 
 ### `family_group_membership_invitations`
 
-Stores group-admin invitations to existing active users, including group, invitee, inviter, proposed role, `pending`,
-`accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and user is allowed.
+Stores group-admin invitations to existing active users, including `invitee_user_id`, `invited_by_user_id`, group, proposed
+role, `pending`, `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and
+invitee is allowed. Invitation constraints and indexes use the `family_group_membership_invitations` prefix.
 Acceptance creates membership in the same transaction; group deletion cascades.
 
 ## Chore and shopping tables
 
 ### `chore_tasks`
 
-Stores group-scoped chore locations, a required reference to a group-owned chore category, and day intervals.
+Stores group-scoped chore tasks, with a required `task_name`, a reference to a group-owned chore category, and day intervals.
 `interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index `(group_id,
 is_active)` as `ix_chore_tasks_group_id_is_active` and `category_id` as `ix_chore_tasks_category_id`. Do not store a
 countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
@@ -208,8 +209,9 @@ Stores a user/photo pair with a creation time. Favorites are independent of shar
 
 ### Activity tables
 
-`photo_activity_events` records `uploaded` or `shared`, the photo, an operation ID, and occurrence time. Batch uploads and
-bulk shares use one operation ID so New can group them; individual operations also receive an ID. `photo_activity_event_groups`
+`photo_activity_events` records `uploaded` or `shared`, the photo, an `activity_operation_id`, and occurrence time. Batch uploads
+and bulk shares use one activity operation ID so New can group them; individual operations also receive an ID.
+`photo_activity_event_groups`
 records groups that gained access at the event. Retrieval verifies current membership, membership start before the event, and
 an active current share, excluding pre-membership and later-unshared events.
 
@@ -253,8 +255,8 @@ Recheck owner group membership when each file completes.
 
 `upload_batch_group_shares` stores the unique `(batch_id, group_id)` share set applied to every finalized photo.
 
-`upload_items` stores the browser `client_id`, original filename, declared content type, expected and received byte counts,
-status (`queued`, `uploading`, `processing`, `succeeded`, `duplicate`, or `failed`), stable error code, optional photo ID, and
+`upload_items` stores the browser `client_id`, `original_filename`, `declared_content_type`, expected and received byte
+counts, status (`queued`, `uploading`, `processing`, `succeeded`, `duplicate`, or `failed`), stable error code, optional photo ID, and
 timestamps. `(batch_id, client_id)` is unique and received bytes must be between zero and size. Files complete independently;
 one failure does not roll back successful photos.
 
@@ -315,7 +317,7 @@ search. Schema version 7 separates the original and derivative asset data, edita
 | `metadata_version` | Matches `photo_metadata.version` |
 | `asset` | Uploader, original details, dimensions, timestamps, and derivatives |
 | `metadata` | Shared memo and its last editor and timestamp |
-| `sharing` | Sharing audiences, currently family-group IDs with their audience type |
+| `sharing` | Sharing audiences, currently family-group IDs |
 | `lifecycle` | Current trash and permanent-deletion state |
 
 The current integrity command uses PostgreSQL as the reference and is read-only. It verifies UUID/path correspondence,
@@ -347,7 +349,11 @@ The development and pre-production history is reset and rebuilt as the following
 
 - `20260821_01_core` — extensions, identity, and family groups
 - `20260821_02_media` — photos, activity, uploads, and albums
-- `20260821_03_household` — complete chore, shopping, notifications, maintenance, and audit schema
+- `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
+- `20260822_01_chore_task_name` — standardize the chore task name column
+- `20260822_02_invitation_names` — rename invitation columns and family-prefixed constraints/indexes
+- `20260822_03_session_last_used` — standardize the session last-use timestamp
+- `20260822_04_activity_operation` — standardize the photo activity operation identifier
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
