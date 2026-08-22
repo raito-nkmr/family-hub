@@ -571,7 +571,6 @@ export const en = {
     title: 'Chore tasks',
     description:
       'Set each task and its frequency to manage when it is next due. On desktop, press “Mark complete”; on mobile, swipe right on a task and tap “Complete”.',
-    reportLink: 'View monthly report',
     reportEyebrow: 'Chore task insights',
     reportTitle: 'Monthly chore task report',
     reportDescription: 'See how your family shares tasks across categories, people, and individual tasks.',

@@ -566,7 +566,6 @@ export const ja: TranslationShape = {
     title: '家事タスク',
     description:
       '家事タスクと頻度を設定して、次回の実施タイミングを管理できます。PCでは「完了」ボタンを押し、スマホではカードを右にスワイプして表示される「完了」をタップしてください。',
-    reportLink: '月次レポートを見る',
     reportEyebrow: '家事タスクの記録',
     reportTitle: '家事タスクの月次レポート',
     reportDescription: 'カテゴリー別・メンバー別・タスク別に、家族の実施状況を確認できます。',

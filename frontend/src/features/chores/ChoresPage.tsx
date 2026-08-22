@@ -1,7 +1,5 @@
 import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router'
-import { appPaths } from '../../app/routes'
 import { AddTaskIcon, CategoryIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
@@ -20,7 +18,6 @@ const ALL_CATEGORIES = 'all'
 
 export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
   const { t } = useTranslation()
-  const location = useLocation()
   const state = useChores({ onUnauthorized })
   const [now, setNow] = useState(() => new Date())
   const [swipeOpenTaskId, setSwipeOpenTaskId] = useState<string | null>(null)
@@ -66,9 +63,6 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
             <p>{t('chores.description')}</p>
           </div>
           <div className="chore-hero__actions">
-            <Link className="secondary-button" to={{ pathname: appPaths['chores-monthly'], search: location.search }}>
-              {t('chores.reportLink')}
-            </Link>
             {isAdmin && (
               <button
                 className="primary-button icon-button"

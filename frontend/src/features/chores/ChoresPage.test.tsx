@@ -92,6 +92,7 @@ describe('ChoresPage', () => {
     renderChorePage()
 
     expect(screen.getByRole('heading', { name: 'お風呂' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '月次レポートを見る' })).not.toBeInTheDocument()
     expect(screen.getAllByText(/family-member/)).toHaveLength(2)
 
     const card = screen.getByRole('heading', { name: 'お風呂' }).closest('article')
