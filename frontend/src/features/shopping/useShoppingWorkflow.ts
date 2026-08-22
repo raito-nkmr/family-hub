@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import i18n from '../../i18n'
-import { isUnauthorizedError } from '../../shared/api/errors'
+import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { useGroupSelection } from '../../shared/routing/useGroupSelection'
@@ -163,7 +163,10 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
 export function useShoppingList(options: ShoppingWorkflowOptions) {
   const queryClient = useQueryClient()
   const base = useShoppingBase(options)
-  const [mutationError, setMutationError] = useState<string | null>(null)
+  const [pageMutationError, setPageMutationError] = useState<string | null>(null)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [categoryDialogError, setCategoryDialogError] = useState<string | null>(null)
+  const [categoryActionId, setCategoryActionId] = useState<string | null>(null)
   const requestsQuery = useQuery({
     queryKey: queryKeys.shoppingRequests(base.selectedGroupId ?? ''),
     queryFn: ({ signal }) => getShoppingRequests(base.selectedGroupId!, signal),
@@ -201,20 +204,63 @@ export function useShoppingList(options: ShoppingWorkflowOptions) {
     ])
   }
   const run = async (operation: () => Promise<unknown>, errorKey: string) => {
-    setMutationError(null)
+    setPageMutationError(null)
     try {
       await operation()
       await invalidate()
       return true
     } catch (error) {
       if (isUnauthorizedError(error)) options.onUnauthorized()
-      else setMutationError(i18n.t(errorKey))
+      else setPageMutationError(i18n.t(errorKey))
       return false
     }
   }
 
+  const runDialogOperation = async (operation: () => Promise<unknown>, errorKey: string) => {
+    setDialogError(null)
+    try {
+      await operation()
+      await invalidate()
+      return true
+    } catch (error) {
+      if (isUnauthorizedError(error)) options.onUnauthorized()
+      else setDialogError(i18n.t(errorKey))
+      return false
+    }
+  }
+
+  const runCategoryOperation = async (
+    operation: () => Promise<unknown>,
+    errorKey: string,
+    conflictErrorKey: string,
+    actionId: string,
+  ) => {
+    setCategoryDialogError(null)
+    setCategoryActionId(actionId)
+    try {
+      await operation()
+      await invalidate()
+      return true
+    } catch (error) {
+      if (isUnauthorizedError(error)) options.onUnauthorized()
+      else if (isApiErrorWithStatus(error, 409)) setCategoryDialogError(i18n.t(conflictErrorKey))
+      else setCategoryDialogError(i18n.t(errorKey))
+      return false
+    } finally {
+      setCategoryActionId(null)
+    }
+  }
+
+  const selectGroup = async (groupId: string) => {
+    setPageMutationError(null)
+    setDialogError(null)
+    setCategoryDialogError(null)
+    await base.selectGroup(groupId)
+  }
+
   return {
     ...base,
+    selectGroup,
     items: requestsQuery.data ?? [],
     categories: categoriesQuery.data ?? [],
     members: base.selectedGroup?.members.filter((member) => member.is_active) ?? [],
@@ -226,32 +272,55 @@ export function useShoppingList(options: ShoppingWorkflowOptions) {
       updateCategoryMutation.isPending ||
       deleteCategoryMutation.isPending ||
       reorderCategoryMutation.isPending,
-    pageError: mutationError ?? (requestsQuery.error || categoriesQuery.error ? i18n.t('errors.shoppingLoad') : null),
+    pageError:
+      pageMutationError ?? (requestsQuery.error || categoriesQuery.error ? i18n.t('errors.shoppingLoad') : null),
+    dialogError,
+    categoryDialogError,
+    categoryActionId,
+    clearDialogError: () => setDialogError(null),
+    clearCategoryDialogError: () => setCategoryDialogError(null),
     saveRequest: (item: ShoppingRequest | undefined, body: Parameters<typeof createShoppingRequest>[1]) =>
-      run(
+      runDialogOperation(
         () => saveRequestMutation.mutateAsync({ item, body }),
         item ? 'errors.shoppingUpdate' : 'errors.shoppingCreate',
       ),
     removeRequest: (itemId: string) => run(() => deleteRequestMutation.mutateAsync(itemId), 'errors.shoppingDelete'),
     addCategory: (name: string) =>
       base.selectedGroupId
-        ? run(
+        ? runCategoryOperation(
             () => createCategoryMutation.mutateAsync({ groupId: base.selectedGroupId!, name }),
             'errors.shoppingCategoryCreate',
+            'errors.shoppingCategoryDuplicate',
+            'create',
           )
         : Promise.resolve(false),
     renameCategory: (id: string, name: string) =>
-      run(() => updateCategoryMutation.mutateAsync({ id, name }), 'errors.shoppingCategoryUpdate'),
-    removeCategory: (id: string) => run(() => deleteCategoryMutation.mutateAsync(id), 'errors.shoppingCategoryDelete'),
+      runCategoryOperation(
+        () => updateCategoryMutation.mutateAsync({ id, name }),
+        'errors.shoppingCategoryUpdate',
+        'errors.shoppingCategoryDuplicate',
+        id,
+      ),
+    removeCategory: (id: string) =>
+      runCategoryOperation(
+        () => deleteCategoryMutation.mutateAsync(id),
+        'errors.shoppingCategoryDelete',
+        'errors.shoppingCategoryInUse',
+        id,
+      ),
     reorderCategories: (ids: string[]) =>
       base.selectedGroupId
-        ? run(
+        ? runCategoryOperation(
             () => reorderCategoryMutation.mutateAsync({ groupId: base.selectedGroupId!, ids }),
             'errors.shoppingCategoryReorder',
+            'errors.shoppingCategoryReorder',
+            'reorder',
           )
         : Promise.resolve(false),
     refresh: async () => {
-      setMutationError(null)
+      setPageMutationError(null)
+      setDialogError(null)
+      setCategoryDialogError(null)
       await Promise.all([requestsQuery.refetch(), categoriesQuery.refetch()])
     },
   }

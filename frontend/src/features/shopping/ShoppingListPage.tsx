@@ -1,377 +1,267 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DeleteIcon, EditIcon, PlusIcon, SaveIcon, ShoppingCartIcon } from '../../shared/ui/icons'
+import { CategoryIcon, DeleteIcon, EditIcon, PlusIcon, ShoppingCartIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
-import type { ShoppingRequest } from './api'
+import { useConfirmation } from '../../shared/ui/confirmation'
+import type { ShoppingCategory, ShoppingRequest } from './api'
+import { ShoppingCategoryManagerDialog } from './components/ShoppingCategoryManagerDialog'
+import { ShoppingItemFormDialog } from './components/ShoppingItemFormDialog'
 import { useShoppingList } from './useShoppingWorkflow'
 
 interface ShoppingListPageProps {
   onUnauthorized: () => void
 }
 
+const ALL_CATEGORIES = 'all'
+const NO_CATEGORY = 'none'
+
 export function ShoppingListPage({ onUnauthorized }: ShoppingListPageProps) {
   const { t } = useTranslation()
+  const confirm = useConfirmation()
   const state = useShoppingList({ onUnauthorized })
-  const [name, setName] = useState('')
-  const [assigneeId, setAssigneeId] = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingName, setEditingName] = useState('')
-  const [editingAssigneeId, setEditingAssigneeId] = useState('')
-  const [editingItemCategoryId, setEditingItemCategoryId] = useState('')
-  const [categoryName, setCategoryName] = useState('')
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
-  const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES)
+  const [showItemDialog, setShowItemDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<ShoppingRequest | null>(null)
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false)
 
-  const clearItemForm = () => {
-    setName('')
-    setAssigneeId('')
-    setCategoryId('')
+  const effectiveSelectedCategory =
+    selectedCategory === ALL_CATEGORIES ||
+    selectedCategory === NO_CATEGORY ||
+    state.categories.some((category) => category.id === selectedCategory)
+      ? selectedCategory
+      : ALL_CATEGORIES
+  const selectedCategoryName =
+    state.categories.find((category) => category.id === effectiveSelectedCategory)?.name ?? ''
+  const visibleItems = state.items.filter((item) => matchesCategory(item.category_id, effectiveSelectedCategory))
+  const emptyListMessage =
+    effectiveSelectedCategory === ALL_CATEGORIES
+      ? t('shopping.listEmpty')
+      : t('shopping.listEmptyCategory', {
+          categoryName: selectedCategoryName || t('shopping.noCategory'),
+        })
+
+  const openAddDialog = () => {
+    state.clearDialogError()
+    setEditingItem(null)
+    setShowItemDialog(true)
   }
 
-  const submitNewItem = async (event: FormEvent) => {
-    event.preventDefault()
-    const normalizedName = name.trim()
-    if (!normalizedName) return
-    if (
-      await state.saveRequest(undefined, {
-        name: normalizedName,
-        assignee_user_id: assigneeId || null,
-        category_id: categoryId || null,
-      })
-    ) {
-      clearItemForm()
-    }
+  const openEditDialog = (item: ShoppingRequest) => {
+    state.clearDialogError()
+    setEditingItem(item)
+    setShowItemDialog(true)
   }
 
-  const beginEdit = (item: ShoppingRequest) => {
-    setEditingId(item.id)
-    setEditingName(item.name)
-    setEditingAssigneeId(item.assignee_user_id ?? '')
-    setEditingItemCategoryId(item.category_id ?? '')
+  const closeItemDialog = () => {
+    setShowItemDialog(false)
+    setEditingItem(null)
   }
 
-  const saveEdit = async (item: ShoppingRequest) => {
-    const normalizedName = editingName.trim()
-    if (!normalizedName) return
-    if (
-      await state.saveRequest(item, {
-        name: normalizedName,
-        assignee_user_id: editingAssigneeId || null,
-        category_id: editingItemCategoryId || null,
-      })
-    ) {
-      setEditingId(null)
-    }
+  const handleSelectGroup = async (groupId: string) => {
+    setSelectedCategory(ALL_CATEGORIES)
+    closeItemDialog()
+    setShowCategoryDialog(false)
+    await state.selectGroup(groupId)
   }
+
+  const saveItem = (body: { name: string; assignee_user_id: string | null; category_id: string | null }) =>
+    state.saveRequest(editingItem ?? undefined, body)
 
   const removeItem = async (item: ShoppingRequest) => {
-    if (!window.confirm(t('shopping.deleteConfirm', { itemName: item.name }))) return
+    if (!(await confirm(t('shopping.deleteConfirm', { itemName: item.name })))) return
     await state.removeRequest(item.id)
   }
 
-  const submitCategory = async (event: FormEvent) => {
-    event.preventDefault()
-    const normalizedName = categoryName.trim()
-    if (!normalizedName) return
-    if (await state.addCategory(normalizedName)) setCategoryName('')
-  }
-
-  const renameCategory = async (id: string) => {
-    const normalizedName = editingCategoryName.trim()
-    if (!normalizedName) return
-    if (await state.renameCategory(id, normalizedName)) setEditingCategoryId(null)
-  }
-
-  const moveCategory = async (index: number, offset: -1 | 1) => {
-    const target = index + offset
-    if (target < 0 || target >= state.categories.length) return
-    const ids = state.categories.map((category) => category.id)
-    ;[ids[index], ids[target]] = [ids[target], ids[index]]
-    await state.reorderCategories(ids)
+  const removeCategory = async (category: ShoppingCategory) => {
+    if (!(await confirm(t('errors.shoppingCategoryDeleteConfirm', { categoryName: category.name })))) return false
+    const removed = await state.removeCategory(category.id)
+    if (removed && selectedCategory === category.id) setSelectedCategory(ALL_CATEGORIES)
+    return removed
   }
 
   return (
-    <main id="top" className="shopping-page">
-      <section className="shopping-hero shopping-hero--compact">
-        <p className="eyebrow">{t('shopping.listEyebrow')}</p>
-        <h1>{t('shopping.listTitle')}</h1>
-        <p>{t('shopping.listDescription')}</p>
-      </section>
+    <>
+      <main id="top" className="shopping-page">
+        <section className="shopping-hero shopping-hero--compact">
+          <div>
+            <p className="eyebrow">{t('shopping.listEyebrow')}</p>
+            <h1>{t('shopping.listTitle')}</h1>
+            <p>{t('shopping.listDescription')}</p>
+          </div>
+          <div className="shopping-hero__actions">
+            <button
+              className="primary-button icon-button"
+              type="button"
+              disabled={state.loading || state.submitting || state.groups.length === 0}
+              onClick={openAddDialog}
+            >
+              <PlusIcon />
+              {t('shopping.add')}
+            </button>
+          </div>
+        </section>
 
-      <section className="shopping-board shopping-management">
-        <GroupScopedToolbar
-          groups={state.groups}
-          selectedGroupId={state.selectedGroupId}
-          selectId="shopping-list-group"
-          label={t('shopping.group')}
-          selectDisabled={state.loading || state.submitting || state.groups.length === 0}
-          refreshDisabled={state.loading || state.submitting}
-          onSelectGroup={state.selectGroup}
-          onRefresh={state.refresh}
-        />
-        {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
-
-        {state.groups.length === 0 ? (
-          <EmptyState
-            icon={<ShoppingCartIcon />}
-            title={t('shopping.groupNeeded')}
-            description={t('shopping.groupNeededHelp')}
+        <section className="shopping-board shopping-management" aria-labelledby="shopping-list-heading">
+          <GroupScopedToolbar
+            groups={state.groups}
+            selectedGroupId={state.selectedGroupId}
+            selectId="shopping-list-group"
+            label={t('shopping.group')}
+            selectDisabled={state.loading || state.submitting || state.groups.length === 0}
+            refreshDisabled={state.loading || state.submitting}
+            onSelectGroup={handleSelectGroup}
+            onRefresh={state.refresh}
           />
-        ) : (
-          <>
-            <form className="shopping-add shopping-add--management" onSubmit={(event) => void submitNewItem(event)}>
-              <label htmlFor="shopping-list-item-name">{t('shopping.itemName')}</label>
-              <div className="shopping-form-grid">
-                <input
-                  className="form-control"
-                  id="shopping-list-item-name"
-                  value={name}
-                  maxLength={120}
-                  placeholder={t('shopping.itemPlaceholder')}
-                  disabled={state.submitting}
-                  onChange={(event) => setName(event.target.value)}
-                />
-                <select
-                  className="form-control"
-                  value={assigneeId}
-                  disabled={state.submitting}
-                  onChange={(event) => setAssigneeId(event.target.value)}
-                >
-                  <option value="">{t('shopping.anyone')}</option>
-                  {state.members.map((member) => (
-                    <option key={member.user_id} value={member.user_id}>
-                      {member.username}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="form-control"
-                  value={categoryId}
-                  disabled={state.submitting}
-                  onChange={(event) => setCategoryId(event.target.value)}
-                >
-                  <option value="">{t('shopping.noCategory')}</option>
+          {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
+
+          {state.groups.length === 0 ? (
+            <EmptyState
+              icon={<ShoppingCartIcon />}
+              title={t('shopping.groupNeeded')}
+              description={t('shopping.groupNeededHelp')}
+            />
+          ) : (
+            <>
+              <div className="shopping-category-toolbar">
+                <nav className="shopping-category-filter" aria-label={t('shopping.categoryFilter')}>
+                  <button
+                    className={`shopping-category-filter__button${effectiveSelectedCategory === ALL_CATEGORIES ? ' shopping-category-filter__button--active' : ''}`}
+                    type="button"
+                    aria-pressed={effectiveSelectedCategory === ALL_CATEGORIES}
+                    onClick={() => setSelectedCategory(ALL_CATEGORIES)}
+                  >
+                    {t('shopping.allCategories')}
+                  </button>
                   {state.categories.map((category) => (
-                    <option key={category.id} value={category.id}>
+                    <button
+                      className={`shopping-category-filter__button${effectiveSelectedCategory === category.id ? ' shopping-category-filter__button--active' : ''}`}
+                      key={category.id}
+                      type="button"
+                      aria-pressed={effectiveSelectedCategory === category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                    >
                       {category.name}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                  <button
+                    className={`shopping-category-filter__button${effectiveSelectedCategory === NO_CATEGORY ? ' shopping-category-filter__button--active' : ''}`}
+                    type="button"
+                    aria-pressed={effectiveSelectedCategory === NO_CATEGORY}
+                    onClick={() => setSelectedCategory(NO_CATEGORY)}
+                  >
+                    {t('shopping.noCategory')}
+                  </button>
+                </nav>
                 <button
-                  className="primary-button icon-button"
-                  type="submit"
-                  disabled={state.submitting || !name.trim()}
+                  className="secondary-button icon-button"
+                  type="button"
+                  disabled={state.submitting}
+                  onClick={() => {
+                    state.clearCategoryDialogError()
+                    setShowCategoryDialog(true)
+                  }}
                 >
-                  <PlusIcon />
-                  {t('shopping.add')}
+                  <CategoryIcon />
+                  {t('shopping.categoryManage')}
                 </button>
               </div>
-            </form>
 
-            <div className="shopping-management__section">
-              <div className="section-heading">
+              <div className="section-heading shopping-management__heading">
                 <div>
-                  <h2>{t('shopping.list')}</h2>
-                  <p>{t('shopping.listManagementHelp')}</p>
+                  <h2 id="shopping-list-heading">{t('shopping.list')}</h2>
+                  <p>
+                    {visibleItems.length > 0
+                      ? t('shopping.listCount', { count: visibleItems.length })
+                      : emptyListMessage}
+                  </p>
                 </div>
               </div>
+
               {state.loading ? (
-                <p>{t('shopping.loading')}</p>
-              ) : state.items.length === 0 ? (
-                <p className="shopping-muted">{t('shopping.listEmpty')}</p>
+                <div className="shopping-management-list" aria-label={t('shopping.loading')}>
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <div className="shopping-management-item shopping-management-item--skeleton" key={index} />
+                  ))}
+                </div>
+              ) : visibleItems.length === 0 ? (
+                <p className="shopping-muted">{emptyListMessage}</p>
               ) : (
                 <div className="shopping-management-list">
-                  {state.items.map((item) => {
-                    const editing = editingId === item.id
-                    return (
-                      <article className="shopping-management-item" key={item.id}>
-                        {editing ? (
-                          <div className="shopping-management-item__edit">
-                            <input
-                              className="form-control"
-                              value={editingName}
-                              maxLength={120}
-                              onChange={(event) => setEditingName(event.target.value)}
-                            />
-                            <select
-                              className="form-control"
-                              value={editingAssigneeId}
-                              onChange={(event) => setEditingAssigneeId(event.target.value)}
-                            >
-                              <option value="">{t('shopping.anyone')}</option>
-                              {state.members.map((member) => (
-                                <option key={member.user_id} value={member.user_id}>
-                                  {member.username}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              className="form-control"
-                              value={editingItemCategoryId}
-                              onChange={(event) => setEditingItemCategoryId(event.target.value)}
-                            >
-                              <option value="">{t('shopping.noCategory')}</option>
-                              {state.categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                  {category.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="shopping-management-item__actions">
-                              <button
-                                className="success-button icon-button"
-                                type="button"
-                                disabled={state.submitting || !editingName.trim()}
-                                onClick={() => void saveEdit(item)}
-                              >
-                                <SaveIcon />
-                                {t('common.save')}
-                              </button>
-                              <button
-                                className="secondary-button"
-                                type="button"
-                                disabled={state.submitting}
-                                onClick={() => setEditingId(null)}
-                              >
-                                {t('common.cancel')}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div>
-                              <h3>{item.name}</h3>
-                              <p>
-                                {item.assignee_username
-                                  ? t('shopping.requestedTo', { username: item.assignee_username })
-                                  : t('shopping.anyone')}
-                                {item.category_name ? ` · ${item.category_name}` : ''}
-                              </p>
-                            </div>
-                            <div className="shopping-management-item__actions">
-                              <button
-                                className="secondary-button icon-button"
-                                type="button"
-                                onClick={() => beginEdit(item)}
-                              >
-                                <EditIcon />
-                                {t('common.edit')}
-                              </button>
-                              <button
-                                className="danger-button icon-button"
-                                type="button"
-                                onClick={() => void removeItem(item)}
-                              >
-                                <DeleteIcon />
-                                {t('common.delete')}
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </article>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="shopping-category-manager">
-              <div className="section-heading">
-                <div>
-                  <h2>{t('shopping.categoryManage')}</h2>
-                  <p>{t('shopping.categoryManageHelp')}</p>
-                </div>
-              </div>
-              <form className="shopping-category-manager__add" onSubmit={(event) => void submitCategory(event)}>
-                <input
-                  className="form-control"
-                  value={categoryName}
-                  maxLength={40}
-                  placeholder={t('shopping.categoryPlaceholder')}
-                  onChange={(event) => setCategoryName(event.target.value)}
-                />
-                <button
-                  className="primary-button icon-button"
-                  type="submit"
-                  disabled={state.submitting || !categoryName.trim()}
-                >
-                  <PlusIcon />
-                  {t('shopping.categoryAdd')}
-                </button>
-              </form>
-              <div className="shopping-category-list">
-                {state.categories.map((category, index) => (
-                  <div className="shopping-category-list__item" key={category.id}>
-                    {editingCategoryId === category.id ? (
-                      <input
-                        className="form-control"
-                        value={editingCategoryName}
-                        maxLength={40}
-                        onChange={(event) => setEditingCategoryName(event.target.value)}
-                      />
-                    ) : (
-                      <strong>{category.name}</strong>
-                    )}
-                    <div className="shopping-category-list__actions">
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        disabled={index === 0 || state.submitting}
-                        onClick={() => void moveCategory(index, -1)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        disabled={index === state.categories.length - 1 || state.submitting}
-                        onClick={() => void moveCategory(index, 1)}
-                      >
-                        ↓
-                      </button>
-                      {editingCategoryId === category.id ? (
-                        <button
-                          className="success-button icon-button"
-                          type="button"
-                          disabled={state.submitting || !editingCategoryName.trim()}
-                          onClick={() => void renameCategory(category.id)}
-                        >
-                          <SaveIcon />
-                          {t('common.save')}
-                        </button>
-                      ) : (
+                  {visibleItems.map((item) => (
+                    <article className="shopping-management-item" key={item.id}>
+                      <div>
+                        <h3>{item.name}</h3>
+                        <p>
+                          {item.assignee_username
+                            ? t('shopping.requestedTo', { username: item.assignee_username })
+                            : t('shopping.anyone')}
+                          {item.category_name ? ` · ${item.category_name}` : ` · ${t('shopping.noCategory')}`}
+                        </p>
+                      </div>
+                      <div className="shopping-management-item__actions">
                         <button
                           className="secondary-button icon-button"
                           type="button"
-                          onClick={() => {
-                            setEditingCategoryId(category.id)
-                            setEditingCategoryName(category.name)
-                          }}
+                          disabled={state.submitting}
+                          aria-label={t('shopping.editItem', { itemName: item.name })}
+                          onClick={() => openEditDialog(item)}
                         >
                           <EditIcon />
                           {t('common.edit')}
                         </button>
-                      )}
-                      <button
-                        className="danger-button icon-button"
-                        type="button"
-                        disabled={state.submitting}
-                        onClick={() => void state.removeCategory(category.id)}
-                      >
-                        <DeleteIcon />
-                        {t('common.delete')}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </section>
-    </main>
+                        <button
+                          className="danger-button icon-button"
+                          type="button"
+                          disabled={state.submitting}
+                          aria-label={t('shopping.deleteItem', { itemName: item.name })}
+                          onClick={() => void removeItem(item)}
+                        >
+                          <DeleteIcon />
+                          {t('common.delete')}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </main>
+
+      {showItemDialog && (
+        <ShoppingItemFormDialog
+          item={editingItem}
+          categories={state.categories}
+          members={state.members}
+          submitting={state.submitting}
+          error={state.dialogError}
+          onSubmit={saveItem}
+          onClose={closeItemDialog}
+        />
+      )}
+      {showCategoryDialog && (
+        <ShoppingCategoryManagerDialog
+          categories={state.categories}
+          submitting={state.submitting}
+          actionId={state.categoryActionId}
+          error={state.categoryDialogError}
+          onCreate={state.addCategory}
+          onRename={state.renameCategory}
+          onDelete={removeCategory}
+          onReorder={state.reorderCategories}
+          onClose={() => setShowCategoryDialog(false)}
+        />
+      )}
+    </>
+  )
+}
+
+function matchesCategory(categoryId: string | null, selectedCategory: string): boolean {
+  return (
+    selectedCategory === ALL_CATEGORIES ||
+    (selectedCategory === NO_CATEGORY ? categoryId === null : categoryId === selectedCategory)
   )
 }
