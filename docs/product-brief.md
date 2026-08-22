@@ -323,6 +323,8 @@ completes it without a confirmation dialog, records the current user as purchase
 an immediate undo. A trip is created on the first purchase or explicitly before shopping.
 
 - All group members can add, edit, and delete unpurchased requests between 1 and 120 characters.
+- The list-management page keeps the active list as the primary view, filters it by all, a shared category, or no
+  category, and opens item forms and category management in dialogs rather than showing management forms permanently.
 - An optional assignee is either anyone or an active member of the same group; assignment never restricts purchasing.
 - Categories are optional shared master data with editable order and are used for counts/frequency, not per-item amounts.
 - Purchase events are append-only records with item, assignee, category snapshots, actual purchaser, and reversal state.
