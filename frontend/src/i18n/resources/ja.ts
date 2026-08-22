@@ -730,6 +730,7 @@ export const ja: TranslationShape = {
     tripAmount: '買い物全体の金額（円）',
     amountUnrecorded: '未記録',
     saveAmount: '金額を保存',
+    markAmountUnrecorded: '金額不明のままにする',
     plannedPurchase: 'リスト内',
     unplannedPurchase: 'リスト外で購入',
     reversed: '取り消し済み',

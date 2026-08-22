@@ -503,6 +503,7 @@
 
 .shopping-trip__amount {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.55rem;
   align-items: end;
 }

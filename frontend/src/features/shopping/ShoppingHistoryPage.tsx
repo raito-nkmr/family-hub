@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChartIcon, PlusIcon, RefreshIcon, UndoIcon } from '../../shared/ui/icons'
+import { BarChartIcon, CancelIcon, PlusIcon, RefreshIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -46,6 +46,16 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
     const amount = raw.trim() === '' ? null : Number(raw)
     if (amount !== null && (!Number.isInteger(amount) || amount < 0)) return
     await state.saveTripAmount(trip.id, amount)
+  }
+
+  const markAmountUnrecorded = async (trip: ShoppingTrip) => {
+    if (await state.saveTripAmount(trip.id, null)) {
+      setAmounts((current) => {
+        const next = { ...current }
+        delete next[trip.id]
+        return next
+      })
+    }
   }
 
   const addUnplanned = async (event: FormEvent, trip: ShoppingTrip) => {
@@ -283,6 +293,18 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
                         >
                           <RefreshIcon />
                           {t('shopping.saveAmount')}
+                        </button>
+                        <button
+                          className="secondary-button icon-button"
+                          type="button"
+                          disabled={
+                            state.submitting ||
+                            (trip.total_amount_yen === null && !(amounts[trip.id] ?? '').trim())
+                          }
+                          onClick={() => void markAmountUnrecorded(trip)}
+                        >
+                          <CancelIcon />
+                          {t('shopping.markAmountUnrecorded')}
                         </button>
                       </div>
                     </header>

@@ -735,6 +735,7 @@ export const en = {
     tripAmount: 'Trip total (yen)',
     amountUnrecorded: 'Not recorded',
     saveAmount: 'Save total',
+    markAmountUnrecorded: 'Leave amount unrecorded',
     plannedPurchase: 'From list',
     unplannedPurchase: 'Added after shopping',
     reversed: 'Reversed',
