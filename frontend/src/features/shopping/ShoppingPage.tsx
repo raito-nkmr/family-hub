@@ -14,15 +14,15 @@ interface ShoppingPageProps {
 export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
   const { t } = useTranslation()
   const state = useShopping({ onUnauthorized })
-  const [name, setName] = useState('')
+  const [itemName, setItemName] = useState('')
   const activeItems = state.items.filter((item) => item.purchased_at === null)
   const purchasedItems = state.items.filter((item) => item.purchased_at !== null)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    const normalized = name.trim()
-    if (!normalized) return
-    if (await state.addItem(normalized)) setName('')
+    const normalizedItemName = itemName.trim()
+    if (!normalizedItemName) return
+    if (await state.addItem(normalizedItemName)) setItemName('')
   }
 
   return (
@@ -53,7 +53,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
               <input
                 className="form-control"
                 id="shopping-item-name"
-                value={name}
+                value={itemName}
                 maxLength={120}
                 placeholder={t('shopping.itemPlaceholder')}
                 disabled={state.loading || state.submitting}
@@ -61,9 +61,9 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
                 aria-describedby={state.formError ? 'shopping-item-error' : undefined}
                 autoComplete="off"
                 enterKeyHint="done"
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => setItemName(event.target.value)}
               />
-              <button type="submit" disabled={state.loading || state.submitting || name.trim().length === 0}>
+              <button type="submit" disabled={state.loading || state.submitting || itemName.trim().length === 0}>
                 <PlusIcon />
                 {t(state.submitting ? 'shopping.adding' : 'shopping.add')}
               </button>
@@ -115,7 +115,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
                 <button
                   type="button"
                   disabled={state.pendingItemIds.has(item.id)}
-                  aria-label={t('shopping.purchaseLabel', { name: item.name })}
+                  aria-label={t('shopping.purchaseLabel', { itemName: item.name })}
                   onClick={() => void state.changePurchaseState(item, true)}
                 >
                   <CheckIcon />

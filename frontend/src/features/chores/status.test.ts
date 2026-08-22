@@ -36,7 +36,7 @@ describe('getChoreDueStatus', () => {
   it('marks an inactive task independently of its due date', () => {
     expect(getChoreDueStatus(makeTask({ is_active: false }), now)).toEqual({
       state: 'inactive',
-      label: '停止中',
+      label: '一時停止中',
     })
   })
 })

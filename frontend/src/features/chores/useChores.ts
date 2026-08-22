@@ -91,7 +91,8 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     },
   })
   const createCategoryMutation = useMutation({
-    mutationFn: ({ groupId, name }: { groupId: string; name: string }) => createChoreCategory(groupId, name),
+    mutationFn: ({ groupId, categoryName }: { groupId: string; categoryName: string }) =>
+      createChoreCategory(groupId, categoryName),
     onSuccess: (created, { groupId }) => {
       queryClient.setQueryData<ChoreCategory[]>(queryKeys.choreCategories(groupId), (current = []) =>
         sortCategories([...current, created]),
@@ -99,7 +100,8 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     },
   })
   const updateCategoryMutation = useMutation({
-    mutationFn: ({ categoryId, name }: { categoryId: string; name: string }) => updateChoreCategory(categoryId, name),
+    mutationFn: ({ categoryId, categoryName }: { categoryId: string; categoryName: string }) =>
+      updateChoreCategory(categoryId, categoryName),
     onSuccess: (updated) => {
       queryClient.setQueryData<ChoreCategory[]>(queryKeys.choreCategories(updated.group_id), (current = []) =>
         sortCategories(current.map((category) => (category.id === updated.id ? updated : category))),
@@ -141,12 +143,12 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     }
   }
 
-  const createCategory = async (name: string) => {
+  const createCategory = async (categoryName: string) => {
     if (!selectedGroupId) return false
     setCategoryDialogError(null)
     setCategoryActionId('create')
     try {
-      await createCategoryMutation.mutateAsync({ groupId: selectedGroupId, name })
+      await createCategoryMutation.mutateAsync({ groupId: selectedGroupId, categoryName })
       return true
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
@@ -158,11 +160,11 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     }
   }
 
-  const renameCategory = async (categoryId: string, name: string) => {
+  const renameCategory = async (categoryId: string, categoryName: string) => {
     setCategoryDialogError(null)
     setCategoryActionId(categoryId)
     try {
-      await updateCategoryMutation.mutateAsync({ categoryId, name })
+      await updateCategoryMutation.mutateAsync({ categoryId, categoryName })
       return true
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
@@ -175,7 +177,10 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
   }
 
   const removeCategory = async (category: ChoreCategory) => {
-    if (!selectedGroupId || !(await confirm(i18n.t('errors.choreCategoryDeleteConfirm', { name: category.name })))) {
+    if (
+      !selectedGroupId ||
+      !(await confirm(i18n.t('errors.choreCategoryDeleteConfirm', { categoryName: category.name })))
+    ) {
       return false
     }
     setCategoryDialogError(null)
@@ -230,7 +235,7 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     updateTask(task, () => completeChoreTask(task.id), i18n.t('errors.choreComplete'))
 
   const setTaskActive = async (task: ChoreTask, isActive: boolean) => {
-    if (!isActive && !(await confirm(i18n.t('errors.chorePauseConfirm', { name: task.task_name })))) return
+    if (!isActive && !(await confirm(i18n.t('errors.chorePauseConfirm', { taskName: task.task_name })))) return
     await updateTask(
       task,
       () => updateChoreTask(task.id, { is_active: isActive }),

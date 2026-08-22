@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api/client'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import {
-  addGroupMember,
+  inviteGroupMember,
   createGroup,
   getGroup,
   getGroups,
@@ -16,7 +16,7 @@ import {
 import { useGroups } from './useGroups'
 
 vi.mock('./api', () => ({
-  addGroupMember: vi.fn(),
+  inviteGroupMember: vi.fn(),
   createGroup: vi.fn(),
   getGroup: vi.fn(),
   getGroupMemberCandidates: vi.fn(),
@@ -146,12 +146,12 @@ describe('useGroups', () => {
 
   it('keeps a successful invitation successful when refreshing the group fails', async () => {
     vi.mocked(getGroup).mockResolvedValueOnce(group).mockRejectedValue(new Error('refresh failed'))
-    vi.mocked(addGroupMember).mockResolvedValue({
+    vi.mocked(inviteGroupMember).mockResolvedValue({
       id: 'invitation-1',
       group_id: group.id,
       group_name: group.name,
       invitee_user_id: 'user-2',
-      username: 'new member',
+      invitee_username: 'new member',
       role: 'member',
       status: 'pending',
       created_at: '2026-07-15T00:00:00Z',
@@ -161,10 +161,10 @@ describe('useGroups', () => {
     })
 
     await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
-    await act(() => result.current.addMember('user-2', 'member'))
+    await act(() => result.current.inviteMember('user-2', 'member'))
     await waitFor(() => expect(vi.mocked(getGroup).mock.calls.length).toBeGreaterThan(1))
 
-    expect(addGroupMember).toHaveBeenCalledWith(group.id, 'user-2', 'member')
+    expect(inviteGroupMember).toHaveBeenCalledWith(group.id, 'user-2', 'member')
     expect(result.current.dialogError).toBeNull()
   })
 

@@ -59,7 +59,7 @@ class ChoreTaskCreate(BaseModel):
 
     @field_validator("task_name")
     @classmethod
-    def normalize_name(cls, value: str) -> str:
+    def normalize_task_name(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
             raise ValueError("chore task name must not be blank")
@@ -74,7 +74,7 @@ class ChoreTaskUpdate(BaseModel):
 
     @field_validator("task_name")
     @classmethod
-    def normalize_name(cls, value: str | None) -> str | None:
+    def normalize_task_name(cls, value: str | None) -> str | None:
         if value is None:
             return None
         normalized = value.strip()

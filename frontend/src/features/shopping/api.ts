@@ -14,11 +14,11 @@ export async function getShoppingItems(groupId: string, signal?: AbortSignal): P
     .items
 }
 
-export function createShoppingItem(groupId: string, name: string): Promise<ShoppingItem> {
+export function createShoppingItem(groupId: string, itemName: string): Promise<ShoppingItem> {
   return sdkData(
     createShoppingItemApiV1ShoppingGroupsGroupIdItemsPost({
       path: { group_id: groupId },
-      body: { name },
+      body: { name: itemName },
     }),
   )
 }

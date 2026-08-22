@@ -164,7 +164,7 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
               title={
                 effectiveSelectedCategory === ALL_CATEGORIES
                   ? t('chores.empty')
-                  : t('chores.emptyCategory', { category: selectedCategoryName })
+                  : t('chores.emptyCategory', { categoryName: selectedCategoryName })
               }
               description={
                 state.categories.length === 0

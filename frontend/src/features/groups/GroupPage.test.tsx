@@ -18,7 +18,7 @@ import {
 import { GroupPage } from './GroupPage'
 
 vi.mock('./api', () => ({
-  addGroupMember: vi.fn(),
+  inviteGroupMember: vi.fn(),
   createGroup: vi.fn(),
   decideGroupMembershipInvitation: vi.fn(),
   getGroup: vi.fn(),
@@ -196,7 +196,7 @@ describe('GroupPage', () => {
         group_id: 'group-1',
         group_name: '同居家族',
         invitee_user_id: 'current-user',
-        username: 'current-user',
+        invitee_username: 'current-user',
         role: 'member',
         status: 'pending',
         created_at: '2026-07-15T00:00:00Z',
@@ -220,7 +220,7 @@ describe('GroupPage', () => {
         group_id: 'group-1',
         group_name: '同居家族',
         invitee_user_id: 'current-user',
-        username: 'current-user',
+        invitee_username: 'current-user',
         role: 'member',
         status: 'pending',
         created_at: '2026-07-15T00:00:00Z',

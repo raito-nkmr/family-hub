@@ -94,7 +94,7 @@ export function ChoreTaskCard({
               <button
                 className="chore-card__edit"
                 type="button"
-                aria-label={t('chores.editLabel', { name: task.task_name })}
+                aria-label={t('chores.editLabel', { taskName: task.task_name })}
                 disabled={busy}
                 onClick={onEdit}
               >
@@ -103,8 +103,8 @@ export function ChoreTaskCard({
               <button
                 className="danger-button icon-button chore-card__stop"
                 type="button"
-                aria-label={t('chores.stop', { name: task.task_name })}
-                title={t('chores.stop', { name: task.task_name })}
+                aria-label={t('chores.pause', { taskName: task.task_name })}
+                title={t('chores.pause', { taskName: task.task_name })}
                 disabled={busy}
                 onClick={onPause}
               >
@@ -124,7 +124,7 @@ export function ChoreTaskCard({
           <div
             className="chore-card__progress-track"
             role="progressbar"
-            aria-label={t('chores.progressLabel', { name: task.task_name })}
+            aria-label={t('chores.progressLabel', { taskName: task.task_name })}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress.percent}

@@ -9,8 +9,8 @@ interface ChoreCategoryManagerDialogProps {
   submitting: boolean
   actionId: string | null
   error: string | null
-  onCreate: (name: string) => Promise<boolean>
-  onRename: (categoryId: string, name: string) => Promise<boolean>
+  onCreate: (categoryName: string) => Promise<boolean>
+  onRename: (categoryId: string, categoryName: string) => Promise<boolean>
   onDelete: (category: ChoreCategory) => Promise<boolean>
   onReorder: (categoryIds: string[]) => Promise<boolean>
   onClose: () => void
@@ -29,33 +29,33 @@ export function ChoreCategoryManagerDialog({
 }: ChoreCategoryManagerDialogProps) {
   const { t } = useTranslation()
   const headingId = useId()
-  const newNameId = useId()
-  const [newName, setNewName] = useState('')
+  const newCategoryNameId = useId()
+  const [newCategoryName, setNewCategoryName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingName, setEditingName] = useState('')
+  const [editingCategoryName, setEditingCategoryName] = useState('')
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const name = newName.trim()
-    if (!name || submitting) return
-    if (await onCreate(name)) setNewName('')
+    const categoryName = newCategoryName.trim()
+    if (!categoryName || submitting) return
+    if (await onCreate(categoryName)) setNewCategoryName('')
   }
 
   const beginRename = (category: ChoreCategory) => {
     setEditingId(category.id)
-    setEditingName(category.name)
+    setEditingCategoryName(category.name)
   }
 
   const cancelRename = () => {
     setEditingId(null)
-    setEditingName('')
+    setEditingCategoryName('')
   }
 
   const handleRename = async (event: FormEvent<HTMLFormElement>, category: ChoreCategory) => {
     event.preventDefault()
-    const name = editingName.trim()
-    if (!name || submitting) return
-    if (await onRename(category.id, name)) cancelRename()
+    const categoryName = editingCategoryName.trim()
+    if (!categoryName || submitting) return
+    if (await onRename(category.id, categoryName)) cancelRename()
   }
 
   const moveCategory = async (index: number, offset: -1 | 1) => {
@@ -73,19 +73,19 @@ export function ChoreCategoryManagerDialog({
         <p>{t('chores.categoryManageHelp')}</p>
       </div>
       <form className="chore-category-form" onSubmit={(event) => void handleCreate(event)}>
-        <label htmlFor={newNameId}>{t('chores.categoryName')}</label>
+        <label htmlFor={newCategoryNameId}>{t('chores.categoryName')}</label>
         <div className="chore-category-form__input">
           <input
             className="form-control form-control--subtle"
-            id={newNameId}
-            value={newName}
+            id={newCategoryNameId}
+            value={newCategoryName}
             maxLength={40}
             required
             autoFocus
             placeholder={t('chores.categoryNamePlaceholder')}
-            onChange={(event) => setNewName(event.target.value)}
+            onChange={(event) => setNewCategoryName(event.target.value)}
           />
-          <button className="primary-button icon-button" type="submit" disabled={submitting || !newName.trim()}>
+          <button className="primary-button icon-button" type="submit" disabled={submitting || !newCategoryName.trim()}>
             <PlusIcon />
             {t('chores.categoryCreate')}
           </button>
@@ -111,15 +111,15 @@ export function ChoreCategoryManagerDialog({
                       className="form-control form-control--subtle"
                       id={`chore-category-${category.id}`}
                       aria-label={t('chores.categoryName')}
-                      value={editingName}
+                      value={editingCategoryName}
                       maxLength={40}
                       required
-                      onChange={(event) => setEditingName(event.target.value)}
+                      onChange={(event) => setEditingCategoryName(event.target.value)}
                     />
                     <button
                       className="success-button icon-button"
                       type="submit"
-                      disabled={submitting || !editingName.trim()}
+                      disabled={submitting || !editingCategoryName.trim()}
                     >
                       <SaveIcon />
                       {t('common.save')}
@@ -143,7 +143,7 @@ export function ChoreCategoryManagerDialog({
                           className="secondary-button icon-button chore-category-list__move"
                           type="button"
                           disabled={submitting || busy || index === 0}
-                          aria-label={t('chores.moveCategoryUp', { name: category.name })}
+                          aria-label={t('chores.moveCategoryUp', { categoryName: category.name })}
                           onClick={() => void moveCategory(index, -1)}
                         >
                           ↑
@@ -152,7 +152,7 @@ export function ChoreCategoryManagerDialog({
                           className="secondary-button icon-button chore-category-list__move"
                           type="button"
                           disabled={submitting || busy || index === categories.length - 1}
-                          aria-label={t('chores.moveCategoryDown', { name: category.name })}
+                          aria-label={t('chores.moveCategoryDown', { categoryName: category.name })}
                           onClick={() => void moveCategory(index, 1)}
                         >
                           ↓
@@ -162,7 +162,7 @@ export function ChoreCategoryManagerDialog({
                         className="secondary-button icon-button"
                         type="button"
                         disabled={submitting}
-                        aria-label={t('chores.editCategory', { name: category.name })}
+                        aria-label={t('chores.editCategory', { categoryName: category.name })}
                         onClick={() => beginRename(category)}
                       >
                         <EditIcon />
@@ -172,7 +172,7 @@ export function ChoreCategoryManagerDialog({
                         className="danger-button icon-button"
                         type="button"
                         disabled={submitting || busy}
-                        aria-label={t('chores.deleteCategory', { name: category.name })}
+                        aria-label={t('chores.deleteCategory', { categoryName: category.name })}
                         onClick={() => void onDelete(category)}
                       >
                         <DeleteIcon />
