@@ -49,7 +49,7 @@ test('authenticates, enforces CSRF, and accepts a same-origin upload chunk', asy
             files: [
               { client_id: clientId, filename: 'live-e2e.png', content_type: 'image/png', size_bytes: sizeBytes },
             ],
-            sharing: { type: 'private', group_ids: [] },
+            sharing: { visibility: 'private', group_ids: [] },
           }),
         })
         return { status: response.status, body: (await response.json()) as UploadBatchResponse }

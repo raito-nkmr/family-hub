@@ -20,8 +20,10 @@ const activity: PhotoActivityItem = {
     content_type: 'image/jpeg',
     width: 640,
     height: 480,
-    captured_at: null,
+    captured_at_original: null,
+    captured_at_override: null,
     uploaded_at: '2026-07-16T03:00:00Z',
+    effective_captured_at: '2026-07-16T03:00:00Z',
     is_favorite: false,
   },
 }
@@ -49,7 +51,7 @@ describe('PhotoActivityPage', () => {
     expect(onSelectPhoto).toHaveBeenCalledWith(activity.photo)
   })
 
-  it('shows an empty state when there is no recent activity', () => {
+  it('shows an empty state when there is no new activity', () => {
     render(
       <PhotoActivityPage
         items={[]}

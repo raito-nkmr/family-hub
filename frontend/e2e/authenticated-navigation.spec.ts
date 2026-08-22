@@ -44,8 +44,8 @@ test('navigates the authenticated household apps on iPhone WebKit', async ({ pag
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Recent updates' })).toBeVisible()
-  await page.getByRole('link', { name: 'Chore', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Chore', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Chores', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Chore tasks', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Shopping', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Shopping List' })).toBeVisible()
   await page.getByRole('link', { name: 'Photos', exact: true }).click()

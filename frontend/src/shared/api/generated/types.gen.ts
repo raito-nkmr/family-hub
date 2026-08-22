@@ -1472,13 +1472,21 @@ export type PhotoLifecycleState = 'active' | 'trashed' | 'purge_pending'
  */
 export type PhotoListItemResponse = {
   /**
-   * Captured At
+   * Captured At Original
    */
-  captured_at: string | null
+  captured_at_original: string | null
+  /**
+   * Captured At Override
+   */
+  captured_at_override: string | null
   /**
    * Content Type
    */
   content_type: string
+  /**
+   * Effective Captured At
+   */
+  effective_captured_at: string
   /**
    * Height
    */
@@ -1537,21 +1545,21 @@ export type PhotoListResponse = {
  */
 export type PhotoResponse = {
   /**
-   * Captured At
-   */
-  captured_at: string | null
-  /**
    * Captured At Original
    */
-  captured_at_original?: string | null
+  captured_at_original: string | null
   /**
    * Captured At Override
    */
-  captured_at_override?: string | null
+  captured_at_override: string | null
   /**
    * Content Type
    */
   content_type: string
+  /**
+   * Effective Captured At
+   */
+  effective_captured_at: string
   /**
    * Height
    */

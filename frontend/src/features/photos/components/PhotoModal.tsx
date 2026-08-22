@@ -6,7 +6,7 @@ import { PageMessage } from '../../../shared/ui/PageMessage'
 import { useConfirmation } from '../../../shared/ui/confirmation'
 import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, RetryIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
-import { getPhotoDownloadUrl, type Photo, type PhotoListItem } from '../api'
+import { getPhotoCaptureDate, getPhotoDownloadUrl, type Photo, type PhotoListItem } from '../api'
 import { formatPhotoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
 
@@ -69,7 +69,7 @@ function PhotoModalDetails({
   const metadataBusy = updatingMetadata || photoDetailLoading
   const [memoState, setMemoState] = useState(() => ({ photoId: photo.id, value: photo.memo ?? '' }))
   const memo = memoState.photoId === photo.id ? memoState.value : (photo.memo ?? '')
-  const captureDateSource = photo.captured_at_override ?? photo.captured_at
+  const captureDateSource = getPhotoCaptureDate(photo)
   const [captureDateState, setCaptureDateState] = useState(() => ({
     photoId: photo.id,
     source: captureDateSource,
@@ -235,7 +235,7 @@ function PhotoModalDetails({
               <div>
                 <dt>{t('photoDetails.capturedAt')}</dt>
                 <dd>
-                  {photo.captured_at ? formatDateTime(photo.captured_at) : t('common.unknown')}
+                  {captureDateSource ? formatDateTime(captureDateSource) : t('common.unknown')}
                   {photo.captured_at_override && <small> ({t('photoDetails.captureDateOverridden')})</small>}
                 </dd>
               </div>

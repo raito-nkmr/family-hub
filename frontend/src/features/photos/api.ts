@@ -48,6 +48,15 @@ export type PhotoTimeline = PhotoTimelineResponse
 export type PhotoVisibility = ApiPhotoVisibility
 export type TrashedPhotoList = TrashedPhotoListResponse
 
+export interface PhotoCaptureDates {
+  captured_at_original: string | null
+  captured_at_override: string | null
+}
+
+export function getPhotoCaptureDate(photo: PhotoCaptureDates): string | null {
+  return photo.captured_at_override ?? photo.captured_at_original
+}
+
 export function getStorageStatus(signal?: AbortSignal): Promise<StorageStatus> {
   return sdkData(getStorageStatusApiV1PhotosStorageStatusGet({ signal }))
 }

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../../shared/lib/format'
+import { getPhotoCaptureDate } from '../../photos/api'
 import type { Photo } from '../../photos/public'
 import { PhotoPreview } from '../../photos/public'
 
@@ -52,7 +53,11 @@ export function AlbumPhotoGrid({
               </div>
               <span className="album-photo-card__body">
                 <strong>{photo.original_filename}</strong>
-                <span>{photo.captured_at ? formatDateTime(photo.captured_at) : t('photos.capturedUnknown')}</span>
+                {getPhotoCaptureDate(photo) ? (
+                  <span>{formatDateTime(getPhotoCaptureDate(photo)!)}</span>
+                ) : (
+                  <span>{t('photos.capturedUnknown')}</span>
+                )}
               </span>
             </button>
           </article>
