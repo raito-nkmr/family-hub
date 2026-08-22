@@ -39,6 +39,7 @@ import SelectSymbol from './icons/material-symbols/select.svg?react'
 import ShareSymbol from './icons/material-symbols/share.svg?react'
 import ShoppingCartSymbol from './icons/material-symbols/shopping-cart.svg?react'
 import StoreSymbol from './icons/material-symbols/store.svg?react'
+import StartSymbol from './icons/material-symbols/start.svg?react'
 import SunnySymbol from './icons/material-symbols/sunny.svg?react'
 import TaskAltSymbol from './icons/material-symbols/task-alt.svg?react'
 import UndoSymbol from './icons/material-symbols/undo.svg?react'
@@ -240,6 +241,10 @@ export function ShoppingCartIcon() {
 
 export function StoreIcon() {
   return <StoreSymbol className="material-symbol-icon" />
+}
+
+export function StartIcon() {
+  return <StartSymbol className="material-symbol-icon" />
 }
 
 export function CheckIcon() {

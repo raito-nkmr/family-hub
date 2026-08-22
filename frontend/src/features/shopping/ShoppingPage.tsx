@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircleIcon, StoreIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
+import { CheckCircleIcon, StartIcon, StoreIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -45,7 +45,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
               disabled={state.submitting}
               onClick={() => void state.beginTrip()}
             >
-              <TaskAltIcon />
+              <StartIcon />
               {t('shopping.startTrip')}
             </button>
           </div>
