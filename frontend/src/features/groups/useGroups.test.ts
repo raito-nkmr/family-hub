@@ -150,7 +150,7 @@ describe('useGroups', () => {
       id: 'invitation-1',
       group_id: group.id,
       group_name: group.name,
-      user_id: 'user-2',
+      invitee_user_id: 'user-2',
       username: 'new member',
       role: 'member',
       status: 'pending',

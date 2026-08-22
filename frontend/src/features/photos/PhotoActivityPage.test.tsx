@@ -9,7 +9,7 @@ const activity: PhotoActivityItem = {
   event_type: 'uploaded',
   actor_user_id: '00000000-0000-4000-8000-000000000002',
   actor_username: 'family',
-  operation_id: '00000000-0000-4000-8000-000000000003',
+  activity_operation_id: '00000000-0000-4000-8000-000000000003',
   occurred_at: '2026-07-16T03:00:00Z',
   photo: {
     id: '00000000-0000-4000-8000-000000000004',

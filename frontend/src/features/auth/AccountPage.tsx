@@ -183,7 +183,7 @@ export function AccountPage({
                 <li key={session.id}>
                   <div>
                     <strong>{session.current ? t('account.currentSession') : t('account.otherSession')}</strong>
-                    <small>{t('account.lastActive', { date: formatDateTime(session.last_seen_at) })}</small>
+                    <small>{t('account.lastUsed', { date: formatDateTime(session.last_used_at) })}</small>
                     <small>{t('account.expires', { date: formatDateTime(session.expires_at) })}</small>
                   </div>
                   {!session.current && (

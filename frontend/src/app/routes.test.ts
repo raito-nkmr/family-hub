@@ -11,7 +11,7 @@ describe('app routes', () => {
   })
 
   it('keeps chore navigation active on the report subpage', () => {
-    expect(getAppView('/chores/reports')).toBe('chores-reports')
+    expect(getAppView('/chores/monthly')).toBe('chores-monthly')
     expect(getAppView('/chores/daily')).toBe('chores-daily')
   })
 })

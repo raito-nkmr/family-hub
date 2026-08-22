@@ -22,7 +22,7 @@ describe('usePhotoActivity', () => {
           event_type: 'uploaded',
           actor_user_id: 'user-2',
           actor_username: 'family',
-          operation_id: 'operation-1',
+          activity_operation_id: 'operation-1',
           occurred_at: '2026-07-16T03:00:00Z',
           photo: {
             id: 'photo-1',
@@ -86,7 +86,7 @@ describe('usePhotoActivity', () => {
           event_type: 'uploaded',
           actor_user_id: 'user-2',
           actor_username: 'family',
-          operation_id: 'operation-1',
+          activity_operation_id: 'operation-1',
           occurred_at: '2026-07-16T03:00:00Z',
           photo: {
             id: 'photo-1',

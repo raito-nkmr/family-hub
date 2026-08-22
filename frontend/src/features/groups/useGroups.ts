@@ -81,7 +81,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
       updateGroupTimezone(groupId, timezone),
     onSuccess: (updated) => {
       updateGroupCaches(queryClient, updated)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.choreReports(updated.id) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.choreMonthlyReports(updated.id) })
     },
   })
 

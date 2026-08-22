@@ -57,7 +57,7 @@ const photo: Photo = {
   uploaded_by_user_id: 'user-1',
   uploaded_by_username: 'owner',
   visibility: 'private',
-  sharing: { type: 'private', group_ids: [] },
+  sharing: { group_ids: [] },
   is_favorite: false,
   memo: null,
   memo_updated_by_user_id: 'user-1',
@@ -82,8 +82,8 @@ const photo: Photo = {
 const uploadItems: UploadItem[] = ['first', 'second'].map((clientId) => ({
   id: `00000000-0000-4000-8000-00000000000${clientId === 'first' ? '1' : '2'}`,
   client_id: clientId,
-  filename: `${clientId}.jpg`,
-  content_type: 'image/jpeg',
+  original_filename: `${clientId}.jpg`,
+  declared_content_type: 'image/jpeg',
   size_bytes: 5,
   received_bytes: 0,
   status: 'queued',
@@ -427,8 +427,8 @@ describe('usePhotoDashboard', () => {
 
     expect(createUploadBatch).toHaveBeenCalledWith(
       [
-        expect.objectContaining({ filename: 'first.jpg', content_type: 'image/jpeg' }),
-        expect.objectContaining({ filename: 'second.jpeg', content_type: 'image/jpeg' }),
+        expect.objectContaining({ original_filename: 'first.jpg', declared_content_type: 'image/jpeg' }),
+        expect.objectContaining({ original_filename: 'second.jpeg', declared_content_type: 'image/jpeg' }),
       ],
       ['group-1'],
     )
@@ -474,7 +474,7 @@ describe('usePhotoDashboard', () => {
 
   it('adds sharing to multiple photos and refreshes the dashboard', async () => {
     vi.mocked(addBulkPhotoSharing).mockResolvedValue({
-      operation_id: 'operation-1',
+      activity_operation_id: 'operation-1',
       updated_count: 2,
       unchanged_count: 0,
     })
@@ -492,7 +492,7 @@ describe('usePhotoDashboard', () => {
 
   it('invalidates the home recent photos after a photo change', async () => {
     vi.mocked(addBulkPhotoSharing).mockResolvedValue({
-      operation_id: 'operation-1',
+      activity_operation_id: 'operation-1',
       updated_count: 1,
       unchanged_count: 0,
     })

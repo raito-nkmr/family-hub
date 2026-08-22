@@ -31,7 +31,7 @@ function sortTasks(tasks: ChoreTask[]): ChoreTask[] {
     (left, right) =>
       Number(right.is_active) - Number(left.is_active) ||
       new Date(left.next_due_at).getTime() - new Date(right.next_due_at).getTime() ||
-      left.name.localeCompare(right.name, 'ja'),
+      left.task_name.localeCompare(right.task_name, 'ja'),
   )
 }
 
@@ -80,10 +80,10 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
   useUnauthorizedError(categoriesQuery.error, onUnauthorized)
 
   const saveMutation = useMutation({
-    mutationFn: async ({ groupId, task, name, intervalDays, categoryId }: SaveTaskInput) =>
+    mutationFn: async ({ groupId, task, taskName, intervalDays, categoryId }: SaveTaskInput) =>
       task
-        ? updateChoreTask(task.id, { name, interval_days: intervalDays, category_id: categoryId })
-        : createChoreTask(groupId, name, intervalDays, categoryId),
+        ? updateChoreTask(task.id, { task_name: taskName, interval_days: intervalDays, category_id: categoryId })
+        : createChoreTask(groupId, taskName, intervalDays, categoryId),
     onSuccess: (saved, { groupId }) => {
       queryClient.setQueryData<ChoreTask[]>(queryKeys.choreTasks(groupId), (current = []) =>
         sortTasks([...current.filter((task) => task.id !== saved.id), saved]),
@@ -127,12 +127,12 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     await selectGroupInUrl(groupId)
   }
 
-  const saveTask = async (name: string, intervalDays: number, categoryId: string) => {
+  const saveTask = async (taskName: string, intervalDays: number, categoryId: string) => {
     const groupId = editingTask?.group_id ?? selectedGroupId
     if (!groupId) return
     setDialogError(null)
     try {
-      await saveMutation.mutateAsync({ groupId, task: editingTask, name, intervalDays, categoryId })
+      await saveMutation.mutateAsync({ groupId, task: editingTask, taskName, intervalDays, categoryId })
       setShowTaskDialog(false)
       setEditingTask(null)
     } catch (error) {
@@ -217,7 +217,7 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
       queryClient.setQueryData<ChoreTask[]>(queryKeys.choreTasks(task.group_id), (current = []) =>
         sortTasks(current.map((item) => (item.id === updated.id ? updated : item))),
       )
-      await queryClient.invalidateQueries({ queryKey: queryKeys.choreReports(task.group_id) })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.choreMonthlyReports(task.group_id) })
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()
       else setPageMutationError(fallback)
@@ -230,7 +230,7 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
     updateTask(task, () => completeChoreTask(task.id), i18n.t('errors.choreComplete'))
 
   const setTaskActive = async (task: ChoreTask, isActive: boolean) => {
-    if (!isActive && !(await confirm(i18n.t('errors.chorePauseConfirm', { name: task.name })))) return
+    if (!isActive && !(await confirm(i18n.t('errors.chorePauseConfirm', { name: task.task_name })))) return
     await updateTask(
       task,
       () => updateChoreTask(task.id, { is_active: isActive }),
@@ -307,7 +307,7 @@ export function useChores({ onUnauthorized }: UseChoresOptions) {
 interface SaveTaskInput {
   groupId: string
   task: ChoreTask | null
-  name: string
+  taskName: string
   intervalDays: number
   categoryId: string
 }

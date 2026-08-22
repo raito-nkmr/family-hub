@@ -16,7 +16,7 @@ function makeTask(overrides: Partial<ChoreTask> = {}): ChoreTask {
   return {
     id: 'task-id',
     group_id: 'group-id',
-    name: 'お風呂',
+    task_name: 'お風呂',
     category_id: 'chore-id',
     interval_days: 1,
     is_active: true,
@@ -60,7 +60,7 @@ describe('ChoresPage', () => {
         { id: 'chore-id', group_id: 'group-id', name: '浴室', sort_order: 0, created_at: '', updated_at: '' },
         { id: 'watering-id', group_id: 'group-id', name: '水やり', sort_order: 1, created_at: '', updated_at: '' },
       ],
-      tasks: [makeTask(), makeTask({ id: 'watering-task-id', name: '花', category_id: 'watering-id' })],
+      tasks: [makeTask(), makeTask({ id: 'watering-task-id', task_name: '花', category_id: 'watering-id' })],
       loading: false,
       submitting: false,
       pendingTaskIds: new Set<string>(),

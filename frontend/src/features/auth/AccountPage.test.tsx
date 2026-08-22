@@ -19,7 +19,7 @@ vi.mock('../notifications/NotificationSettings', () => ({
 const currentSession = {
   id: 'current-session',
   created_at: '2026-07-16T01:00:00Z',
-  last_seen_at: '2026-07-16T02:00:00Z',
+  last_used_at: '2026-07-16T02:00:00Z',
   expires_at: '2026-08-16T01:00:00Z',
   current: true,
 }

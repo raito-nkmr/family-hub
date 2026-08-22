@@ -5,10 +5,10 @@ import { useLocation } from 'react-router'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import { ChoreDailyPage } from './ChoreDailyPage'
 
-const useChoreReport = vi.fn()
+const useChoreMonthlyReport = vi.fn()
 
-vi.mock('./useChoreReport', () => ({
-  useChoreReport: () => useChoreReport(),
+vi.mock('./useChoreMonthlyReport', () => ({
+  useChoreMonthlyReport: () => useChoreMonthlyReport(),
 }))
 
 const report = {
@@ -61,7 +61,7 @@ function LocationProbe() {
 
 describe('ChoreDailyPage', () => {
   it('starts with a Sunday-first calendar and accessible completion counts', () => {
-    useChoreReport.mockReturnValue(makeState())
+    useChoreMonthlyReport.mockReturnValue(makeState())
     render(<ChoreDailyPage onUnauthorized={vi.fn()} />, {
       wrapper: createAppWrapper('/chores/daily?group=group-1&month=2026-07'),
     })
@@ -74,7 +74,7 @@ describe('ChoreDailyPage', () => {
 
   it('shows the bar chart and stores the selected view in the URL', async () => {
     const user = userEvent.setup()
-    useChoreReport.mockReturnValue(makeState())
+    useChoreMonthlyReport.mockReturnValue(makeState())
     render(
       <>
         <ChoreDailyPage onUnauthorized={vi.fn()} />
@@ -91,7 +91,7 @@ describe('ChoreDailyPage', () => {
   })
 
   it('opens the chart when view=chart is in the URL', () => {
-    useChoreReport.mockReturnValue(makeState())
+    useChoreMonthlyReport.mockReturnValue(makeState())
     render(<ChoreDailyPage onUnauthorized={vi.fn()} />, {
       wrapper: createAppWrapper('/chores/daily?group=group-1&month=2026-07&view=chart'),
     })

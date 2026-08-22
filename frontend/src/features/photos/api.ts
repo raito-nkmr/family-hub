@@ -149,7 +149,7 @@ export function removePhotoGroupShareAsAdmin(
 }
 
 export function addBulkPhotoSharing(photoIds: string[], groupIds: string[]): Promise<BulkSharingResult> {
-  const body: BulkPhotoSharingAdd = { photo_ids: photoIds, add_group_ids: groupIds }
+  const body: BulkPhotoSharingAdd = { photo_ids: photoIds, group_ids_to_add: groupIds }
   return sdkData(bulkAddPhotoSharingApiV1PhotosBulkSharingPost({ body }))
 }
 

@@ -70,14 +70,14 @@ export async function getChoreTasks(groupId: string, signal?: AbortSignal): Prom
 
 export function createChoreTask(
   groupId: string,
-  name: string,
+  taskName: string,
   intervalDays: number,
   categoryId: string,
 ): Promise<ChoreTask> {
   return sdkData(
     createChoreTaskApiV1ChoresGroupsGroupIdTasksPost({
       path: { group_id: groupId },
-      body: { name, interval_days: intervalDays, category_id: categoryId },
+      body: { task_name: taskName, interval_days: intervalDays, category_id: categoryId },
     }),
   )
 }

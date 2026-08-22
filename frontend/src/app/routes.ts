@@ -6,7 +6,7 @@ export const appPaths = {
   'photo-trash': '/photos/trash',
   chores: '/chores',
   'chores-daily': '/chores/daily',
-  'chores-reports': '/chores/reports',
+  'chores-monthly': '/chores/monthly',
   shopping: '/shopping',
   groups: '/groups',
   invitations: '/invitations',
@@ -17,7 +17,7 @@ export const appPaths = {
 export type AppView = keyof typeof appPaths
 
 export const photoViews: AppView[] = ['photo-activity', 'photos', 'albums', 'photo-trash']
-export const choreViews: AppView[] = ['chores', 'chores-daily', 'chores-reports']
+export const choreViews: AppView[] = ['chores', 'chores-daily', 'chores-monthly']
 export const managementViews: AppView[] = ['groups', 'invitations', 'account', 'system']
 
 export function getAppView(pathname: string): AppView | null {

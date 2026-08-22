@@ -93,7 +93,7 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         to={choreTo('chores')}
       >
         <ListIcon />
-        {t('navigation.choresList')}
+        {t('navigation.taskList')}
       </NavLink>
       <NavLink
         className={itemClass('chores-daily', 'app-navigation__desktop-only app-navigation__item--nested')}
@@ -103,8 +103,8 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         {t('navigation.choresDaily')}
       </NavLink>
       <NavLink
-        className={itemClass('chores-reports', 'app-navigation__desktop-only app-navigation__item--nested')}
-        to={choreTo('chores-reports')}
+        className={itemClass('chores-monthly', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={choreTo('chores-monthly')}
       >
         <BarChartIcon />
         {t('navigation.choresMonthly')}
@@ -168,7 +168,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
         ]
       : activeView && choreViews.includes(activeView)
         ? [
-            { view: 'chores' as const, label: t('navigation.choresList'), count: 0, icon: <ListIcon /> },
+            { view: 'chores' as const, label: t('navigation.taskList'), count: 0, icon: <ListIcon /> },
             {
               view: 'chores-daily' as const,
               label: t('navigation.choresDaily'),
@@ -176,7 +176,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
               icon: <CalendarMonthIcon />,
             },
             {
-              view: 'chores-reports' as const,
+              view: 'chores-monthly' as const,
               label: t('navigation.choresMonthly'),
               count: 0,
               icon: <BarChartIcon />,

@@ -59,7 +59,7 @@ export function addGroupMember(groupId: string, userId: string, role: GroupRole)
   return sdkData(
     inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost({
       path: { group_id: groupId },
-      body: { user_id: userId, role },
+      body: { invitee_user_id: userId, role },
     }),
   )
 }

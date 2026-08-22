@@ -10,11 +10,11 @@ import { getGroups } from '../groups/api'
 import { getChoreMonthlyReport } from './api'
 import { getCurrentMonthForTimezone, isReportMonth } from './reportDate'
 
-interface UseChoreReportOptions {
+interface UseChoreMonthlyReportOptions {
   onUnauthorized: () => void
 }
 
-export function useChoreReport({ onUnauthorized }: UseChoreReportOptions) {
+export function useChoreMonthlyReport({ onUnauthorized }: UseChoreMonthlyReportOptions) {
   const [searchParams, setSearchParams] = useSearchParams()
   const groupsQuery = useQuery({
     queryKey: queryKeys.groups,
@@ -27,7 +27,7 @@ export function useChoreReport({ onUnauthorized }: UseChoreReportOptions) {
   const requestedMonth = searchParams.get('month')
   const effectiveMonth = isReportMonth(requestedMonth) && requestedMonth <= currentMonth ? requestedMonth : currentMonth
   const reportQuery = useQuery({
-    queryKey: queryKeys.choreReport(selectedGroupId ?? '', effectiveMonth),
+    queryKey: queryKeys.choreMonthlyReport(selectedGroupId ?? '', effectiveMonth),
     queryFn: ({ signal }) => getChoreMonthlyReport(selectedGroupId!, effectiveMonth, signal),
     enabled: selectedGroupId !== null,
   })
@@ -82,11 +82,11 @@ export function useChoreReport({ onUnauthorized }: UseChoreReportOptions) {
   const previousMonth = shiftReportMonth(effectiveMonth, -1)
   const nextMonth = shiftReportMonth(effectiveMonth, 1)
   const queryError = groupsQuery.error
-    ? i18n.t('errors.choreReportData')
+    ? i18n.t('errors.choreMonthlyReportData')
     : reportQuery.error
       ? isApiErrorWithStatus(reportQuery.error, 404)
-        ? i18n.t('errors.choreReportForbidden')
-        : i18n.t('errors.choreReportLoad')
+        ? i18n.t('errors.choreMonthlyReportForbidden')
+        : i18n.t('errors.choreMonthlyReportLoad')
       : null
 
   return {

@@ -35,7 +35,7 @@ export function usePhotoMetadata({
   const clearError = useCallback(() => setMetadataError(null), [])
   const savePhotoMetadata = async (changes: {
     memo?: string | null
-    sharing?: { type: 'private' | 'shared'; group_ids: string[] }
+    sharing?: { visibility: 'private' | 'shared'; group_ids: string[] }
     captured_at_override?: string | null
   }) => {
     if (!selectedPhoto) return
@@ -60,7 +60,9 @@ export function usePhotoMetadata({
     if (!selectedPhoto) return
     const currentIds = selectedPhoto.sharing.group_ids ?? []
     if (currentIds.length === groupIds.length && currentIds.every((id) => groupIds.includes(id))) return
-    await savePhotoMetadata({ sharing: { type: groupIds.length > 0 ? 'shared' : 'private', group_ids: groupIds } })
+    await savePhotoMetadata({
+      sharing: { visibility: groupIds.length > 0 ? 'shared' : 'private', group_ids: groupIds },
+    })
   }
 
   const toggleFavorite = async () => {

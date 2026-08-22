@@ -19,7 +19,7 @@ const photo: Photo = {
   uploaded_by_user_id: 'user-1',
   uploaded_by_username: 'owner',
   visibility: 'private',
-  sharing: { type: 'private', group_ids: [] },
+  sharing: { group_ids: [] },
   is_favorite: false,
   memo: null,
   memo_updated_by_user_id: 'user-1',

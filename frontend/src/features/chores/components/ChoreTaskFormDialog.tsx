@@ -10,7 +10,7 @@ interface ChoreTaskFormDialogProps {
   categories: ChoreCategory[]
   submitting: boolean
   error: string | null
-  onSubmit: (name: string, intervalDays: number, categoryId: string) => Promise<void>
+  onSubmit: (taskName: string, intervalDays: number, categoryId: string) => Promise<void>
   onClose: () => void
 }
 
@@ -24,19 +24,19 @@ export function ChoreTaskFormDialog({
 }: ChoreTaskFormDialogProps) {
   const { t } = useTranslation()
   const headingId = useId()
-  const nameId = useId()
+  const taskNameId = useId()
   const intervalId = useId()
   const categoryFieldId = useId()
   const errorId = useId()
-  const [name, setName] = useState(task?.name ?? '')
+  const [taskName, setTaskName] = useState(task?.task_name ?? '')
   const [intervalDays, setIntervalDays] = useState(task?.interval_days ?? 1)
   const [categoryId, setCategoryId] = useState(task?.category_id ?? categories[0]?.id ?? '')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (submitting || !name.trim() || intervalDays < 1 || intervalDays > 3650) return
+    if (submitting || !taskName.trim() || intervalDays < 1 || intervalDays > 3650) return
     if (!categoryId) return
-    await onSubmit(name.trim(), intervalDays, categoryId)
+    await onSubmit(taskName.trim(), intervalDays, categoryId)
   }
 
   return (
@@ -46,18 +46,18 @@ export function ChoreTaskFormDialog({
         <p>{t('chores.formHelp')}</p>
       </div>
       <form className="chore-task-form" onSubmit={(event) => void handleSubmit(event)}>
-        <label htmlFor={nameId}>{t('chores.place')}</label>
+        <label htmlFor={taskNameId}>{t('chores.taskName')}</label>
         <input
           className="form-control form-control--subtle"
-          id={nameId}
-          value={name}
+          id={taskNameId}
+          value={taskName}
           maxLength={120}
           required
           autoFocus
-          placeholder={t('chores.placePlaceholder')}
+          placeholder={t('chores.taskNamePlaceholder')}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => setTaskName(event.target.value)}
         />
         <label htmlFor={categoryFieldId}>{t('chores.category')}</label>
         {categories.length > 0 ? (
@@ -100,7 +100,7 @@ export function ChoreTaskFormDialog({
           <button
             className="success-button icon-button"
             type="submit"
-            disabled={submitting || !name.trim() || !Number.isFinite(intervalDays) || !categoryId}
+            disabled={submitting || !taskName.trim() || !Number.isFinite(intervalDays) || !categoryId}
           >
             <SaveIcon />
             {submitting ? t('common.saving') : t('common.save')}

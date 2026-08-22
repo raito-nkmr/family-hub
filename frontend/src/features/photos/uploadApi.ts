@@ -15,12 +15,17 @@ export type UploadBatch = UploadBatchResponse
 export type UploadItem = UploadItemResponse
 
 export function createUploadBatch(
-  files: Array<{ client_id: string; filename: string; content_type: string; size_bytes: number }>,
+  files: Array<{
+    client_id: string
+    original_filename: string
+    declared_content_type: string
+    size_bytes: number
+  }>,
   groupIds: string[],
 ): Promise<UploadBatch> {
   const body: UploadBatchCreate = {
     files,
-    sharing: { type: groupIds.length > 0 ? 'shared' : 'private', group_ids: groupIds },
+    sharing: { visibility: groupIds.length > 0 ? 'shared' : 'private', group_ids: groupIds },
   }
   return sdkData(createUploadBatchApiV1UploadBatchesPost({ body }))
 }

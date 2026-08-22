@@ -39,8 +39,8 @@
   --chore-progress-overdue: #b4232f;
   --chore-progress-inactive: #718496;
   --chore-progress-track: rgb(16 42 67 / 14%);
-  --chore-report-bar: #3979ad;
-  --chore-report-bar-track: rgb(16 42 67 / 12%);
+  --chore-monthly-report-bar: #3979ad;
+  --chore-monthly-report-bar-track: rgb(16 42 67 / 12%);
   --color-spinner-track: rgb(23 50 77 / 22%);
   --color-spinner-head: #315f8c;
   --color-icon-theme-moon: #1f4e79;
@@ -118,8 +118,8 @@
   --chore-progress-overdue: #ff8f98;
   --chore-progress-inactive: #879bad;
   --chore-progress-track: rgb(214 229 244 / 18%);
-  --chore-report-bar: #65a9dc;
-  --chore-report-bar-track: rgb(214 229 244 / 16%);
+  --chore-monthly-report-bar: #65a9dc;
+  --chore-monthly-report-bar-track: rgb(214 229 244 / 16%);
   --color-spinner-track: rgb(255 255 255 / 35%);
   --color-spinner-head: #fff;
   --color-icon-theme-moon: #83b6df;

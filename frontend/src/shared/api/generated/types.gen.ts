@@ -405,9 +405,9 @@ export type AuthSessionResponse = {
  */
 export type BulkPhotoSharingAdd = {
   /**
-   * Add Group Ids
+   * Group Ids To Add
    */
-  add_group_ids: Array<string>
+  group_ids_to_add: Array<string>
   /**
    * Photo Ids
    */
@@ -419,9 +419,9 @@ export type BulkPhotoSharingAdd = {
  */
 export type BulkPhotoSharingResponse = {
   /**
-   * Operation Id
+   * Activity Operation Id
    */
-  operation_id: string
+  activity_operation_id: string
   /**
    * Unchanged Count
    */
@@ -686,10 +686,6 @@ export type ChoreMonthlyTaskResponse = {
    */
   members: Array<ChoreMonthlyTaskMemberResponse>
   /**
-   * Name
-   */
-  name: string
-  /**
    * Participant Count
    */
   participant_count: number
@@ -697,6 +693,10 @@ export type ChoreMonthlyTaskResponse = {
    * Task Id
    */
   task_id: string
+  /**
+   * Task Name
+   */
+  task_name: string
 }
 
 /**
@@ -712,9 +712,9 @@ export type ChoreTaskCreate = {
    */
   interval_days: number
   /**
-   * Name
+   * Task Name
    */
-  name: string
+  task_name: string
 }
 
 /**
@@ -762,13 +762,13 @@ export type ChoreTaskResponse = {
   is_active: boolean
   last_completion: ChoreCompletionResponse | null
   /**
-   * Name
-   */
-  name: string
-  /**
    * Next Due At
    */
   next_due_at: string
+  /**
+   * Task Name
+   */
+  task_name: string
   /**
    * Updated At
    */
@@ -792,9 +792,9 @@ export type ChoreTaskUpdate = {
    */
   is_active?: boolean | null
   /**
-   * Name
+   * Task Name
    */
-  name?: string | null
+  task_name?: string | null
 }
 
 /**
@@ -1016,11 +1016,11 @@ export type GroupMemberRoleUpdate = {
  * GroupMembershipInvitationCreate
  */
 export type GroupMembershipInvitationCreate = {
-  role?: GroupRole
   /**
-   * User Id
+   * Invitee User Id
    */
-  user_id: string
+  invitee_user_id: string
+  role?: GroupRole
 }
 
 /**
@@ -1063,15 +1063,15 @@ export type GroupMembershipInvitationResponse = {
    * Id
    */
   id: string
+  /**
+   * Invitee User Id
+   */
+  invitee_user_id: string
   role: GroupRole
   /**
    * Status
    */
   status: string
-  /**
-   * User Id
-   */
-  user_id: string
   /**
    * Username
    */
@@ -1411,6 +1411,10 @@ export type PhotoActivityEventType = 'uploaded' | 'shared'
  */
 export type PhotoActivityItemResponse = {
   /**
+   * Activity Operation Id
+   */
+  activity_operation_id: string
+  /**
    * Actor User Id
    */
   actor_user_id: string
@@ -1427,10 +1431,6 @@ export type PhotoActivityItemResponse = {
    * Occurred At
    */
   occurred_at: string
-  /**
-   * Operation Id
-   */
-  operation_id: string
   photo: PhotoListItemResponse
 }
 
@@ -1641,7 +1641,6 @@ export type PhotoResponseSharing = {
    * Group Ids
    */
   group_ids?: Array<string>
-  type: PhotoVisibility
 }
 
 /**
@@ -1680,7 +1679,7 @@ export type PhotoSharing = {
    * Group Ids
    */
   group_ids?: Array<string>
-  type: PhotoVisibility
+  visibility: PhotoVisibility
 }
 
 /**
@@ -1989,13 +1988,13 @@ export type UploadFileCreate = {
    */
   client_id: string
   /**
-   * Content Type
+   * Declared Content Type
    */
-  content_type: string
+  declared_content_type: string
   /**
-   * Filename
+   * Original Filename
    */
-  filename: string
+  original_filename: string
   /**
    * Size Bytes
    */
@@ -2011,21 +2010,21 @@ export type UploadItemResponse = {
    */
   client_id: string
   /**
-   * Content Type
+   * Declared Content Type
    */
-  content_type: string
+  declared_content_type: string
   /**
    * Error Code
    */
   error_code: string | null
   /**
-   * Filename
-   */
-  filename: string
-  /**
    * Id
    */
   id: string
+  /**
+   * Original Filename
+   */
+  original_filename: string
   /**
    * Photo Id
    */
@@ -2092,9 +2091,9 @@ export type UserSessionResponse = {
    */
   id: string
   /**
-   * Last Seen At
+   * Last Used At
    */
-  last_seen_at: string
+  last_used_at: string
 }
 
 /**

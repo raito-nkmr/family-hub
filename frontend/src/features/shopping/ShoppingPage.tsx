@@ -119,7 +119,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
                   onClick={() => void state.changePurchaseState(item, true)}
                 >
                   <CheckIcon />
-                  <span>{t(state.pendingItemIds.has(item.id) ? 'shopping.purchasing' : 'shopping.purchased')}</span>
+                  <span>{t(state.pendingItemIds.has(item.id) ? 'shopping.purchasing' : 'shopping.markPurchased')}</span>
                 </button>
               </article>
             ))}

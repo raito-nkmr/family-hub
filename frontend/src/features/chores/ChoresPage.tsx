@@ -66,7 +66,7 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
             <p>{t('chores.description')}</p>
           </div>
           <div className="chore-hero__actions">
-            <Link className="secondary-button" to={{ pathname: appPaths['chores-reports'], search: location.search }}>
+            <Link className="secondary-button" to={{ pathname: appPaths['chores-monthly'], search: location.search }}>
               {t('chores.reportLink')}
             </Link>
             {isAdmin && (
@@ -209,7 +209,7 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
               <div className="chore-inactive__list">
                 {visibleInactiveTasks.map((task) => (
                   <div key={task.id}>
-                    <span>{task.name}</span>
+                    <span>{task.task_name}</span>
                     <button
                       className="success-button icon-button"
                       type="button"

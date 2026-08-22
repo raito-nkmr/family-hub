@@ -2,23 +2,23 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { TaskAltIcon } from '../../shared/ui/icons'
-import { ChoreReportFrame, type ChoreReportData } from './ChoreReportFrame'
-import { useChoreReport } from './useChoreReport'
+import { ChoreMonthlyReportFrame, type ChoreMonthlyReportData } from './ChoreMonthlyReportFrame'
+import { useChoreMonthlyReport } from './useChoreMonthlyReport'
 
-interface ChoreReportPageProps {
+interface ChoreMonthlyReportPageProps {
   onUnauthorized: () => void
 }
 
-export function ChoreReportPage({ onUnauthorized }: ChoreReportPageProps) {
+export function ChoreMonthlyReportPage({ onUnauthorized }: ChoreMonthlyReportPageProps) {
   const { t } = useTranslation()
-  const state = useChoreReport({ onUnauthorized })
+  const state = useChoreMonthlyReport({ onUnauthorized })
   const maxCategoryCount = useMemo(
     () => Math.max(1, ...(state.report?.categories.map((category) => category.completion_count) ?? [])),
     [state.report?.categories],
   )
 
   return (
-    <ChoreReportFrame
+    <ChoreMonthlyReportFrame
       state={state}
       eyebrow={t('chores.reportEyebrow')}
       title={t('chores.reportTitle')}
@@ -29,7 +29,7 @@ export function ChoreReportPage({ onUnauthorized }: ChoreReportPageProps) {
           <>
             <ReportSummary report={report} t={t} />
             <EmptyState
-              className="chore-empty-state chore-report-empty"
+              className="chore-empty-state chore-monthly-report-empty"
               icon={<TaskAltIcon />}
               title={t('chores.reportEmpty')}
               description={t('chores.reportEmptyHelp')}
@@ -44,7 +44,7 @@ export function ChoreReportPage({ onUnauthorized }: ChoreReportPageProps) {
           </>
         )
       }
-    </ChoreReportFrame>
+    </ChoreMonthlyReportFrame>
   )
 }
 
@@ -57,9 +57,9 @@ function ReportSummary({ report, t }: ReportSectionProps) {
     { label: t('chores.reportCategories'), value: summary.category_count },
   ]
   return (
-    <section className="chore-report-section" aria-labelledby="chore-report-summary-heading">
-      <h2 id="chore-report-summary-heading">{t('chores.reportSummary')}</h2>
-      <dl className="chore-report-summary">
+    <section className="chore-monthly-report-section" aria-labelledby="chore-monthly-report-summary-heading">
+      <h2 id="chore-monthly-report-summary-heading">{t('chores.reportSummary')}</h2>
+      <dl className="chore-monthly-report-summary">
         {items.map((item) => (
           <div key={item.label}>
             <dt>{item.label}</dt>
@@ -73,15 +73,15 @@ function ReportSummary({ report, t }: ReportSectionProps) {
 
 function CategoryReport({ report, maxCount, t }: ReportSectionProps & { maxCount: number }) {
   return (
-    <section className="chore-report-section" aria-labelledby="chore-report-category-heading">
-      <div className="chore-report-section__heading">
-        <h2 id="chore-report-category-heading">{t('chores.reportCategoriesByCount')}</h2>
+    <section className="chore-monthly-report-section" aria-labelledby="chore-monthly-report-category-heading">
+      <div className="chore-monthly-report-section__heading">
+        <h2 id="chore-monthly-report-category-heading">{t('chores.reportCategoriesByCount')}</h2>
         <span>{t('chores.reportCompletionCount')}</span>
       </div>
-      <div className="chore-report-category-list">
+      <div className="chore-monthly-report-category-list">
         {report.categories.map((category) => (
-          <div className="chore-report-category" key={`${category.category_id ?? 'snapshot'}-${category.name}`}>
-            <div className="chore-report-category__heading">
+          <div className="chore-monthly-report-category" key={`${category.category_id ?? 'snapshot'}-${category.name}`}>
+            <div className="chore-monthly-report-category__heading">
               <strong>{category.name}</strong>
               <span>
                 {t('chores.reportCategoryMeta', {
@@ -90,7 +90,7 @@ function CategoryReport({ report, maxCount, t }: ReportSectionProps & { maxCount
                 })}
               </span>
             </div>
-            <div className="chore-report-bar" role="img" aria-label={category.name}>
+            <div className="chore-monthly-report-bar" role="img" aria-label={category.name}>
               <span style={{ width: `${(category.completion_count / maxCount) * 100}%` }} />
             </div>
           </div>
@@ -102,19 +102,19 @@ function CategoryReport({ report, maxCount, t }: ReportSectionProps & { maxCount
 
 function MemberReport({ report, t }: ReportSectionProps) {
   return (
-    <section className="chore-report-section" aria-labelledby="chore-report-member-heading">
-      <div className="chore-report-section__heading">
-        <h2 id="chore-report-member-heading">{t('chores.reportMembers')}</h2>
+    <section className="chore-monthly-report-section" aria-labelledby="chore-monthly-report-member-heading">
+      <div className="chore-monthly-report-section__heading">
+        <h2 id="chore-monthly-report-member-heading">{t('chores.reportMembers')}</h2>
         <span>{t('chores.reportRanking')}</span>
       </div>
-      <div className="chore-report-table-wrapper">
-        <table className="chore-report-table">
+      <div className="chore-monthly-report-table-wrapper">
+        <table className="chore-monthly-report-table">
           <thead>
             <tr>
               <th scope="col">{t('chores.reportUser')}</th>
               <th scope="col">{t('chores.reportCompletions')}</th>
               <th scope="col">{t('chores.reportUniqueTasks')}</th>
-              <th scope="col">{t('chores.reportShare')}</th>
+              <th scope="col">{t('chores.reportCompletionRate')}</th>
             </tr>
           </thead>
           <tbody>
@@ -129,10 +129,10 @@ function MemberReport({ report, t }: ReportSectionProps) {
           </tbody>
         </table>
       </div>
-      <div className="chore-report-member-cards" role="list" aria-label={t('chores.reportMembers')}>
+      <div className="chore-monthly-report-member-cards" role="list" aria-label={t('chores.reportMembers')}>
         {report.members.map((member, index) => (
-          <article className="chore-report-member-card" role="listitem" key={member.user_id}>
-            <div className="chore-report-member-card__heading">
+          <article className="chore-monthly-report-member-card" role="listitem" key={member.user_id}>
+            <div className="chore-monthly-report-member-card__heading">
               <strong>
                 {index + 1}. {member.username}
               </strong>
@@ -157,16 +157,16 @@ function MemberReport({ report, t }: ReportSectionProps) {
 
 function TaskReport({ report, t }: ReportSectionProps) {
   return (
-    <section className="chore-report-section" aria-labelledby="chore-report-task-heading">
-      <div className="chore-report-section__heading">
-        <h2 id="chore-report-task-heading">{t('chores.reportTasks')}</h2>
+    <section className="chore-monthly-report-section" aria-labelledby="chore-monthly-report-task-heading">
+      <div className="chore-monthly-report-section__heading">
+        <h2 id="chore-monthly-report-task-heading">{t('chores.reportTasks')}</h2>
         <span>{t('chores.reportTaskDescription')}</span>
       </div>
-      <div className="chore-report-task-table-wrapper">
-        <table className="chore-report-table chore-report-task-table">
+      <div className="chore-monthly-report-task-table-wrapper">
+        <table className="chore-monthly-report-table chore-monthly-report-task-table">
           <thead>
             <tr>
-              <th scope="col">{t('chores.place')}</th>
+              <th scope="col">{t('chores.taskName')}</th>
               <th scope="col">{t('chores.category')}</th>
               <th scope="col">{t('chores.reportCompletions')}</th>
               <th scope="col">{t('chores.reportParticipants')}</th>
@@ -176,7 +176,7 @@ function TaskReport({ report, t }: ReportSectionProps) {
           <tbody>
             {report.tasks.map((task) => (
               <tr key={task.task_id}>
-                <th scope="row">{task.name}</th>
+                <th scope="row">{task.task_name}</th>
                 <td>{task.category_name}</td>
                 <td>{task.completion_count}</td>
                 <td>{task.participant_count}</td>
@@ -188,12 +188,12 @@ function TaskReport({ report, t }: ReportSectionProps) {
           </tbody>
         </table>
       </div>
-      <div className="chore-report-task-collapsible">
+      <div className="chore-monthly-report-task-collapsible">
         {report.tasks.map((task) => (
           <details key={task.task_id}>
             <summary>
               <span>
-                <strong>{task.name}</strong>
+                <strong>{task.task_name}</strong>
                 <small>{task.category_name}</small>
               </span>
               <b>{task.completion_count}</b>
@@ -214,7 +214,7 @@ function TaskReport({ report, t }: ReportSectionProps) {
 
 function MemberBreakdown({ task, t }: { task: ReportSectionProps['report']['tasks'][number]; t: Translator }) {
   return (
-    <ul className="chore-report-member-breakdown">
+    <ul className="chore-monthly-report-member-breakdown">
       {task.members.map((member) => (
         <li key={member.user_id}>
           <span>{member.username}</span>
@@ -226,7 +226,7 @@ function MemberBreakdown({ task, t }: { task: ReportSectionProps['report']['task
 }
 
 type ReportSectionProps = {
-  report: ChoreReportData
+  report: ChoreMonthlyReportData
   t: Translator
 }
 

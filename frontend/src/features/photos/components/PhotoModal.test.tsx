@@ -8,7 +8,7 @@ const photo: Photo = {
   uploaded_by_user_id: 'owner-1',
   uploaded_by_username: 'owner',
   visibility: 'shared',
-  sharing: { type: 'shared', group_ids: ['group-1'] },
+  sharing: { group_ids: ['group-1'] },
   is_favorite: false,
   memo: '旅行のメモ',
   memo_updated_by_user_id: 'viewer-1',

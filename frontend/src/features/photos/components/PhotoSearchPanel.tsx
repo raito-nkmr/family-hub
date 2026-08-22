@@ -214,7 +214,7 @@ export function PhotoSearchPanel({
             >
               <option value="">{t('photoSearch.all')}</option>
               <option value="private">{t('photoSearch.private')}</option>
-              <option value="shared">{t('photoSearch.family')}</option>
+              <option value="shared">{t('photoSearch.shared')}</option>
             </select>
           </label>
           <label>
