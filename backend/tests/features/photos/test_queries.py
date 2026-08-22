@@ -123,8 +123,8 @@ def test_search_options_returns_visible_uploaders_and_groups_in_stable_order() -
 
     result = service.search_options(uuid4())
 
-    assert [(item.id, item.name) for item in result.uploaders] == [(uploader_id, "Alice")]
-    assert [(item.id, item.name) for item in result.groups] == [(group_id, "Family")]
+    assert [(item.id, item.label) for item in result.uploaders] == [(uploader_id, "Alice")]
+    assert [(item.id, item.label) for item in result.groups] == [(group_id, "Family")]
     uploader_sql = str(
         session.execute.call_args_list[0]
         .args[0]

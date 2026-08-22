@@ -70,7 +70,7 @@ class GroupMembershipInvitationResponse(BaseModel):
     group_id: UUID
     group_name: str
     invitee_user_id: UUID
-    username: str
+    invitee_username: str
     role: GroupRole
     status: str
     created_at: datetime

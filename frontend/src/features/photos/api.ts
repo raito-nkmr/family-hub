@@ -18,12 +18,12 @@ import type {
 import {
   addPhotoFavoriteApiV1PhotosPhotoIdFavoritePut,
   bulkAddPhotoSharingApiV1PhotosBulkSharingPost,
-  getPhotoMetadataApiV1PhotosPhotoIdGet,
+  getPhotoApiV1PhotosPhotoIdGet,
   getPhotoSearchOptionsApiV1PhotosSearchOptionsGet,
   getPhotoTimelineApiV1PhotosTimelineGet,
   getStorageStatusApiV1PhotosStorageStatusGet,
   listPhotoActivityApiV1PhotosActivityGet,
-  listPhotoMetadataApiV1PhotosGet,
+  listPhotosApiV1PhotosGet,
   listTrashedPhotosApiV1PhotosTrashGet,
   markPhotoActivitySeenApiV1PhotosActivitySeenPost,
   permanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDelete,
@@ -48,12 +48,12 @@ export type PhotoTimeline = PhotoTimelineResponse
 export type PhotoVisibility = ApiPhotoVisibility
 export type TrashedPhotoList = TrashedPhotoListResponse
 
-export interface PhotoCaptureDates {
+export interface PhotoCaptureTimes {
   captured_at_original: string | null
   captured_at_override: string | null
 }
 
-export function getPhotoCaptureDate(photo: PhotoCaptureDates): string | null {
+export function getPhotoCaptureTime(photo: PhotoCaptureTimes): string | null {
   return photo.captured_at_override ?? photo.captured_at_original
 }
 
@@ -82,7 +82,7 @@ export async function getPhotos(
   limit = 50,
 ): Promise<PhotoPage> {
   return sdkData(
-    listPhotoMetadataApiV1PhotosGet({
+    listPhotosApiV1PhotosGet({
       query: {
         limit,
         cursor,
@@ -108,7 +108,7 @@ export function getPhotoSearchOptions(signal?: AbortSignal): Promise<PhotoSearch
 }
 
 export function getPhoto(photoId: string, signal?: AbortSignal): Promise<Photo> {
-  return sdkData(getPhotoMetadataApiV1PhotosPhotoIdGet({ path: { photo_id: photoId }, signal }))
+  return sdkData(getPhotoApiV1PhotosPhotoIdGet({ path: { photo_id: photoId }, signal }))
 }
 
 export function getTrashedPhotos(signal?: AbortSignal, cursor?: string): Promise<TrashedPhotoList> {

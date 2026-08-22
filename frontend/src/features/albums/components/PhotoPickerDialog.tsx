@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isUnauthorizedError } from '../../../shared/api/errors'
 import { formatDateTime } from '../../../shared/lib/format'
-import { getPhotoCaptureDate } from '../../photos/api'
+import { getPhotoCaptureTime } from '../../photos/api'
 import { Dialog } from '../../../shared/ui/Dialog'
 import { DialogActions } from '../../../shared/ui/DialogActions'
 import { LoadingState } from '../../../shared/ui/LoadingState'
@@ -103,8 +103,8 @@ export function PhotoPickerDialog({
                 </div>
                 <span className="photo-picker-item__name">{photo.original_filename}</span>
                 <span className="photo-picker-item__date">
-                  {getPhotoCaptureDate(photo)
-                    ? formatDateTime(getPhotoCaptureDate(photo)!)
+                  {getPhotoCaptureTime(photo)
+                    ? formatDateTime(getPhotoCaptureTime(photo)!)
                     : t('photos.capturedUnknown')}
                 </span>
               </button>

@@ -99,12 +99,12 @@ import type {
   GetHealthApiV1HealthGetResponses,
   GetNotificationConfigApiV1NotificationsConfigGetData,
   GetNotificationConfigApiV1NotificationsConfigGetResponses,
+  GetPhotoApiV1PhotosPhotoIdGetData,
+  GetPhotoApiV1PhotosPhotoIdGetErrors,
+  GetPhotoApiV1PhotosPhotoIdGetResponses,
   GetPhotoContentApiV1PhotosPhotoIdContentGetData,
   GetPhotoContentApiV1PhotosPhotoIdContentGetErrors,
   GetPhotoContentApiV1PhotosPhotoIdContentGetResponses,
-  GetPhotoMetadataApiV1PhotosPhotoIdGetData,
-  GetPhotoMetadataApiV1PhotosPhotoIdGetErrors,
-  GetPhotoMetadataApiV1PhotosPhotoIdGetResponses,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetData,
@@ -161,9 +161,9 @@ import type {
   ListPhotoActivityApiV1PhotosActivityGetData,
   ListPhotoActivityApiV1PhotosActivityGetErrors,
   ListPhotoActivityApiV1PhotosActivityGetResponses,
-  ListPhotoMetadataApiV1PhotosGetData,
-  ListPhotoMetadataApiV1PhotosGetErrors,
-  ListPhotoMetadataApiV1PhotosGetResponses,
+  ListPhotosApiV1PhotosGetData,
+  ListPhotosApiV1PhotosGetErrors,
+  ListPhotosApiV1PhotosGetResponses,
   ListSessionsApiV1AuthSessionsGetData,
   ListSessionsApiV1AuthSessionsGetResponses,
   ListShoppingItemsApiV1ShoppingGroupsGroupIdItemsGetData,
@@ -1290,16 +1290,15 @@ export const deletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionId
   >({ url: '/api/v1/notifications/subscriptions/{subscription_id}', ...options })
 
 /**
- * List Photo Metadata
+ * List Photos
  */
-export const listPhotoMetadataApiV1PhotosGet = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPhotoMetadataApiV1PhotosGetData, ThrowOnError>,
-): RequestResult<ListPhotoMetadataApiV1PhotosGetResponses, ListPhotoMetadataApiV1PhotosGetErrors, ThrowOnError> =>
-  (options?.client ?? client).get<
-    ListPhotoMetadataApiV1PhotosGetResponses,
-    ListPhotoMetadataApiV1PhotosGetErrors,
-    ThrowOnError
-  >({ url: '/api/v1/photos', ...options })
+export const listPhotosApiV1PhotosGet = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPhotosApiV1PhotosGetData, ThrowOnError>,
+): RequestResult<ListPhotosApiV1PhotosGetResponses, ListPhotosApiV1PhotosGetErrors, ThrowOnError> =>
+  (options?.client ?? client).get<ListPhotosApiV1PhotosGetResponses, ListPhotosApiV1PhotosGetErrors, ThrowOnError>({
+    url: '/api/v1/photos',
+    ...options,
+  })
 
 /**
  * List Photo Activity
@@ -1462,18 +1461,14 @@ export const trashPhotoApiV1PhotosPhotoIdDelete = <ThrowOnError extends boolean 
   >({ url: '/api/v1/photos/{photo_id}', ...options })
 
 /**
- * Get Photo Metadata
+ * Get Photo
  */
-export const getPhotoMetadataApiV1PhotosPhotoIdGet = <ThrowOnError extends boolean = false>(
-  options: Options<GetPhotoMetadataApiV1PhotosPhotoIdGetData, ThrowOnError>,
-): RequestResult<
-  GetPhotoMetadataApiV1PhotosPhotoIdGetResponses,
-  GetPhotoMetadataApiV1PhotosPhotoIdGetErrors,
-  ThrowOnError
-> =>
+export const getPhotoApiV1PhotosPhotoIdGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetPhotoApiV1PhotosPhotoIdGetData, ThrowOnError>,
+): RequestResult<GetPhotoApiV1PhotosPhotoIdGetResponses, GetPhotoApiV1PhotosPhotoIdGetErrors, ThrowOnError> =>
   (options.client ?? client).get<
-    GetPhotoMetadataApiV1PhotosPhotoIdGetResponses,
-    GetPhotoMetadataApiV1PhotosPhotoIdGetErrors,
+    GetPhotoApiV1PhotosPhotoIdGetResponses,
+    GetPhotoApiV1PhotosPhotoIdGetErrors,
     ThrowOnError
   >({ url: '/api/v1/photos/{photo_id}', ...options })
 

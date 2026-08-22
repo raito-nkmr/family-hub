@@ -7,7 +7,7 @@ import { PageMessage } from '../../../shared/ui/PageMessage'
 import { RefreshButton } from '../../../shared/ui/RefreshButton'
 import { CancelIcon, ExportIcon, PhotoIcon, SelectIcon, ShareIcon } from '../../../shared/ui/icons'
 import {
-  getPhotoCaptureDate,
+  getPhotoCaptureTime,
   type PhotoFilters,
   type PhotoListItem,
   type PhotoSearchOptions,
@@ -46,8 +46,8 @@ interface PhotoGroup {
 }
 
 function groupTitle(photo: PhotoListItem, language: string, t: TFunction): { key: string; title: string } {
-  const captureDate = getPhotoCaptureDate(photo)
-  const source = captureDate ?? photo.uploaded_at
+  const captureTime = getPhotoCaptureTime(photo)
+  const source = captureTime ?? photo.uploaded_at
   const parts = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: '2-digit',
@@ -61,7 +61,7 @@ function groupTitle(photo: PhotoListItem, language: string, t: TFunction): { key
     month: 'long',
     timeZone: 'Asia/Tokyo',
   }).format(new Date(source))
-  return captureDate
+  return captureTime
     ? { key: `captured-${key}`, title: formatted }
     : { key: `unknown-${key}`, title: `${t('photos.capturedUnknown')} · ${t('photos.addedOn', { date: formatted })}` }
 }

@@ -53,8 +53,8 @@ describe('PhotoSearchPanel', () => {
         filters={{}}
         timeline={null}
         searchOptions={{
-          uploaders: [{ id: 'user-1', name: 'owner' }],
-          groups: [{ id: 'group-1', name: 'Family' }],
+          uploaders: [{ id: 'user-1', label: 'owner' }],
+          groups: [{ id: 'group-1', label: 'Family' }],
         }}
         disabled={false}
         onSearch={onSearch}
@@ -70,7 +70,7 @@ describe('PhotoSearchPanel', () => {
   })
 
   it('synchronizes local fields when URL-backed filters change', async () => {
-    const searchOptions = { uploaders: [{ id: 'user-1', name: 'owner' }], groups: [] }
+    const searchOptions = { uploaders: [{ id: 'user-1', label: 'owner' }], groups: [] }
     const { rerender } = render(
       <PhotoSearchPanel
         filters={{ q: '旅行' }}

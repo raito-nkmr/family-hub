@@ -55,11 +55,15 @@ export function createGroup(name: string): Promise<GroupDetail> {
   return sdkData(createGroupApiV1GroupsPost({ body: { name } }))
 }
 
-export function addGroupMember(groupId: string, userId: string, role: GroupRole): Promise<GroupMembershipInvitation> {
+export function inviteGroupMember(
+  groupId: string,
+  inviteeUserId: string,
+  role: GroupRole,
+): Promise<GroupMembershipInvitation> {
   return sdkData(
     inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost({
       path: { group_id: groupId },
-      body: { invitee_user_id: userId, role },
+      body: { invitee_user_id: inviteeUserId, role },
     }),
   )
 }

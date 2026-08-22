@@ -1067,15 +1067,15 @@ export type GroupMembershipInvitationResponse = {
    * Invitee User Id
    */
   invitee_user_id: string
+  /**
+   * Invitee Username
+   */
+  invitee_username: string
   role: GroupRole
   /**
    * Status
    */
   status: string
-  /**
-   * Username
-   */
-  username: string
 }
 
 /**
@@ -1660,9 +1660,9 @@ export type PhotoSearchOptionResponse = {
    */
   id: string
   /**
-   * Name
+   * Label
    */
-  name: string
+  label: string
 }
 
 /**
@@ -4011,7 +4011,7 @@ export type DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdD
 export type DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponse =
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses[keyof DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses]
 
-export type ListPhotoMetadataApiV1PhotosGetData = {
+export type ListPhotosApiV1PhotosGetData = {
   body?: never
   path?: never
   query?: {
@@ -4071,25 +4071,24 @@ export type ListPhotoMetadataApiV1PhotosGetData = {
   url: '/api/v1/photos'
 }
 
-export type ListPhotoMetadataApiV1PhotosGetErrors = {
+export type ListPhotosApiV1PhotosGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type ListPhotoMetadataApiV1PhotosGetError =
-  ListPhotoMetadataApiV1PhotosGetErrors[keyof ListPhotoMetadataApiV1PhotosGetErrors]
+export type ListPhotosApiV1PhotosGetError = ListPhotosApiV1PhotosGetErrors[keyof ListPhotosApiV1PhotosGetErrors]
 
-export type ListPhotoMetadataApiV1PhotosGetResponses = {
+export type ListPhotosApiV1PhotosGetResponses = {
   /**
    * Successful Response
    */
   200: PhotoListResponse
 }
 
-export type ListPhotoMetadataApiV1PhotosGetResponse =
-  ListPhotoMetadataApiV1PhotosGetResponses[keyof ListPhotoMetadataApiV1PhotosGetResponses]
+export type ListPhotosApiV1PhotosGetResponse =
+  ListPhotosApiV1PhotosGetResponses[keyof ListPhotosApiV1PhotosGetResponses]
 
 export type ListPhotoActivityApiV1PhotosActivityGetData = {
   body?: never
@@ -4391,7 +4390,7 @@ export type TrashPhotoApiV1PhotosPhotoIdDeleteResponses = {
 export type TrashPhotoApiV1PhotosPhotoIdDeleteResponse =
   TrashPhotoApiV1PhotosPhotoIdDeleteResponses[keyof TrashPhotoApiV1PhotosPhotoIdDeleteResponses]
 
-export type GetPhotoMetadataApiV1PhotosPhotoIdGetData = {
+export type GetPhotoApiV1PhotosPhotoIdGetData = {
   body?: never
   path: {
     /**
@@ -4403,25 +4402,25 @@ export type GetPhotoMetadataApiV1PhotosPhotoIdGetData = {
   url: '/api/v1/photos/{photo_id}'
 }
 
-export type GetPhotoMetadataApiV1PhotosPhotoIdGetErrors = {
+export type GetPhotoApiV1PhotosPhotoIdGetErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type GetPhotoMetadataApiV1PhotosPhotoIdGetError =
-  GetPhotoMetadataApiV1PhotosPhotoIdGetErrors[keyof GetPhotoMetadataApiV1PhotosPhotoIdGetErrors]
+export type GetPhotoApiV1PhotosPhotoIdGetError =
+  GetPhotoApiV1PhotosPhotoIdGetErrors[keyof GetPhotoApiV1PhotosPhotoIdGetErrors]
 
-export type GetPhotoMetadataApiV1PhotosPhotoIdGetResponses = {
+export type GetPhotoApiV1PhotosPhotoIdGetResponses = {
   /**
    * Successful Response
    */
   200: PhotoResponse
 }
 
-export type GetPhotoMetadataApiV1PhotosPhotoIdGetResponse =
-  GetPhotoMetadataApiV1PhotosPhotoIdGetResponses[keyof GetPhotoMetadataApiV1PhotosPhotoIdGetResponses]
+export type GetPhotoApiV1PhotosPhotoIdGetResponse =
+  GetPhotoApiV1PhotosPhotoIdGetResponses[keyof GetPhotoApiV1PhotosPhotoIdGetResponses]
 
 export type UpdatePhotoMetadataApiV1PhotosPhotoIdPatchData = {
   body: PhotoUpdate

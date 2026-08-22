@@ -15,12 +15,12 @@ from app.features.photos.queries import PhotoListFilters, PhotoListItem, PhotoLi
 from app.features.photos.router import (
     bulk_add_photo_sharing,
     download_photo_original,
+    get_photo,
     get_photo_content,
-    get_photo_metadata,
     get_photo_thumbnail,
     get_photo_timeline,
     list_photo_activity,
-    list_photo_metadata,
+    list_photos,
     mark_photo_activity_seen,
     update_photo_metadata,
 )
@@ -281,10 +281,10 @@ class PhotoRouterStub:
         return photo
 
 
-def test_list_photo_metadata_returns_items() -> None:
+def test_list_photos_returns_items() -> None:
     photo = make_photo()
 
-    response = list_photo_metadata(PhotoListQuery(), authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
+    response = list_photos(PhotoListQuery(), authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
 
     assert [item.id for item in response.items] == [photo.id]
     assert response.items[0].uploaded_at == datetime(2026, 7, 14, 4, tzinfo=UTC)
@@ -335,19 +335,19 @@ def test_bulk_add_photo_sharing_returns_updated_count() -> None:
     assert response.unchanged_count == 0
 
 
-def test_get_photo_metadata_returns_photo() -> None:
+def test_get_photo_returns_photo() -> None:
     photo = make_photo()
 
-    response = get_photo_metadata(photo.id, authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
+    response = get_photo(photo.id, authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
 
     assert response.id == photo.id
 
 
-def test_get_photo_metadata_returns_404_when_missing() -> None:
+def test_get_photo_returns_404_when_missing() -> None:
     photo_id = uuid4()
 
     with pytest.raises(HTTPException) as error:
-        get_photo_metadata(photo_id, authenticated_user=TEST_USER, service=PhotoRouterStub([]))
+        get_photo(photo_id, authenticated_user=TEST_USER, service=PhotoRouterStub([]))
 
     assert error.value.status_code == 404
     assert error.value.detail == "Photo not found"

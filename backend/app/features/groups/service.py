@@ -347,20 +347,20 @@ class GroupService:
         group_id: UUID,
         actor_user_id: UUID,
         actor_username: str,
-        user_id: UUID,
+        invitee_user_id: UUID,
         role: GroupRole,
     ) -> tuple[FamilyGroupMembershipInvitation, PublicUser]:
         try:
             self._get_group_for_admin(group_id, actor_user_id)
-            user = self._user_directory.list_by_ids({user_id}).get(user_id)
+            user = self._user_directory.list_by_ids({invitee_user_id}).get(invitee_user_id)
             if user is None or not user.is_active:
                 raise GroupUserNotFoundError
-            if self._session.get(FamilyGroupMember, (group_id, user_id)) is not None:
+            if self._session.get(FamilyGroupMember, (group_id, invitee_user_id)) is not None:
                 raise GroupMemberAlreadyExistsError
             invitation = FamilyGroupMembershipInvitation(
                 id=uuid4(),
                 group_id=group_id,
-                invitee_user_id=user_id,
+                invitee_user_id=invitee_user_id,
                 invited_by_user_id=actor_user_id,
                 role=role,
                 status="pending",
@@ -376,7 +376,7 @@ class GroupService:
                 actor_username=actor_username,
                 group_id=group_id,
                 target_type="user",
-                target_id=str(user_id),
+                target_id=str(invitee_user_id),
                 details={"username": user.username, "role": role.value},
             )
             self._session.commit()

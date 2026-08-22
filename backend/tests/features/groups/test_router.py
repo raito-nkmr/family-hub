@@ -7,10 +7,11 @@ from fastapi import HTTPException
 from app.core.config import Settings
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.features.auth.public import PublicUser
-from app.features.groups.models import GroupRole
+from app.features.groups.models import FamilyGroupMembershipInvitation, GroupRole
 from app.features.groups.router import (
     create_group,
     get_group,
+    invite_group_member,
     list_group_member_candidates,
     list_groups,
     remove_group_member,
@@ -18,7 +19,13 @@ from app.features.groups.router import (
     update_group_member_role,
     update_group_settings,
 )
-from app.features.groups.schemas import GroupCreate, GroupMemberRoleUpdate, GroupTimezoneUpdate, GroupUpdate
+from app.features.groups.schemas import (
+    GroupCreate,
+    GroupMemberRoleUpdate,
+    GroupMembershipInvitationCreate,
+    GroupTimezoneUpdate,
+    GroupUpdate,
+)
 from app.features.groups.service import (
     GroupDetail,
     GroupForbiddenError,
@@ -115,6 +122,31 @@ class GroupServiceStub:
         assert actor_user_id == TEST_USER.id
         return [PublicUser(id=TEST_TARGET_USER_ID, username="たろう", is_active=True)]
 
+    def invite_member(
+        self,
+        group_id: UUID,
+        actor_user_id: UUID,
+        actor_username: str,
+        invitee_user_id: UUID,
+        role: GroupRole,
+    ) -> tuple[FamilyGroupMembershipInvitation, PublicUser]:
+        if self.error:
+            raise self.error
+        assert actor_user_id == TEST_USER.id
+        assert actor_username == TEST_USER.username
+        assert invitee_user_id == TEST_TARGET_USER_ID
+        invitation = FamilyGroupMembershipInvitation(
+            id=uuid4(),
+            group_id=group_id,
+            invitee_user_id=invitee_user_id,
+            invited_by_user_id=actor_user_id,
+            role=role,
+            status="pending",
+            created_at=datetime(2026, 7, 15, 3, tzinfo=UTC),
+            responded_at=None,
+        )
+        return invitation, PublicUser(id=invitee_user_id, username="たろう", is_active=True)
+
     def update_member_role(
         self,
         group_id: UUID,
@@ -148,6 +180,20 @@ def test_list_groups_returns_memberships() -> None:
     response = list_groups(TEST_USER, GroupServiceStub(detail))
 
     assert response.items[0].id == detail.group.id
+
+
+def test_invite_group_member_returns_invitee_fields() -> None:
+    detail = make_detail()
+
+    response = invite_group_member(
+        detail.group.id,
+        GroupMembershipInvitationCreate(invitee_user_id=TEST_TARGET_USER_ID),
+        TEST_USER,
+        GroupServiceStub(detail),
+    )
+
+    assert response.invitee_user_id == TEST_TARGET_USER_ID
+    assert response.invitee_username == "たろう"
 
 
 def test_create_group_returns_creator_membership() -> None:

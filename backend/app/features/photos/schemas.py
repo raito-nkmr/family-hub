@@ -25,7 +25,7 @@ class StorageStatusResponse(BaseModel):
 
 class PhotoSearchOptionResponse(BaseModel):
     id: UUID
-    name: str
+    label: str
 
 
 class PhotoSearchOptionsResponse(BaseModel):
