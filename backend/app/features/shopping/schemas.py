@@ -64,6 +64,8 @@ class ShoppingCategoryOrderUpdate(BaseModel):
 
 
 class ShoppingCategoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     group_id: UUID
     name: str
@@ -103,6 +105,8 @@ class ShoppingItemCreateDetailed(ShoppingItemCreate):
 
 
 class ShoppingListItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     group_id: UUID
     name: str
