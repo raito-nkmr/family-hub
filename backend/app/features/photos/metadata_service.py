@@ -80,7 +80,7 @@ class PhotoMetadataService:
                 raise PhotoUpdatePersistenceError("Capture time override must be timezone-aware")
             normalized_override = captured_at_override.astimezone(UTC) if captured_at_override is not None else None
             photo.metadata_record.captured_at_override = normalized_override
-            photo.effective_captured_at = normalized_override or photo.captured_at or photo.uploaded_at
+            photo.effective_captured_at = normalized_override or photo.captured_at_original or photo.uploaded_at
         if sharing_group_ids is not None:
             visible_existing_group_ids = set(
                 self._session.scalars(

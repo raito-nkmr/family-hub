@@ -34,7 +34,7 @@ def make_photo(
         sha256="a" * 64,
         width=640,
         height=480,
-        captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC),
+        captured_at_original=datetime(2026, 7, 14, 3, tzinfo=UTC),
         uploaded_at=uploaded_at,
         effective_captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC),
         lifecycle_state=PhotoLifecycleState.ACTIVE,

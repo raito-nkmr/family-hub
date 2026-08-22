@@ -97,7 +97,7 @@ class Photo(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     width: Mapped[int] = mapped_column(Integer, nullable=False)
     height: Mapped[int] = mapped_column(Integer, nullable=False)
-    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    captured_at_original: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     effective_captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     lifecycle_state: Mapped[str] = mapped_column(

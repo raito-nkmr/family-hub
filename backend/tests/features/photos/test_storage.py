@@ -530,7 +530,7 @@ def make_sidecar(
         memo_updated_by_username="owner",
         memo_updated_at=updated_at,
         metadata_version=1,
-        sharing_audiences=(),
+        group_ids=(),
         original_filename="original.jpg",
         storage_key=storage_key,
         content_type="image/jpeg",
@@ -538,7 +538,7 @@ def make_sidecar(
         sha256=sha256,
         width=640,
         height=480,
-        captured_at=None,
+        captured_at_original=None,
         uploaded_at=updated_at,
         derivatives=(
             {
@@ -550,6 +550,7 @@ def make_sidecar(
                 "size_bytes": derivative.size_bytes,
             },
         ),
+        effective_captured_at=updated_at,
     )
 
 
@@ -567,7 +568,7 @@ def test_finalize_upload_moves_original_and_writes_sidecar(tmp_path: Path, monke
     assert result.original_path.read_bytes() == b"photo"
     sidecar_payload = json.loads(result.sidecar_path.read_text(encoding="utf-8"))
     assert sidecar_payload == {
-        "schema_version": 7,
+        "schema_version": 8,
         "id": str(photo_id),
         "metadata_version": 1,
         "asset": {
@@ -580,8 +581,9 @@ def test_finalize_upload_moves_original_and_writes_sidecar(tmp_path: Path, monke
             "sha256": staged.sha256,
             "width": 640,
             "height": 480,
-            "captured_at": None,
+            "captured_at_original": None,
             "captured_at_override": None,
+            "effective_captured_at": "2026-07-14T04:00:00Z",
             "uploaded_at": "2026-07-14T04:00:00Z",
             "derivatives": [
                 {
@@ -600,7 +602,7 @@ def test_finalize_upload_moves_original_and_writes_sidecar(tmp_path: Path, monke
             "updated_by_username": "owner",
             "updated_at": "2026-07-14T04:00:00Z",
         },
-        "sharing": {"audiences": []},
+        "sharing": {"group_ids": []},
         "lifecycle": {
             "state": "active",
             "trashed_at": None,
@@ -636,14 +638,14 @@ def test_update_sidecar_replaces_metadata_atomically(tmp_path: Path, monkeypatch
             metadata,
             memo="北海道旅行",
             metadata_version=2,
-            sharing_audiences=({"type": "group", "id": str(group_id)},),
+            group_ids=(group_id,),
         )
     )
 
     payload = json.loads(finalized.sidecar_path.read_text(encoding="utf-8"))
     assert payload["metadata_version"] == 2
     assert payload["metadata"]["memo"] == "北海道旅行"
-    assert payload["sharing"]["audiences"] == [{"type": "group", "id": str(group_id)}]
+    assert payload["sharing"]["group_ids"] == [str(group_id)]
     assert not finalized.sidecar_path.with_name(f"{photo_id}.json.part").exists()
 
 

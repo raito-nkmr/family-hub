@@ -17,11 +17,11 @@ from tests.features.photos.factories import make_photo
 
 def test_photo_response_normalizes_datetimes_to_utc() -> None:
     photo = make_photo()
-    photo.captured_at = datetime(2026, 7, 14, 12, tzinfo=timezone(timedelta(hours=9)))
+    photo.captured_at_original = datetime(2026, 7, 14, 12, tzinfo=timezone(timedelta(hours=9)))
 
     response = photo_response_from_model(photo, visible_group_ids=set(), is_favorite=False)
 
-    assert response.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
+    assert response.captured_at_original == datetime(2026, 7, 14, 3, tzinfo=UTC)
     assert response.uploaded_by_user_id == photo.uploaded_by_user_id
     assert response.uploaded_by_username == "owner"
     assert response.memo is None
@@ -34,7 +34,8 @@ def test_photo_response_normalizes_datetimes_to_utc() -> None:
     payload = response.model_dump(mode="json")
     assert payload["sharing"] == {"group_ids": []}
     assert "type" not in payload["sharing"]
-    assert '"captured_at":"2026-07-14T03:00:00Z"' in response.model_dump_json()
+    assert '"captured_at_original":"2026-07-14T03:00:00Z"' in response.model_dump_json()
+    assert '"effective_captured_at":"2026-07-14T03:00:00Z"' in response.model_dump_json()
 
 
 def test_photo_response_rejects_naive_datetime() -> None:

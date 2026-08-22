@@ -52,7 +52,7 @@ def test_concurrent_favorite_registration_is_idempotent() -> None:
                     sha256="b" * 64,
                     width=1,
                     height=1,
-                    captured_at=None,
+                    captured_at_original=None,
                     uploaded_at=now,
                     effective_captured_at=now,
                     lifecycle_state=PhotoLifecycleState.ACTIVE,

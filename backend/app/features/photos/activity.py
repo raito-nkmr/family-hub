@@ -107,8 +107,10 @@ class PhotoActivityService:
                 Photo.content_type,
                 Photo.width,
                 Photo.height,
-                func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at).label("captured_at"),
+                Photo.captured_at_original,
+                PhotoMetadata.captured_at_override,
                 Photo.uploaded_at,
+                Photo.effective_captured_at.label("effective_captured_at"),
                 favorite.label("is_favorite"),
             )
             .join(Photo, Photo.id == PhotoActivityEvent.photo_id)
@@ -137,8 +139,10 @@ class PhotoActivityService:
                     content_type=row.content_type,
                     width=row.width,
                     height=row.height,
-                    captured_at=row.captured_at,
+                    captured_at_original=row.captured_at_original,
+                    captured_at_override=row.captured_at_override,
                     uploaded_at=row.uploaded_at,
+                    effective_captured_at=row.effective_captured_at,
                     is_favorite=row.is_favorite,
                 ),
             )

@@ -150,8 +150,10 @@ class PhotoRouterStub:
                     content_type=photo.content_type,
                     width=photo.width,
                     height=photo.height,
-                    captured_at=photo.captured_at,
+                    captured_at_original=photo.captured_at_original,
+                    captured_at_override=photo.metadata_record.captured_at_override,
                     uploaded_at=photo.uploaded_at,
+                    effective_captured_at=photo.effective_captured_at,
                     is_favorite=False,
                 )
                 for photo in self.photos
@@ -194,8 +196,10 @@ class PhotoRouterStub:
                         content_type=photo.content_type,
                         width=photo.width,
                         height=photo.height,
-                        captured_at=photo.captured_at,
+                        captured_at_original=photo.captured_at_original,
+                        captured_at_override=photo.metadata_record.captured_at_override,
                         uploaded_at=photo.uploaded_at,
+                        effective_captured_at=photo.effective_captured_at,
                         is_favorite=False,
                     ),
                 )

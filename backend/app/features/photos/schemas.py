@@ -85,19 +85,19 @@ class PhotoResponse(BaseModel):
     sha256: str
     width: PositiveInt
     height: PositiveInt
-    captured_at: datetime | None
+    captured_at_original: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     lifecycle_state: PhotoLifecycleState
     trashed_at: datetime | None
     purge_after: datetime | None
     purge_requested_at: datetime | None
-    captured_at_original: datetime | None = None
-    captured_at_override: datetime | None = None
+    captured_at_override: datetime | None
 
     @field_validator(
-        "captured_at",
         "captured_at_original",
         "captured_at_override",
+        "effective_captured_at",
         "uploaded_at",
         "memo_updated_at",
         "trashed_at",
@@ -136,13 +136,13 @@ def photo_response_from_model(photo, *, visible_group_ids: Collection[UUID], is_
         sha256=photo.sha256,
         width=photo.width,
         height=photo.height,
-        captured_at=metadata.captured_at_override or photo.captured_at,
+        captured_at_original=photo.captured_at_original,
         uploaded_at=photo.uploaded_at,
+        effective_captured_at=photo.effective_captured_at,
         lifecycle_state=photo.lifecycle_state,
         trashed_at=photo.trashed_at,
         purge_after=photo.purge_after,
         purge_requested_at=photo.purge_requested_at,
-        captured_at_original=photo.captured_at,
         captured_at_override=metadata.captured_at_override,
     )
 
@@ -164,11 +164,13 @@ class PhotoListItemResponse(BaseModel):
     content_type: str
     width: PositiveInt
     height: PositiveInt
-    captured_at: datetime | None
+    captured_at_original: datetime | None
+    captured_at_override: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     is_favorite: bool
 
-    @field_validator("captured_at", "uploaded_at")
+    @field_validator("captured_at_original", "captured_at_override", "uploaded_at", "effective_captured_at")
     @classmethod
     def normalize_datetime_to_utc(cls, value: datetime | None) -> datetime | None:
         if value is None:

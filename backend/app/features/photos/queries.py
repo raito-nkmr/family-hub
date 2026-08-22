@@ -51,8 +51,10 @@ class PhotoListItem:
     content_type: str
     width: int
     height: int
-    captured_at: datetime | None
+    captured_at_original: datetime | None
+    captured_at_override: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     is_favorite: bool
 
 
@@ -135,8 +137,10 @@ class PhotoQueryService:
                 Photo.content_type,
                 Photo.width,
                 Photo.height,
-                func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at).label("captured_at"),
+                Photo.captured_at_original,
+                PhotoMetadata.captured_at_override,
                 Photo.uploaded_at,
+                sort_at.label("effective_captured_at"),
                 sort_at.label("sort_at"),
                 favorite.label("is_favorite"),
             )
@@ -158,8 +162,10 @@ class PhotoQueryService:
                 content_type=row.content_type,
                 width=row.width,
                 height=row.height,
-                captured_at=row.captured_at,
+                captured_at_original=row.captured_at_original,
+                captured_at_override=row.captured_at_override,
                 uploaded_at=row.uploaded_at,
+                effective_captured_at=row.effective_captured_at,
                 is_favorite=row.is_favorite,
             )
             for row in page_rows
@@ -227,11 +233,11 @@ class PhotoQueryService:
             conditions.append(shared_condition)
         elif filters.visibility is PhotoVisibility.PRIVATE:
             conditions.append(not_(shared_condition))
-        captured_at = func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at)
+        captured_at_known_at = func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at_original)
         if filters.captured_at_known is True:
-            conditions.append(captured_at.is_not(None))
+            conditions.append(captured_at_known_at.is_not(None))
         elif filters.captured_at_known is False:
-            conditions.append(captured_at.is_(None))
+            conditions.append(captured_at_known_at.is_(None))
         if filters.sharing_group_id:
             conditions.append(
                 and_(

@@ -26,8 +26,10 @@ def make_row(*, occurred_at: datetime | None = None) -> SimpleNamespace:
         content_type="image/jpeg",
         width=640,
         height=480,
-        captured_at=None,
+        captured_at_original=None,
+        captured_at_override=None,
         uploaded_at=datetime(2026, 7, 16, 3, tzinfo=UTC),
+        effective_captured_at=datetime(2026, 7, 16, 3, tzinfo=UTC),
         is_favorite=False,
     )
 
