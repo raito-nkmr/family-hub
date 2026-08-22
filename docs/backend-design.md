@@ -65,7 +65,8 @@ for feature logic.
 
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
-function or registry for Alembic. The current Alembic chain consists of three explicit schema-only baseline revisions
+function or registry for Alembic. The current Alembic chain consists of three explicit schema-only baseline revisions followed
+by approved feature migrations
 (`core`, `media`, and `household`). The `household` baseline contains the complete current chore schema, including
 categories, completion snapshots, report settings, and category ordering. Migrations must not write application data,
 seed rows, or perform backfills.
@@ -103,7 +104,8 @@ must be active and not already members. A database unique constraint and pre-che
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items,
+aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items and
+shopping workflow rows,
 photo shares, activity-group relations, and upload-batch shares. Photos remain; affected sidecars are synchronized after commit.
 
 Membership removal and photo, upload, album, chore, and shopping operations that depend on membership are serialized by
@@ -130,9 +132,13 @@ defaults to `Asia/Tokyo`.
 
 ### `features.shopping`
 
-Owns group items, purchase state, purchaser, and purchase time. All members may perform the operations. Mutations lock the
-group, recheck membership, then lock the item, serializing membership removal and concurrent state changes. Purchase time is
-server-generated UTC time. Non-members receive `404`.
+Owns active shopping requests, shared categories, shopping trips, append-only purchase events, assignment snapshots, trip-level
+amounts, and statistics. All group members may perform the operations; an assignee is informational and never a purchase
+permission. In-store writes lock the group, recheck membership, then lock the item and trip, so concurrent completion of the
+same request produces one success and one `409`. Purchase events retain item, assignee, and category snapshots and are never
+deleted by undo or correction. Trip amounts are nullable non-negative yen integers and are excluded from totals when null.
+The history endpoint uses an opaque `(started_at, id)` cursor, and statistics convert date boundaries through the group's IANA
+time zone. Existing legacy purchase state is converted by `app.commands.migrate_shopping_history`, never by Alembic.
 
 ### `features.photos`
 
@@ -458,8 +464,9 @@ recovery, deduplication, per-device retries, and maintenance terminal states.
 ### Routers and migrations
 
 Replace FastAPI dependencies with test Session and Storage implementations. Test resumable chunk upload, response schemas, and
-domain-exception-to-HTTP conversion. CI must apply the latest migrations to an empty PostgreSQL database, while integration
-and unit tests remain separately runnable.
+domain-exception-to-HTTP conversion. Shopping tests cover assignment membership, purchaser/assignee differences, unplanned
+purchases, nullable trip totals, reversal retention, cursor history, statistics, and the idempotent legacy conversion command.
+CI must apply the latest migrations to an empty PostgreSQL database, while integration and unit tests remain separately runnable.
 
 ## Future design candidates and open decisions
 

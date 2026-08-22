@@ -1,11 +1,9 @@
-import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatDateTime } from '../../shared/lib/format'
-import { CheckIcon, PlusIcon, ShoppingCartIcon, UndoIcon } from '../../shared/ui/icons'
+import { CheckCircleIcon, ShoppingCartIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
-import { useShopping } from './useShopping'
+import { useShoppingStore } from './useShoppingWorkflow'
 
 interface ShoppingPageProps {
   onUnauthorized: () => void
@@ -13,81 +11,51 @@ interface ShoppingPageProps {
 
 export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
   const { t } = useTranslation()
-  const state = useShopping({ onUnauthorized })
-  const [itemName, setItemName] = useState('')
-  const activeItems = state.items.filter((item) => item.purchased_at === null)
-  const purchasedItems = state.items.filter((item) => item.purchased_at !== null)
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault()
-    const normalizedItemName = itemName.trim()
-    if (!normalizedItemName) return
-    if (await state.addItem(normalizedItemName)) setItemName('')
-  }
+  const state = useShoppingStore({ onUnauthorized })
 
   return (
-    <main id="top" className="shopping-page">
-      <section className="shopping-hero">
-        <h1>{t('shopping.title')}</h1>
-        <p>{t('shopping.description')}</p>
+    <main id="top" className="shopping-page shopping-page--store">
+      <section className="shopping-hero shopping-hero--compact">
+        <p className="eyebrow">{t('shopping.storeEyebrow')}</p>
+        <h1>{t('shopping.storeTitle')}</h1>
+        <p>{t('shopping.storeDescription')}</p>
       </section>
 
-      <section className="shopping-board" aria-labelledby="shopping-board-heading">
+      <section className="shopping-board shopping-store" aria-labelledby="shopping-store-heading">
         <GroupScopedToolbar
           groups={state.groups}
           selectedGroupId={state.selectedGroupId}
-          selectId="shopping-group"
+          selectId="shopping-store-group"
           label={t('shopping.group')}
-          selectDisabled={
-            state.loading || state.submitting || state.pendingItemIds.size > 0 || state.groups.length === 0
-          }
-          refreshDisabled={state.loading || state.submitting || state.pendingItemIds.size > 0}
+          selectDisabled={state.loading || state.submitting || state.groups.length === 0}
+          refreshDisabled={state.loading || state.submitting}
           onSelectGroup={state.selectGroup}
           onRefresh={state.refresh}
         />
 
         {state.groups.length > 0 && (
-          <form className="shopping-add" onSubmit={(event) => void submit(event)}>
-            <label htmlFor="shopping-item-name">{t('shopping.itemName')}</label>
+          <div className="shopping-store__controls">
             <div>
-              <input
-                className="form-control"
-                id="shopping-item-name"
-                value={itemName}
-                maxLength={120}
-                placeholder={t('shopping.itemPlaceholder')}
-                disabled={state.loading || state.submitting}
-                aria-invalid={state.formError ? true : undefined}
-                aria-describedby={state.formError ? 'shopping-item-error' : undefined}
-                autoComplete="off"
-                enterKeyHint="done"
-                onChange={(event) => setItemName(event.target.value)}
-              />
-              <button type="submit" disabled={state.loading || state.submitting || itemName.trim().length === 0}>
-                <PlusIcon />
-                {t(state.submitting ? 'shopping.adding' : 'shopping.add')}
-              </button>
+              <h2 id="shopping-store-heading">{t('shopping.storeList')}</h2>
+              <p>{t('shopping.remaining', { count: state.items.length })}</p>
             </div>
-            {state.formError && (
-              <p id="shopping-item-error" className="shopping-add__error" role="alert">
-                {state.formError}
-              </p>
-            )}
-          </form>
-        )}
-
-        <div className="section-heading shopping-board__heading">
-          <div>
-            <h2 id="shopping-board-heading">{t('shopping.list')}</h2>
-            <p>{t('shopping.remaining', { count: activeItems.length })}</p>
+            <button
+              className="secondary-button icon-button"
+              type="button"
+              disabled={state.submitting}
+              onClick={() => void state.beginTrip()}
+            >
+              <TaskAltIcon />
+              {t('shopping.startTrip')}
+            </button>
           </div>
-        </div>
+        )}
 
         {state.pageError && <PageMessage>{state.pageError}</PageMessage>}
         {state.loading ? (
-          <div className="shopping-list" aria-label={t('shopping.loading')}>
-            {Array.from({ length: 3 }, (_, index) => (
-              <div className="shopping-item shopping-item--skeleton" key={index} />
+          <div className="shopping-store-list" aria-label={t('shopping.loading')}>
+            {Array.from({ length: 4 }, (_, index) => (
+              <div className="shopping-store-item shopping-store-item--skeleton" key={index} />
             ))}
           </div>
         ) : state.groups.length === 0 ? (
@@ -97,62 +65,44 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
             title={t('shopping.groupNeeded')}
             description={t('shopping.groupNeededHelp')}
           />
-        ) : activeItems.length === 0 ? (
+        ) : state.items.length === 0 ? (
           <EmptyState
             className="shopping-empty-state"
-            icon={<CheckIcon />}
-            title={t('shopping.empty')}
-            description={t('shopping.emptyHelp')}
+            icon={<CheckCircleIcon />}
+            title={t('shopping.storeEmpty')}
+            description={t('shopping.storeEmptyHelp')}
           />
         ) : (
-          <div className="shopping-list">
-            {activeItems.map((item) => (
-              <article className="shopping-item" key={item.id}>
-                <div>
-                  <h3>{item.name}</h3>
-                  <p>{t('shopping.waiting')}</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={state.pendingItemIds.has(item.id)}
-                  aria-label={t('shopping.purchaseLabel', { itemName: item.name })}
-                  onClick={() => void state.changePurchaseState(item, true)}
-                >
-                  <CheckIcon />
-                  <span>{t(state.pendingItemIds.has(item.id) ? 'shopping.purchasing' : 'shopping.markPurchased')}</span>
-                </button>
-              </article>
+          <div className="shopping-store-list">
+            {state.items.map((item) => (
+              <button
+                className="shopping-store-item"
+                type="button"
+                key={item.id}
+                disabled={state.pendingItemIds.has(item.id)}
+                aria-label={t('shopping.purchaseLabel', { itemName: item.name })}
+                onClick={() => void state.purchase(item)}
+              >
+                <span className="shopping-store-item__name">{item.name}</span>
+                {item.assignee_username && (
+                  <span className="shopping-store-item__assignee">
+                    {t('shopping.requestedTo', { username: item.assignee_username })}
+                  </span>
+                )}
+                <CheckCircleIcon />
+              </button>
             ))}
           </div>
         )}
 
-        {purchasedItems.length > 0 && (
-          <details className="shopping-history">
-            <summary>{t('shopping.history', { count: purchasedItems.length })}</summary>
-            <div className="shopping-history__list">
-              {purchasedItems.map((item) => (
-                <div key={item.id}>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <span>
-                      {t('shopping.purchasedMeta', {
-                        username: item.purchased_by_username ?? t('common.unknown'),
-                        date: item.purchased_at ? formatDateTime(item.purchased_at) : '',
-                      })}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={state.pendingItemIds.has(item.id)}
-                    onClick={() => void state.changePurchaseState(item, false)}
-                  >
-                    <UndoIcon />
-                    {t('shopping.restore')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </details>
+        {state.lastPurchase && (
+          <div className="shopping-undo" role="status">
+            <span>{t('shopping.purchasedNotice', { itemName: state.lastPurchase.item_name })}</span>
+            <button className="secondary-button icon-button" type="button" onClick={() => void state.undo()}>
+              <UndoIcon />
+              {t('shopping.undoImmediately')}
+            </button>
+          </div>
         )}
       </section>
     </main>

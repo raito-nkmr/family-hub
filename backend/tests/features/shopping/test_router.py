@@ -87,6 +87,11 @@ def test_shopping_routes_are_registered_and_mutations_require_csrf() -> None:
 
     assert {"get", "post"} <= set(paths["/api/v1/shopping/groups/{group_id}/items"])
     assert {"post", "delete"} <= set(paths["/api/v1/shopping/items/{item_id}/purchase"])
+    assert {"get", "post"} <= set(paths["/api/v1/shopping/groups/{group_id}/requests"])
+    assert {"get", "post"} <= set(paths["/api/v1/shopping/groups/{group_id}/trips"])
+    assert "get" in paths["/api/v1/shopping/groups/{group_id}/statistics"]
+    assert "post" in paths["/api/v1/shopping/requests/{item_id}/purchase"]
+    assert "post" in paths["/api/v1/shopping/purchases/{purchase_id}/reverse"]
 
     from app.features.shopping.router import router
 

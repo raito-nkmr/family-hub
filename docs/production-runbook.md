@@ -181,9 +181,10 @@ sudo systemd-run --wait --pipe --collect \
   -m app.commands.check_photo_integrity
 ```
 
-The current resettable schema chain has three revisions, ending at `20260821_03_household`. The three baseline revisions
-contain the complete schema with the current naming contract. The upgrade contains schema DDL only; it does not create users, groups,
-categories, tasks, or completion history. Run `create_user` and any other bootstrap commands separately. Development
+The current resettable schema chain has four revisions, ending at `20260822_04_shopping_workflow`. The upgrade contains schema
+DDL only; it does not create users, groups, categories, tasks, or completion history. Run `create_user` and any other bootstrap
+commands separately. After upgrading an environment that contains legacy purchased shopping rows, run the idempotent conversion
+command below. Development
 reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
 command against the production-like service or volume.
 
@@ -200,6 +201,16 @@ sudo systemd-run --wait --pty --collect \
 ```
 
 Replace the username with the operator's value. Never put the password in an argument, environment variable, or log.
+
+Convert legacy shopping purchase state after the migration and before using history/statistics:
+
+```bash
+cd /opt/family-hub/current/backend
+uv run --locked python -m app.commands.migrate_shopping_history --apply
+```
+
+Without `--apply`, the command reports the number of rows that would be converted and rolls back. It creates one finalized,
+amount-unrecorded trip and one purchase event per legacy purchased item, and is safe to run again.
 
 ## Initial cutover from the public test environment
 

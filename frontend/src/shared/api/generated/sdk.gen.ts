@@ -12,6 +12,9 @@ import type {
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutData,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutErrors,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutResponses,
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostData,
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors,
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses,
   AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchData,
   AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchErrors,
   AppendUploadChunkApiV1UploadBatchesItemsItemIdContentPatchResponses,
@@ -51,9 +54,15 @@ import type {
   CreatePushSubscriptionApiV1NotificationsSubscriptionsPostData,
   CreatePushSubscriptionApiV1NotificationsSubscriptionsPostErrors,
   CreatePushSubscriptionApiV1NotificationsSubscriptionsPostResponses,
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostData,
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors,
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses,
   CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostData,
   CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostErrors,
   CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostResponses,
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostData,
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors,
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses,
   CreateUploadBatchApiV1UploadBatchesPostData,
   CreateUploadBatchApiV1UploadBatchesPostErrors,
   CreateUploadBatchApiV1UploadBatchesPostResponses,
@@ -69,6 +78,12 @@ import type {
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteErrors,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses,
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteData,
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors,
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses,
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteData,
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors,
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetData,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetErrors,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetResponses,
@@ -113,6 +128,12 @@ import type {
   GetPhotoTimelineApiV1PhotosTimelineGetData,
   GetPhotoTimelineApiV1PhotosTimelineGetErrors,
   GetPhotoTimelineApiV1PhotosTimelineGetResponses,
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetData,
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors,
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses,
+  GetShoppingTripApiV1ShoppingTripsTripIdGetData,
+  GetShoppingTripApiV1ShoppingTripsTripIdGetErrors,
+  GetShoppingTripApiV1ShoppingTripsTripIdGetResponses,
   GetStorageStatusApiV1PhotosStorageStatusGetData,
   GetStorageStatusApiV1PhotosStorageStatusGetResponses,
   GetSystemStatusApiV1AdminMaintenanceStatusGetData,
@@ -166,9 +187,18 @@ import type {
   ListPhotosApiV1PhotosGetResponses,
   ListSessionsApiV1AuthSessionsGetData,
   ListSessionsApiV1AuthSessionsGetResponses,
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetData,
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors,
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses,
   ListShoppingItemsApiV1ShoppingGroupsGroupIdItemsGetData,
   ListShoppingItemsApiV1ShoppingGroupsGroupIdItemsGetErrors,
   ListShoppingItemsApiV1ShoppingGroupsGroupIdItemsGetResponses,
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetData,
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors,
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses,
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetData,
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors,
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses,
   ListTrashedPhotosApiV1PhotosTrashGetData,
   ListTrashedPhotosApiV1PhotosTrashGetErrors,
   ListTrashedPhotosApiV1PhotosTrashGetResponses,
@@ -192,6 +222,9 @@ import type {
   PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostData,
   PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostErrors,
   PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostResponses,
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostData,
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors,
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses,
   RemoveAlbumPhotoApiV1AlbumsAlbumIdPhotosPhotoIdDeleteData,
   RemoveAlbumPhotoApiV1AlbumsAlbumIdPhotosPhotoIdDeleteErrors,
   RemoveAlbumPhotoApiV1AlbumsAlbumIdPhotosPhotoIdDeleteResponses,
@@ -213,18 +246,27 @@ import type {
   ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchData,
   ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchErrors,
   ReorderChoreCategoriesApiV1ChoresGroupsGroupIdCategoriesOrderPatchResponses,
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchData,
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors,
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses,
   RestorePhotoApiV1PhotosPhotoIdRestorePostData,
   RestorePhotoApiV1PhotosPhotoIdRestorePostErrors,
   RestorePhotoApiV1PhotosPhotoIdRestorePostResponses,
   RestoreShoppingItemApiV1ShoppingItemsItemIdPurchaseDeleteData,
   RestoreShoppingItemApiV1ShoppingItemsItemIdPurchaseDeleteErrors,
   RestoreShoppingItemApiV1ShoppingItemsItemIdPurchaseDeleteResponses,
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostData,
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors,
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses,
   RevokeInvitationApiV1AdminInvitationsInvitationIdDeleteData,
   RevokeInvitationApiV1AdminInvitationsInvitationIdDeleteErrors,
   RevokeInvitationApiV1AdminInvitationsInvitationIdDeleteResponses,
   RevokeSessionApiV1AuthSessionsSessionIdDeleteData,
   RevokeSessionApiV1AuthSessionsSessionIdDeleteErrors,
   RevokeSessionApiV1AuthSessionsSessionIdDeleteResponses,
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostData,
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors,
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses,
   TrashPhotoApiV1PhotosPhotoIdDeleteData,
   TrashPhotoApiV1PhotosPhotoIdDeleteErrors,
   TrashPhotoApiV1PhotosPhotoIdDeleteResponses,
@@ -252,6 +294,18 @@ import type {
   UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutData,
   UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutErrors,
   UpdatePushSubscriptionLocaleApiV1NotificationsSubscriptionsLocalePutResponses,
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchData,
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors,
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses,
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchData,
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors,
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses,
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchData,
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors,
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses,
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchData,
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors,
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchData,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchErrors,
   UpdateUserRoleApiV1AdminUsersUserIdRolePatchResponses,
@@ -1631,6 +1685,109 @@ export const getPhotoThumbnailApiV1PhotosPhotoIdThumbnailGet = <ThrowOnError ext
   >({ url: '/api/v1/photos/{photo_id}/thumbnail', ...options })
 
 /**
+ * Delete Shopping Category
+ */
+export const deleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteData, ThrowOnError>,
+): RequestResult<
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses,
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses,
+    DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/categories/{category_id}', ...options })
+
+/**
+ * Update Shopping Category
+ */
+export const updateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses,
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses,
+    UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/categories/{category_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * List Shopping Categories
+ */
+export const listShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetData, ThrowOnError>,
+): RequestResult<
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses,
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses,
+    ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/groups/{group_id}/categories', ...options })
+
+/**
+ * Create Shopping Category
+ */
+export const createShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostData, ThrowOnError>,
+): RequestResult<
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses,
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses,
+    CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/groups/{group_id}/categories',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Reorder Shopping Categories
+ */
+export const reorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatch = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchData, ThrowOnError>,
+): RequestResult<
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses,
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses,
+    ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/groups/{group_id}/categories/order',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
  * List Shopping Items
  */
 export const listShoppingItemsApiV1ShoppingGroupsGroupIdItemsGet = <ThrowOnError extends boolean = false>(
@@ -1670,6 +1827,93 @@ export const createShoppingItemApiV1ShoppingGroupsGroupIdItemsPost = <ThrowOnErr
   })
 
 /**
+ * List Shopping Requests
+ */
+export const listShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetData, ThrowOnError>,
+): RequestResult<
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses,
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses,
+    ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/groups/{group_id}/requests', ...options })
+
+/**
+ * Create Shopping Request
+ */
+export const createShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostData, ThrowOnError>,
+): RequestResult<
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses,
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses,
+    CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/groups/{group_id}/requests',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Get Shopping Statistics
+ */
+export const getShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetData, ThrowOnError>,
+): RequestResult<
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses,
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses,
+    GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/groups/{group_id}/statistics', ...options })
+
+/**
+ * List Shopping Trips
+ */
+export const listShoppingTripsApiV1ShoppingGroupsGroupIdTripsGet = <ThrowOnError extends boolean = false>(
+  options: Options<ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetData, ThrowOnError>,
+): RequestResult<
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses,
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses,
+    ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/groups/{group_id}/trips', ...options })
+
+/**
+ * Start Shopping Trip
+ */
+export const startShoppingTripApiV1ShoppingGroupsGroupIdTripsPost = <ThrowOnError extends boolean = false>(
+  options: Options<StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostData, ThrowOnError>,
+): RequestResult<
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses,
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses,
+    StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/groups/{group_id}/trips', ...options })
+
+/**
  * Restore Shopping Item
  */
 export const restoreShoppingItemApiV1ShoppingItemsItemIdPurchaseDelete = <ThrowOnError extends boolean = false>(
@@ -1700,6 +1944,164 @@ export const purchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePost = <ThrowOn
     PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostErrors,
     ThrowOnError
   >({ url: '/api/v1/shopping/items/{item_id}/purchase', ...options })
+
+/**
+ * Update Shopping Purchase
+ */
+export const updateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses,
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses,
+    UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/purchases/{purchase_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Reverse Shopping Purchase
+ */
+export const reverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostData, ThrowOnError>,
+): RequestResult<
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses,
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses,
+    ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/purchases/{purchase_id}/reverse', ...options })
+
+/**
+ * Delete Shopping Request
+ */
+export const deleteShoppingRequestApiV1ShoppingRequestsItemIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteData, ThrowOnError>,
+): RequestResult<
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses,
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses,
+    DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/requests/{item_id}', ...options })
+
+/**
+ * Update Shopping Request
+ */
+export const updateShoppingRequestApiV1ShoppingRequestsItemIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses,
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses,
+    UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/requests/{item_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Purchase Shopping Request
+ */
+export const purchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePost = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostData, ThrowOnError>,
+): RequestResult<
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses,
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses,
+    PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/requests/{item_id}/purchase', ...options })
+
+/**
+ * Get Shopping Trip
+ */
+export const getShoppingTripApiV1ShoppingTripsTripIdGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetShoppingTripApiV1ShoppingTripsTripIdGetData, ThrowOnError>,
+): RequestResult<
+  GetShoppingTripApiV1ShoppingTripsTripIdGetResponses,
+  GetShoppingTripApiV1ShoppingTripsTripIdGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetShoppingTripApiV1ShoppingTripsTripIdGetResponses,
+    GetShoppingTripApiV1ShoppingTripsTripIdGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/trips/{trip_id}', ...options })
+
+/**
+ * Update Shopping Trip
+ */
+export const updateShoppingTripApiV1ShoppingTripsTripIdPatch = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateShoppingTripApiV1ShoppingTripsTripIdPatchData, ThrowOnError>,
+): RequestResult<
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses,
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses,
+    UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/trips/{trip_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
+ * Add Unplanned Shopping Purchase
+ */
+export const addUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPost = <ThrowOnError extends boolean = false>(
+  options: Options<AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostData, ThrowOnError>,
+): RequestResult<
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses,
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses,
+    AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/shopping/trips/{trip_id}/purchases',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
 
 /**
  * Create Upload Batch

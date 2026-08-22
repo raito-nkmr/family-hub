@@ -525,8 +525,22 @@ class GroupService:
         if GroupRole(membership.role) is GroupRole.ADMIN:
             self._require_another_active_admin(group_id, target_user_id)
 
+        assigned_items = list(
+            self._session.scalars(
+                select(ShoppingItem)
+                .where(
+                    ShoppingItem.group_id == group_id,
+                    ShoppingItem.assignee_user_id == target_user_id,
+                )
+                .with_for_update()
+            ).all()
+        )
+        now = datetime.now(UTC)
+        for item in assigned_items:
+            item.assignee_user_id = None
+            item.updated_at = now
         self._session.delete(membership)
-        group.updated_at = datetime.now(UTC)
+        group.updated_at = now
         record_administrative_event(
             self._session,
             scope="group",

@@ -1,6 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router'
-import { appPaths, choreViews, getAppView, managementViews, photoViews, type AppView } from '../../app/routes'
+import {
+  appPaths,
+  choreViews,
+  getAppView,
+  managementViews,
+  photoViews,
+  shoppingViews,
+  type AppView,
+} from '../../app/routes'
 import {
   AlbumIcon,
   BarChartIcon,
@@ -15,8 +23,8 @@ import {
   PhotoActivityIcon,
   PhotoIcon,
   PhotoLibraryIcon,
-  ShoppingCartIcon,
   SaveIcon,
+  ShoppingCartIcon,
 } from './icons'
 
 interface NavigationProps {
@@ -30,6 +38,8 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
   const activeView = getAppView(location.pathname)
   const choreSearch = activeView && choreViews.includes(activeView) ? location.search : ''
   const choreTo = (view: (typeof choreViews)[number]) => ({ pathname: appPaths[view], search: choreSearch })
+  const shoppingSearch = activeView && shoppingViews.includes(activeView) ? location.search : ''
+  const shoppingTo = (view: (typeof shoppingViews)[number]) => ({ pathname: appPaths[view], search: shoppingSearch })
   const itemClass = (view: AppView, extra = '') =>
     `${activeView === view ? 'app-navigation__item app-navigation__item--active' : 'app-navigation__item'} ${extra}`.trim()
   const sectionClass = (views: AppView[], extra = '') =>
@@ -113,9 +123,34 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         <HouseholdSuppliesIcon />
         {t('navigation.chores')}
       </NavLink>
-      <NavLink className={itemClass('shopping')} to={appPaths.shopping}>
+      <NavLink className={sectionClass(shoppingViews, 'app-navigation__mobile-only')} to={shoppingTo('shopping')}>
         <ShoppingCartIcon />
         {t('navigation.shopping')}
+      </NavLink>
+      <span className="app-navigation__section app-navigation__desktop-only">
+        <ShoppingCartIcon />
+        {t('navigation.shopping')}
+      </span>
+      <NavLink
+        className={itemClass('shopping', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={shoppingTo('shopping')}
+      >
+        <ShoppingCartIcon />
+        {t('navigation.shoppingStore')}
+      </NavLink>
+      <NavLink
+        className={itemClass('shopping-list', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={shoppingTo('shopping-list')}
+      >
+        <ListIcon />
+        {t('navigation.shoppingList')}
+      </NavLink>
+      <NavLink
+        className={itemClass('shopping-history', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={shoppingTo('shopping-history')}
+      >
+        <BarChartIcon />
+        {t('navigation.shoppingHistory')}
       </NavLink>
       <span className="app-navigation__label app-navigation__label--management" lang="en">
         {t('navigation.management')}
@@ -153,6 +188,7 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
   const location = useLocation()
   const activeView = getAppView(location.pathname)
   const choreSearch = activeView && choreViews.includes(activeView) ? location.search : ''
+  const shoppingSearch = activeView && shoppingViews.includes(activeView) ? location.search : ''
   const tabs =
     activeView && photoViews.includes(activeView)
       ? [
@@ -182,25 +218,36 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
               icon: <BarChartIcon />,
             },
           ]
-        : activeView && managementViews.includes(activeView)
+        : activeView && shoppingViews.includes(activeView)
           ? [
-              { view: 'groups' as const, label: t('navigation.groups'), count: 0, icon: <GroupIcon /> },
-              ...(showInvitations
-                ? [
-                    {
-                      view: 'invitations' as const,
-                      label: t('navigation.invitations'),
-                      count: 0,
-                      icon: <PersonAddIcon />,
-                    },
-                  ]
-                : []),
-              { view: 'account' as const, label: t('navigation.account'), count: 0, icon: <EditIcon /> },
-              ...(showInvitations
-                ? [{ view: 'system' as const, label: t('navigation.system'), count: 0, icon: <SaveIcon /> }]
-                : []),
+              { view: 'shopping' as const, label: t('navigation.shoppingStore'), count: 0, icon: <ShoppingCartIcon /> },
+              { view: 'shopping-list' as const, label: t('navigation.shoppingList'), count: 0, icon: <ListIcon /> },
+              {
+                view: 'shopping-history' as const,
+                label: t('navigation.shoppingHistory'),
+                count: 0,
+                icon: <BarChartIcon />,
+              },
             ]
-          : []
+          : activeView && managementViews.includes(activeView)
+            ? [
+                { view: 'groups' as const, label: t('navigation.groups'), count: 0, icon: <GroupIcon /> },
+                ...(showInvitations
+                  ? [
+                      {
+                        view: 'invitations' as const,
+                        label: t('navigation.invitations'),
+                        count: 0,
+                        icon: <PersonAddIcon />,
+                      },
+                    ]
+                  : []),
+                { view: 'account' as const, label: t('navigation.account'), count: 0, icon: <EditIcon /> },
+                ...(showInvitations
+                  ? [{ view: 'system' as const, label: t('navigation.system'), count: 0, icon: <SaveIcon /> }]
+                  : []),
+              ]
+            : []
   if (tabs.length === 0) return null
   return (
     <nav className="section-navigation" aria-label={t('navigation.sectionLabel')}>
@@ -212,7 +259,11 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
               : 'section-navigation__item'
           }
           to={
-            choreViews.includes(tab.view) ? { pathname: appPaths[tab.view], search: choreSearch } : appPaths[tab.view]
+            choreViews.includes(tab.view)
+              ? { pathname: appPaths[tab.view], search: choreSearch }
+              : shoppingViews.includes(tab.view)
+                ? { pathname: appPaths[tab.view], search: shoppingSearch }
+                : appPaths[tab.view]
           }
           key={tab.view}
         >

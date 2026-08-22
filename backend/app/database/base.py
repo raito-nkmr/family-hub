@@ -32,7 +32,7 @@ def get_model_metadata() -> MetaData:
         UploadBatchGroupShare,
         UploadItem,
     )
-    from app.features.shopping.models import ShoppingItem
+    from app.features.shopping.models import ShoppingCategory, ShoppingItem, ShoppingPurchase, ShoppingTrip
 
     for model in (
         Album,
@@ -57,7 +57,10 @@ def get_model_metadata() -> MetaData:
         PhotoMetadata,
         PhotoShare,
         PushSubscription,
+        ShoppingCategory,
         ShoppingItem,
+        ShoppingPurchase,
+        ShoppingTrip,
         UploadBatch,
         UploadBatchGroupShare,
         UploadItem,

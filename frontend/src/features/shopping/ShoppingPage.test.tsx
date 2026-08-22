@@ -1,71 +1,88 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ShoppingItem } from './api'
+import type { ShoppingPurchase, ShoppingRequest } from './api'
 import { ShoppingPage } from './ShoppingPage'
 
-const addItem = vi.fn()
-const changePurchaseState = vi.fn()
-const useShopping = vi.fn()
+const purchase = vi.fn()
+const undo = vi.fn()
+const useShoppingStore = vi.fn()
 
-vi.mock('./useShopping', () => ({
-  useShopping: () => useShopping(),
+vi.mock('./useShoppingWorkflow', () => ({
+  useShoppingStore: () => useShoppingStore(),
 }))
 
-function makeItem(purchased = false): ShoppingItem {
-  return {
-    id: purchased ? 'purchased-item-id' : 'active-item-id',
-    group_id: 'group-id',
-    name: purchased ? 'パン' : '牛乳 2本',
-    created_by_user_id: 'user-id',
-    created_at: '2026-07-15T00:00:00Z',
-    updated_at: '2026-07-15T01:00:00Z',
-    purchased_by_user_id: purchased ? 'buyer-id' : null,
-    purchased_by_username: purchased ? 'family-member' : null,
-    purchased_at: purchased ? '2026-07-15T01:00:00Z' : null,
-  }
+const item: ShoppingRequest = {
+  id: 'item-id',
+  group_id: 'group-id',
+  name: '牛乳 2本',
+  created_by_user_id: 'requester-id',
+  created_at: '2026-07-15T00:00:00Z',
+  updated_at: '2026-07-15T01:00:00Z',
+  assignee_user_id: 'assignee-id',
+  assignee_username: '家族メンバー',
+  category_id: null,
+  category_name: null,
+}
+
+const purchaseRecord: ShoppingPurchase = {
+  id: 'purchase-id',
+  trip_id: 'trip-id',
+  shopping_item_id: item.id,
+  item_name: item.name,
+  assignee_user_id: item.assignee_user_id,
+  assignee_username: item.assignee_username,
+  category_id: null,
+  category_name: null,
+  purchased_by_user_id: 'buyer-id',
+  purchased_by_username: '買った人',
+  purchased_at: '2026-07-15T01:00:00Z',
+  reversed_at: null,
+  reversed_by_user_id: null,
 }
 
 describe('ShoppingPage', () => {
   beforeEach(() => {
-    addItem.mockReset().mockResolvedValue(true)
-    changePurchaseState.mockReset()
-    useShopping.mockReturnValue({
+    purchase.mockReset()
+    undo.mockReset()
+    useShoppingStore.mockReturnValue({
       groups: [{ id: 'group-id', name: '同居家族' }],
       selectedGroupId: 'group-id',
-      items: [makeItem(), makeItem(true)],
+      items: [item],
       loading: false,
       submitting: false,
       pendingItemIds: new Set<string>(),
       pageError: null,
-      formError: null,
+      lastPurchase: null,
       selectGroup: vi.fn(),
-      addItem,
-      changePurchaseState,
+      purchase,
+      undo,
+      beginTrip: vi.fn(),
       refresh: vi.fn(),
     })
   })
 
-  it('adds an item with the quick entry form', async () => {
-    const user = userEvent.setup()
-    render(<ShoppingPage onUnauthorized={vi.fn()} />)
-
-    await user.type(screen.getByLabelText('買うもの'), '卵 10個')
-    await user.click(screen.getByRole('button', { name: 'リストに追加' }))
-
-    expect(addItem).toHaveBeenCalledWith('卵 10個')
-    expect(screen.getByLabelText('買うもの')).toHaveValue('')
-  })
-
-  it('marks an active item as purchased and can restore recent items', async () => {
+  it('completes a purchase with one tap and shows no confirmation', async () => {
     const user = userEvent.setup()
     render(<ShoppingPage onUnauthorized={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: '牛乳 2本を購入済みにする' }))
-    await user.click(screen.getByText('最近の購入済み（1件）'))
-    await user.click(screen.getByRole('button', { name: 'リストに戻す' }))
 
-    expect(changePurchaseState).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'active-item-id' }), true)
-    expect(changePurchaseState).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'purchased-item-id' }), false)
+    expect(purchase).toHaveBeenCalledWith(item)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('offers an immediate undo for the latest purchase', async () => {
+    const user = userEvent.setup()
+    useShoppingStore.mockReturnValueOnce({
+      ...useShoppingStore(),
+      items: [],
+      lastPurchase: purchaseRecord,
+    })
+    render(<ShoppingPage onUnauthorized={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: '取り消す' }))
+
+    expect(undo).toHaveBeenCalledOnce()
   })
 })

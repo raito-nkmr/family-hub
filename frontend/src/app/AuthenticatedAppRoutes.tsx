@@ -37,6 +37,12 @@ const PhotoTrashPage = lazy(() =>
 const ShoppingPage = lazy(() =>
   import('../features/shopping/ShoppingPage').then((module) => ({ default: module.ShoppingPage })),
 )
+const ShoppingListPage = lazy(() =>
+  import('../features/shopping/ShoppingListPage').then((module) => ({ default: module.ShoppingListPage })),
+)
+const ShoppingHistoryPage = lazy(() =>
+  import('../features/shopping/ShoppingHistoryPage').then((module) => ({ default: module.ShoppingHistoryPage })),
+)
 const SystemStatusPage = lazy(() =>
   import('../features/maintenance/SystemStatusPage').then((module) => ({ default: module.SystemStatusPage })),
 )
@@ -97,6 +103,8 @@ export function AuthenticatedAppRoutes({
       <Route path={appPaths['chores-daily']} element={<ChoreDailyPage onUnauthorized={onUnauthorized} />} />
       <Route path={appPaths['chores-monthly']} element={<ChoreMonthlyReportPage onUnauthorized={onUnauthorized} />} />
       <Route path={appPaths.shopping} element={<ShoppingPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths['shopping-list']} element={<ShoppingListPage onUnauthorized={onUnauthorized} />} />
+      <Route path={appPaths['shopping-history']} element={<ShoppingHistoryPage onUnauthorized={onUnauthorized} />} />
       <Route
         path={appPaths.groups}
         element={<GroupPage currentUserId={currentUser.id} onUnauthorized={onUnauthorized} />}

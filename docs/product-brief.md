@@ -35,9 +35,10 @@ Original image previews are kept in a bounded in-memory cache for the current au
 photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
 cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
 
-Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
-group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
-the unpurchased state.
+Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping is divided into
+an in-store mode, list management, and purchase history/statistics. Assignees are requests rather than permissions: every
+group member can complete a purchase, and the actual purchaser is recorded separately. Purchase events retain snapshots,
+trip totals are entered later in yen, and history uses cursor pagination without a 20-item limit.
 
 The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
@@ -63,7 +64,8 @@ administrator. The footer displays the application version from `frontend/packag
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chores, Shopping, and Other appear in bottom
 navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chores;
-Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
+In store, List, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
+administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
 
@@ -315,18 +317,23 @@ each month, assignees, notifications, points, and completion undo are future fea
 
 ## Shopping list application
 
-Family members add items when they notice a need and mark them purchased from a phone while shopping or after returning home.
-The list is shared per family group.
+Shopping is shared per family group and is split into three pages: a deliberately simple in-store mode, list management,
+and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
+completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
+an immediate undo. A trip is created on the first purchase or explicitly before shopping.
 
-- All group members can add an item between 1 and 120 characters.
-- Unpurchased items are shown oldest first.
-- Any member can mark an item purchased; the purchaser and server time are recorded.
-- The latest 20 purchased items are shown newest first and can be returned to unpurchased.
-- Purchase and unpurchase operations are serialized with row locks; operations against stale state are rejected as conflicts.
-- Non-members are not told that items or the group exist and receive not-found behavior.
+- All group members can add, edit, and delete unpurchased requests between 1 and 120 characters.
+- An optional assignee is either anyone or an active member of the same group; assignment never restricts purchasing.
+- Categories are optional shared master data with editable order and are used for counts/frequency, not per-item amounts.
+- Purchase events are append-only records with item, assignee, category snapshots, actual purchaser, and reversal state.
+- History is grouped by shopping trip, supports cursor pagination for all time, optional total yen entered after returning home,
+  list-external purchases, purchaser/category correction, and date-based statistics.
+- Unrecorded totals are shown explicitly and excluded from spending totals. Spending is recorded only at trip level.
+- Group membership, CSRF, row locking, and stale-state conflict handling apply to every write; non-members receive not-found behavior.
 
-Quantity, unit, memo, store, and category are not separate fields initially and may be included in the item name. Assignees,
-notifications, real-time sync, item edit/delete, permanent purchase-history audit display, and recurring-item re-add are future features.
+Quantity, unit, memo, store, push notifications, real-time sync, receipt OCR, budgets, recurring purchases, and store-route
+optimization remain outside the current scope. Product names and assignee snapshots are retained in purchase history even when
+the current list or category changes.
 
 ## Future person-detection policy
 
@@ -421,7 +428,7 @@ configured on the browser or server operating system.
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
 - Calendar chore schedules, assignees, notifications, and completion undo
-- Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
+- Shopping quantity, unit, store, notifications, real-time sync, receipt OCR, budgets, and recurring items
 
 ## Open decisions
 

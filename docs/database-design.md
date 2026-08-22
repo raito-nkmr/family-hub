@@ -23,6 +23,8 @@ users 1 ───── 0..1 photo_activity_states
 users 1 ───── 0..N family_group_members N..1 ───── 1 family_groups
 family_groups 1 ───── 0..N chore_tasks 1 ───── 0..N chore_completions
 family_groups 1 ───── 0..N shopping_items
+family_groups 1 ───── 0..N shopping_categories
+shopping_items 1 ───── 0..N shopping_purchases N..1 ───── 1 shopping_trips
 users 1 ───── 0..N upload_batches 1 ───── 1..N upload_items N..0 ───── 0..1 photos
 upload_batches 1 ───── 0..N upload_batch_group_shares N..1 ───── 1 family_groups
 users 1 ───── 0..N push_subscriptions N..1 ───── 1 user_sessions
@@ -162,10 +164,30 @@ category counts, member rankings, and task/member counts. Empty months return th
 
 ### `shopping_items`
 
-Stores a group item, creator, optional purchaser, creation and update times, and optional purchase time. The purchaser and
-purchase time must both be null or both be set. Index `(group_id, purchased_at, created_at)` as
-`ix_shopping_items_group_id_purchase_state`; list unpurchased items by `created_at ASC, id ASC` and purchased items by
-`purchased_at DESC, id DESC`. Lock rows while changing purchase state and clear purchaser and time when restoring an item.
+Stores the current active request, creator, optional informational assignee, optional shared category, legacy purchaser state,
+and timestamps. The purchaser and purchase time must both be null or both be set. Index `(group_id, purchased_at, created_at)`
+as `ix_shopping_items_group_id_purchase_state`; in-store mode lists unpurchased items by `created_at ASC, id ASC`. Lock the
+group and item while completing or restoring a request. Deleting an active request is allowed, while purchased history remains
+in `shopping_purchases`.
+
+### `shopping_categories`
+
+Stores group-shared optional category names and non-negative display order. Names are trimmed, limited to 40 characters, and
+unique within a group without regard to case. The `(group_id, sort_order, id)` index supports management ordering. Deleting a
+category nulls current and historical references but leaves category name snapshots on purchase events.
+
+### `shopping_trips`
+
+Stores one shopping session per explicit or automatically created trip: group, starter, UTC start time, optional finalization,
+nullable non-negative total amount in Japanese yen, recording user, and update time. History pages order by `(started_at DESC,
+id DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
+
+### `shopping_purchases`
+
+Append-only purchase events reference a trip and optionally the current `shopping_items` row. They store item name, assignee,
+and category snapshots, actual purchaser, purchase time, and nullable reversal actor/time. The optional item reference uses
+`ON DELETE SET NULL`; trip/group references cascade only with their owning group/trip. Reversal changes state and never deletes an
+event, preserving repeated purchases, corrections, planned-vs-unplanned counts, and time-series statistics.
 
 ## Photo tables
 
@@ -348,13 +370,15 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain.
+The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain,
+followed by the current workflow migration.
 The current names are defined directly in these baseline revisions; naming-only revisions are not retained when the
 resettable databases are rebuilt:
 
 - `20260821_01_core` — extensions, identity, and family groups
 - `20260821_02_media` — photos, activity, uploads, and albums
 - `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
+- `20260822_04_shopping_workflow` — shopping assignments, categories, trips, purchase events, and workflow indexes
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,

@@ -1796,9 +1796,97 @@ export type PushSubscriptionResponse = {
 }
 
 /**
+ * ShoppingCategoryCreate
+ */
+export type ShoppingCategoryCreate = {
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * ShoppingCategoryListResponse
+ */
+export type ShoppingCategoryListResponse = {
+  /**
+   * Items
+   */
+  items: Array<ShoppingCategoryResponse>
+}
+
+/**
+ * ShoppingCategoryOrderUpdate
+ */
+export type ShoppingCategoryOrderUpdate = {
+  /**
+   * Category Ids
+   */
+  category_ids: Array<string>
+}
+
+/**
+ * ShoppingCategoryResponse
+ */
+export type ShoppingCategoryResponse = {
+  /**
+   * Created At
+   */
+  created_at: string
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Sort Order
+   */
+  sort_order: number
+  /**
+   * Updated At
+   */
+  updated_at: string
+}
+
+/**
+ * ShoppingCategoryUpdate
+ */
+export type ShoppingCategoryUpdate = {
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
  * ShoppingItemCreate
  */
 export type ShoppingItemCreate = {
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * ShoppingItemCreateDetailed
+ */
+export type ShoppingItemCreateDetailed = {
+  /**
+   * Assignee User Id
+   */
+  assignee_user_id?: string | null
+  /**
+   * Category Id
+   */
+  category_id?: string | null
   /**
    * Name
    */
@@ -1855,6 +1943,322 @@ export type ShoppingItemResponse = {
    * Updated At
    */
   updated_at: string
+}
+
+/**
+ * ShoppingItemUpdate
+ */
+export type ShoppingItemUpdate = {
+  /**
+   * Assignee User Id
+   */
+  assignee_user_id?: string | null
+  /**
+   * Category Id
+   */
+  category_id?: string | null
+  /**
+   * Name
+   */
+  name: string
+}
+
+/**
+ * ShoppingListItemListResponse
+ */
+export type ShoppingListItemListResponse = {
+  /**
+   * Items
+   */
+  items: Array<ShoppingListItemResponse>
+}
+
+/**
+ * ShoppingListItemResponse
+ */
+export type ShoppingListItemResponse = {
+  /**
+   * Assignee User Id
+   */
+  assignee_user_id: string | null
+  /**
+   * Assignee Username
+   */
+  assignee_username: string | null
+  /**
+   * Category Id
+   */
+  category_id: string | null
+  /**
+   * Category Name
+   */
+  category_name: string | null
+  /**
+   * Created At
+   */
+  created_at: string
+  /**
+   * Created By User Id
+   */
+  created_by_user_id: string
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Updated At
+   */
+  updated_at: string
+}
+
+/**
+ * ShoppingPurchaseResponse
+ */
+export type ShoppingPurchaseResponse = {
+  /**
+   * Assignee User Id
+   */
+  assignee_user_id: string | null
+  /**
+   * Assignee Username
+   */
+  assignee_username: string | null
+  /**
+   * Category Id
+   */
+  category_id: string | null
+  /**
+   * Category Name
+   */
+  category_name: string | null
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Item Name
+   */
+  item_name: string
+  /**
+   * Purchased At
+   */
+  purchased_at: string
+  /**
+   * Purchased By User Id
+   */
+  purchased_by_user_id: string
+  /**
+   * Purchased By Username
+   */
+  purchased_by_username: string
+  /**
+   * Reversed At
+   */
+  reversed_at: string | null
+  /**
+   * Reversed By User Id
+   */
+  reversed_by_user_id: string | null
+  /**
+   * Shopping Item Id
+   */
+  shopping_item_id: string | null
+  /**
+   * Trip Id
+   */
+  trip_id: string
+}
+
+/**
+ * ShoppingPurchaseUpdate
+ */
+export type ShoppingPurchaseUpdate = {
+  /**
+   * Category Id
+   */
+  category_id?: string | null
+  /**
+   * Purchased By User Id
+   */
+  purchased_by_user_id?: string | null
+}
+
+/**
+ * ShoppingStatisticsResponse
+ */
+export type ShoppingStatisticsResponse = {
+  /**
+   * Assignees
+   */
+  assignees: Array<{
+    [key: string]: unknown
+  }>
+  /**
+   * Categories
+   */
+  categories: Array<{
+    [key: string]: unknown
+  }>
+  /**
+   * From Date
+   */
+  from_date: string
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Monthly
+   */
+  monthly: Array<{
+    [key: string]: unknown
+  }>
+  /**
+   * Planned Purchase Count
+   */
+  planned_purchase_count: number
+  /**
+   * Purchase Count
+   */
+  purchase_count: number
+  /**
+   * Purchasers
+   */
+  purchasers: Array<{
+    [key: string]: unknown
+  }>
+  /**
+   * To Date
+   */
+  to_date: string
+  /**
+   * Total Amount Yen
+   */
+  total_amount_yen: number
+  /**
+   * Trip Count
+   */
+  trip_count: number
+  /**
+   * Unplanned Purchase Count
+   */
+  unplanned_purchase_count: number
+  /**
+   * Unrecorded Trip Count
+   */
+  unrecorded_trip_count: number
+}
+
+/**
+ * ShoppingTripListResponse
+ */
+export type ShoppingTripListResponse = {
+  /**
+   * Items
+   */
+  items: Array<ShoppingTripResponse>
+  /**
+   * Next Cursor
+   */
+  next_cursor: string | null
+}
+
+/**
+ * ShoppingTripResponse
+ */
+export type ShoppingTripResponse = {
+  /**
+   * Active Purchase Count
+   */
+  active_purchase_count: number
+  /**
+   * Finalized At
+   */
+  finalized_at: string | null
+  /**
+   * Group Id
+   */
+  group_id: string
+  /**
+   * Id
+   */
+  id: string
+  /**
+   * Purchase Count
+   */
+  purchase_count: number
+  /**
+   * Purchases
+   */
+  purchases?: Array<ShoppingPurchaseResponse>
+  /**
+   * Recorded By User Id
+   */
+  recorded_by_user_id: string | null
+  /**
+   * Recorded By Username
+   */
+  recorded_by_username: string | null
+  /**
+   * Started At
+   */
+  started_at: string
+  /**
+   * Started By User Id
+   */
+  started_by_user_id: string
+  /**
+   * Started By Username
+   */
+  started_by_username: string
+  /**
+   * Total Amount Yen
+   */
+  total_amount_yen: number | null
+  /**
+   * Updated At
+   */
+  updated_at: string
+}
+
+/**
+ * ShoppingTripUpdate
+ */
+export type ShoppingTripUpdate = {
+  /**
+   * Finalize
+   */
+  finalize?: boolean
+  /**
+   * Total Amount Yen
+   */
+  total_amount_yen?: number | null
+}
+
+/**
+ * ShoppingUnplannedPurchaseCreate
+ */
+export type ShoppingUnplannedPurchaseCreate = {
+  /**
+   * Category Id
+   */
+  category_id?: string | null
+  /**
+   * Name
+   */
+  name: string
+  /**
+   * Purchased By User Id
+   */
+  purchased_by_user_id?: string | null
 }
 
 /**
@@ -4741,6 +5145,190 @@ export type GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetResponses = {
   200: unknown
 }
 
+export type DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Category Id
+     */
+    category_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/categories/{category_id}'
+}
+
+export type DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteError =
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors[keyof DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteErrors]
+
+export type DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponse =
+  DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses[keyof DeleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDeleteResponses]
+
+export type UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchData = {
+  body: ShoppingCategoryUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Category Id
+     */
+    category_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/categories/{category_id}'
+}
+
+export type UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchError =
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors[keyof UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchErrors]
+
+export type UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingCategoryResponse
+}
+
+export type UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponse =
+  UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses[keyof UpdateShoppingCategoryApiV1ShoppingCategoriesCategoryIdPatchResponses]
+
+export type ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/categories'
+}
+
+export type ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetError =
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors[keyof ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetErrors]
+
+export type ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingCategoryListResponse
+}
+
+export type ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponse =
+  ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses[keyof ListShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesGetResponses]
+
+export type CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostData = {
+  body: ShoppingCategoryCreate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/categories'
+}
+
+export type CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostError =
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors[keyof CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostErrors]
+
+export type CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: ShoppingCategoryResponse
+}
+
+export type CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponse =
+  CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses[keyof CreateShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPostResponses]
+
+export type ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchData = {
+  body: ShoppingCategoryOrderUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/categories/order'
+}
+
+export type ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchError =
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors[keyof ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchErrors]
+
+export type ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingCategoryListResponse
+}
+
+export type ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponse =
+  ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses[keyof ReorderShoppingCategoriesApiV1ShoppingGroupsGroupIdCategoriesOrderPatchResponses]
+
 export type ListShoppingItemsApiV1ShoppingGroupsGroupIdItemsGetData = {
   body?: never
   path: {
@@ -4810,6 +5398,196 @@ export type CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostResponses = {
 
 export type CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostResponse =
   CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostResponses[keyof CreateShoppingItemApiV1ShoppingGroupsGroupIdItemsPostResponses]
+
+export type ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/requests'
+}
+
+export type ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetError =
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors[keyof ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetErrors]
+
+export type ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingListItemListResponse
+}
+
+export type ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponse =
+  ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses[keyof ListShoppingRequestsApiV1ShoppingGroupsGroupIdRequestsGetResponses]
+
+export type CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostData = {
+  body: ShoppingItemCreateDetailed
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/requests'
+}
+
+export type CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostError =
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors[keyof CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostErrors]
+
+export type CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: ShoppingListItemResponse
+}
+
+export type CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponse =
+  CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses[keyof CreateShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPostResponses]
+
+export type GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query: {
+    /**
+     * From Date
+     */
+    from_date: string
+    /**
+     * To Date
+     */
+    to_date: string
+  }
+  url: '/api/v1/shopping/groups/{group_id}/statistics'
+}
+
+export type GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetError =
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors[keyof GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetErrors]
+
+export type GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingStatisticsResponse
+}
+
+export type GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponse =
+  GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses[keyof GetShoppingStatisticsApiV1ShoppingGroupsGroupIdStatisticsGetResponses]
+
+export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetData = {
+  body?: never
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: {
+    /**
+     * Cursor
+     */
+    cursor?: string | null
+    /**
+     * Limit
+     */
+    limit?: number
+  }
+  url: '/api/v1/shopping/groups/{group_id}/trips'
+}
+
+export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetError =
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors[keyof ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetErrors]
+
+export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingTripListResponse
+}
+
+export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponse =
+  ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses[keyof ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetResponses]
+
+export type StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/groups/{group_id}/trips'
+}
+
+export type StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostError =
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors[keyof StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostErrors]
+
+export type StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: ShoppingTripResponse
+}
+
+export type StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponse =
+  StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses[keyof StartShoppingTripApiV1ShoppingGroupsGroupIdTripsPostResponses]
 
 export type RestoreShoppingItemApiV1ShoppingItemsItemIdPurchaseDeleteData = {
   body?: never
@@ -4886,6 +5664,309 @@ export type PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostResponses = 
 
 export type PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostResponse =
   PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostResponses[keyof PurchaseShoppingItemApiV1ShoppingItemsItemIdPurchasePostResponses]
+
+export type UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchData = {
+  body: ShoppingPurchaseUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Purchase Id
+     */
+    purchase_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/purchases/{purchase_id}'
+}
+
+export type UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchError =
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors[keyof UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchErrors]
+
+export type UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingPurchaseResponse
+}
+
+export type UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponse =
+  UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses[keyof UpdateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatchResponses]
+
+export type ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Purchase Id
+     */
+    purchase_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/purchases/{purchase_id}/reverse'
+}
+
+export type ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostError =
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors[keyof ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostErrors]
+
+export type ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingPurchaseResponse
+}
+
+export type ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponse =
+  ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses[keyof ReverseShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdReversePostResponses]
+
+export type DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Item Id
+     */
+    item_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/requests/{item_id}'
+}
+
+export type DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteError =
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors[keyof DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors]
+
+export type DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponse =
+  DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses[keyof DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses]
+
+export type UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchData = {
+  body: ShoppingItemUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Item Id
+     */
+    item_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/requests/{item_id}'
+}
+
+export type UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchError =
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors[keyof UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchErrors]
+
+export type UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingListItemResponse
+}
+
+export type UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponse =
+  UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses[keyof UpdateShoppingRequestApiV1ShoppingRequestsItemIdPatchResponses]
+
+export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Item Id
+     */
+    item_id: string
+  }
+  query?: {
+    /**
+     * Trip Id
+     */
+    trip_id?: string | null
+  }
+  url: '/api/v1/shopping/requests/{item_id}/purchase'
+}
+
+export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostError =
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors[keyof PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostErrors]
+
+export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses = {
+  /**
+   * Successful Response
+   */
+  201: ShoppingPurchaseResponse
+}
+
+export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponse =
+  PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses[keyof PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses]
+
+export type GetShoppingTripApiV1ShoppingTripsTripIdGetData = {
+  body?: never
+  path: {
+    /**
+     * Trip Id
+     */
+    trip_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/trips/{trip_id}'
+}
+
+export type GetShoppingTripApiV1ShoppingTripsTripIdGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type GetShoppingTripApiV1ShoppingTripsTripIdGetError =
+  GetShoppingTripApiV1ShoppingTripsTripIdGetErrors[keyof GetShoppingTripApiV1ShoppingTripsTripIdGetErrors]
+
+export type GetShoppingTripApiV1ShoppingTripsTripIdGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingTripResponse
+}
+
+export type GetShoppingTripApiV1ShoppingTripsTripIdGetResponse =
+  GetShoppingTripApiV1ShoppingTripsTripIdGetResponses[keyof GetShoppingTripApiV1ShoppingTripsTripIdGetResponses]
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchData = {
+  body: ShoppingTripUpdate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Trip Id
+     */
+    trip_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/trips/{trip_id}'
+}
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchError =
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors[keyof UpdateShoppingTripApiV1ShoppingTripsTripIdPatchErrors]
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses = {
+  /**
+   * Successful Response
+   */
+  200: ShoppingTripResponse
+}
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponse =
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses[keyof UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses]
+
+export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostData = {
+  body: ShoppingUnplannedPurchaseCreate
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Trip Id
+     */
+    trip_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/trips/{trip_id}/purchases'
+}
+
+export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostError =
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors[keyof AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostErrors]
+
+export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: ShoppingPurchaseResponse
+}
+
+export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponse =
+  AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses[keyof AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostResponses]
 
 export type CreateUploadBatchApiV1UploadBatchesPostData = {
   body: UploadBatchCreate
