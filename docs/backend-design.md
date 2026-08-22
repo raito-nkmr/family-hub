@@ -394,9 +394,18 @@ PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` is set. The 
 requires `MIGRATION_TEST_DATABASE_URL`.
 
 For local testing, use two disposable databases on the development PostgreSQL instance at `127.0.0.1:15432`. Reuse the
-existing local PostgreSQL role, but use database names such as `family_hub_test` and `family_hub_migration_test`; the role
-must exist, while the databases must be created before running the tests. Never use the production PostgreSQL endpoint at
-`127.0.0.1:5433` or a production database for tests.
+existing local PostgreSQL role and use `family_hub_test` and `family_hub_migration_test`. A development volume reset also
+deletes these databases, so recreate them immediately after `docker compose up --detach --wait db`:
+
+```bash
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_test"'
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_migration_test"'
+```
+
+The role must exist, while the databases must be created before running the tests. Never use the production PostgreSQL
+endpoint at `127.0.0.1:5433` or a production database for tests.
 
 Set the URLs in the current shell rather than committing credentials or adding them to repository files:
 
@@ -416,6 +425,9 @@ uses its separate empty database and applies and rolls back the full Alembic his
 DATABASE_URL="$TEST_DATABASE_URL" uv run --locked alembic upgrade head
 uv run --locked pytest
 ```
+
+The ordinary integration-test database receives the latest schema before the suite runs. Keep
+`family_hub_migration_test` empty; the migration round-trip test applies and rolls back the full Alembic history itself.
 
 Unset the variables when finished if the shell will be reused for another database:
 

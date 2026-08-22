@@ -400,6 +400,16 @@ docker compose down --volumes
 docker compose up --detach --wait db
 ```
 
+Because the development PostgreSQL volume also contains disposable integration-test databases, recreate them after every
+volume reset:
+
+```bash
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_test"'
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_migration_test"'
+```
+
 Apply the latest schema and create development bootstrap data:
 
 ```bash
