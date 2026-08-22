@@ -70,7 +70,7 @@ def upgrade() -> None:
         "chore_tasks",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("group_id", sa.UUID(), nullable=False),
-        sa.Column("name", sa.String(length=120), nullable=False),
+        sa.Column("task_name", sa.String(length=120), nullable=False),
         sa.Column("category_id", sa.UUID(), nullable=False),
         sa.Column("interval_days", sa.Integer(), nullable=False),
         sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False),
@@ -81,9 +81,9 @@ def upgrade() -> None:
         sa.Column(
             "updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
-        sa.CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_chore_tasks_name_length"),
+        sa.CheckConstraint("char_length(task_name) BETWEEN 1 AND 120", name="ck_chore_tasks_task_name_length"),
         sa.CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_chore_tasks_interval_days"),
-        sa.CheckConstraint("name = btrim(name)", name="ck_chore_tasks_name_trimmed"),
+        sa.CheckConstraint("task_name = btrim(task_name)", name="ck_chore_tasks_task_name_trimmed"),
         sa.PrimaryKeyConstraint("id", name="pk_chore_tasks"),
     )
     op.create_index("ix_chore_tasks_group_id_is_active", "chore_tasks", ["group_id", "is_active"], unique=False)
