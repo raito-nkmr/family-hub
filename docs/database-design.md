@@ -43,8 +43,8 @@ current relational contract.
 - Store timestamps as `TIMESTAMPTZ` in UTC; keep the PostgreSQL session time zone at UTC.
 - FastAPI returns UTC ISO 8601 timestamps and never converts them to JST at the DB/API boundary.
 - React explicitly converts display values to `Asia/Tokyo`; JST date boundaries are used for date search and grouping.
-- Store the denormalized `effective_captured_at` sort value as owner override, EXIF `captured_at`, then `uploaded_at`; keep
-  the source capture fields separate so upload time is never presented as a known capture time.
+- Store the denormalized `effective_captured_at` sort value as owner override, original `captured_at_original`, then
+  `uploaded_at`; keep the source and override fields separate so upload time is never presented as a known capture time.
 - Do not store image data, absolute HDD paths, or environment-specific mount points in PostgreSQL.
 - Give constraints and indexes stable names managed by Alembic.
 - Avoid PostgreSQL-specific ENUMs for now; use strings with `CHECK` constraints so values remain easier to change.
@@ -63,7 +63,8 @@ React       July 14, 2026 12:00 JST
 ```
 
 The server generates `uploaded_at`. EXIF capture times with an offset are converted using that offset. EXIF values without
-an offset are interpreted as JST and then converted to UTC. Missing or invalid EXIF values produce a null `captured_at`.
+an offset are interpreted as JST and then converted to UTC. Missing or invalid EXIF values produce a null
+`captured_at_original`.
 React must pass `Asia/Tokyo` explicitly to `Intl.DateTimeFormat` or equivalent. JST date ranges are converted to UTC before
 being sent to PostgreSQL so the late-night JST interval is included correctly.
 
@@ -186,9 +187,9 @@ includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTim
 
 Separates user-editable information from original metadata. It is keyed by `photo_id` and stores a memo of at most 2,000
 characters, an optional owner-entered `captured_at_override`, memo attribution, last-edit time, optimistic-lock `version`, and
-timestamps. `photos.effective_captured_at` is synchronized from `captured_at_override`, the original EXIF `photos.captured_at`,
-or `photos.uploaded_at` when the override is cleared. The API continues to expose only the source/override capture values as
-known capture times.
+timestamps. `photos.effective_captured_at` is synchronized from `captured_at_override`, the original EXIF
+`photos.captured_at_original`, or `photos.uploaded_at` when the override is cleared. The API exposes
+`captured_at_original`, `captured_at_override`, and `effective_captured_at`; only the first two are known capture times.
 Viewers can edit the shared memo; only the owner can edit sharing or the capture-time override. Every metadata update
 increments the version and synchronizes `metadata_version` in the JSON sidecar.
 
@@ -242,7 +243,7 @@ CREATE INDEX ix_photo_metadata_memo_trgm
 ```
 
 Convert `effective_captured_at` to `Asia/Tokyo` for month and date boundaries while keeping stored timestamps UTC. The
-`captured_at` and `captured_at_override` columns remain separate so the API can distinguish known capture time from the
+`captured_at_original`, `captured_at_override`, and `effective_captured_at` columns remain separate so the API can distinguish known capture time from the
 upload-time fallback.
 Do not duplicate indexes already supplied by unique constraints.
 
@@ -308,7 +309,7 @@ optimization are not part of this implementation.
 ## JSON sidecars
 
 Store one same-UUID JSON file beside every original. The sidecar is recovery information, not the source for ordinary lists or
-search. Schema version 7 separates the original and derivative asset data, editable metadata, sharing, and lifecycle state:
+search. Schema version 8 separates the original and derivative asset data, editable metadata, sharing, and lifecycle state:
 
 | Field | Purpose |
 | --- | --- |
@@ -317,14 +318,16 @@ search. Schema version 7 separates the original and derivative asset data, edita
 | `metadata_version` | Matches `photo_metadata.version` |
 | `asset` | Uploader, original details, dimensions, timestamps, and derivatives |
 | `metadata` | Shared memo and its last editor and timestamp |
-| `sharing` | Sharing audiences, currently family-group IDs |
+| `sharing` | `group_ids` for the family groups that can access the photo |
 | `lifecycle` | Current trash and permanent-deletion state |
 
 The current integrity command uses PostgreSQL as the reference and is read-only. It verifies UUID/path correspondence,
 original size, optional hashes, sidecar contents, and derivative files. `sync_photo_sidecars` rewrites sidecars from current
-database records. Automatic repair and sidecar-to-database rebuilding are not implemented; restore the database from a backup
-if PostgreSQL is lost. Thumbnail locations are recorded for integrity checks, but not other regenerable derived data such as
-person-analysis results.
+database records when existing data is retained. `cleanup_orphaned_photo_files` removes only old files not referenced by
+PostgreSQL, defaults to a dry run, and refuses an empty database unless an intentional reset explicitly passes
+`--allow-empty-database`. Restore the database from a backup if PostgreSQL is lost; sidecar-to-database rebuilding and
+automatic thumbnail repair are not implemented. Thumbnail locations are recorded for integrity checks, but not other
+regenerable derived data such as person-analysis results.
 
 ## Maintenance and notification tables
 
@@ -345,20 +348,18 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history is reset and rebuilt as the following immutable baseline chain:
+The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain.
+The current names are defined directly in these baseline revisions; naming-only revisions are not retained when the
+resettable databases are rebuilt:
 
 - `20260821_01_core` — extensions, identity, and family groups
 - `20260821_02_media` — photos, activity, uploads, and albums
 - `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
-- `20260822_01_chore_task_name` — standardize the chore task name column
-- `20260822_02_invitation_names` — rename invitation columns and family-prefixed constraints/indexes
-- `20260822_03_session_last_used` — standardize the session last-use timestamp
-- `20260822_04_activity_operation` — standardize the photo activity operation identifier
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
 and category ordering, are included directly in the current chain.
-Never rewrite these revisions after the rebuild; future approved schema changes must be added as new migrations.
+After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
 update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate

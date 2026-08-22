@@ -47,9 +47,10 @@ backend/
 ```
 
 Commands include user and dummy-user creation, password reset, database and secondary-storage backup, photo-integrity
-checking, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and delivery, monitoring reporting,
-and role management. User creation permits regular users only after an active system administrator exists; initial setup
-must explicitly create the administrator. Role management uses the same transaction advisory lock as web administration.
+checking, old orphaned-photo cleanup, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and
+delivery, monitoring reporting, and role management. User creation permits regular users only after an active system
+administrator exists; initial setup must explicitly create the administrator. Role management uses the same transaction
+advisory lock as web administration.
 Do not create empty packages or placeholder tests before they are needed.
 
 ## Responsibilities
@@ -279,12 +280,13 @@ At finalization, create a WebP thumbnail with a longest edge of at most 480 px, 
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
 API. Originals, downloads, thumbnails, and ZIP exports return `private, no-store`.
 
-Sidecars use schema version 7 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
-capture-time overrides, and shares. The database stores `effective_captured_at` as the denormalized sort value
-`captured_at_override`, then EXIF `captured_at`, then `uploaded_at`. It is synchronized at registration and override updates;
-the original EXIF capture time remains separate from this fallback value so the API does not present upload time as a known
-capture time. `ix_photos_sort_date_id` covers `(effective_captured_at DESC, id DESC)`.
-After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to regenerate every sidecar from the database.
+Sidecars use schema version 8 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
+capture-time overrides, and `group_ids`. The database stores `effective_captured_at` as the denormalized sort value
+`captured_at_override`, then original EXIF `captured_at_original`, then `uploaded_at`. It is synchronized at registration and
+override updates; `captured_at_original` and `captured_at_override` remain separate so the API does not present upload time as
+a known capture time. `ix_photos_sort_date_id` covers `(effective_captured_at DESC, id DESC)`.
+After a sharing or sidecar-schema migration, run `python -m app.commands.sync_photo_sidecars` to regenerate every sidecar
+from the database.
 
 ## Upload processing
 
@@ -354,7 +356,9 @@ thumbnail → database order and compensate on failure. Keep stable path rules a
 rebuild photo metadata. The integrity command is read-only: it reports missing files, size mismatches, sidecar mismatches,
 orphaned files, and unmatched `.part` files; `--verify-hashes` additionally reads originals to compare SHA-256. It returns
 0 with no findings and 1 with findings and never changes files or the database. Automatic repair and sidecar-to-database
-rebuild are not implemented.
+rebuild are not implemented. `python -m app.commands.cleanup_orphaned_photo_files` can remove orphaned originals, sidecars,
+derivatives, and stale upload parts after a 24-hour grace period. It defaults to a dry run, requires `--apply` to delete,
+and refuses an empty database unless `--allow-empty-database` is explicitly provided for an intentional full reset.
 
 ## Storage availability
 
@@ -460,7 +464,7 @@ Photos move between `active`, `trashed`, and `purge_pending` without moving orig
 authorization, lists, New, albums, and exports. Only the owner can view or restore it; shares, album relationships, memo, and
 favorite data remain for restoration. Album counts, pages, and covers consider active photos only, while the `AlbumPhoto`
 relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
-sidecar schema 7.
+sidecar schema 8.
 
 Permanent deletion requests for `trashed` photos are accepted only after `purge_after`; an early request is rejected with `409`.
 The request first commits `purge_pending`, then clears album covers for the photo in the same database transaction, idempotently

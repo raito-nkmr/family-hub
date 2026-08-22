@@ -41,7 +41,9 @@ the unpurchased state.
 
 The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
-content mismatches, and orphaned files using the database as the reference. Original SHA-256 recalculation is optional.
+content mismatches, and orphaned files using the database as the reference. A separate guarded maintenance command can
+remove old orphaned photo files after an explicit apply flag; it refuses an empty database unless an intentional reset is
+explicitly confirmed. Original SHA-256 recalculation is optional.
 Photo details can download an accessible original by its original filename. The library can select up to 100 visible photos
 and stream them as one ZIP for manual backup.
 
