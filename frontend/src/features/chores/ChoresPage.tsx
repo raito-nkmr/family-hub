@@ -1,6 +1,8 @@
 import { useEffect, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AddTaskIcon, CategoryIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
+import { AddTaskIcon, TaskAltIcon, UndoIcon } from '../../shared/ui/icons'
+import { CategoryFilterToolbar } from '../../shared/ui/CategoryFilterToolbar'
+import { PageHero } from '../../shared/ui/PageHero'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -57,13 +59,12 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
   return (
     <>
       <main id="top" className="chore-page">
-        <section className="chore-hero">
-          <div>
-            <h1>{t('chores.title')}</h1>
-            <p>{t('chores.description')}</p>
-          </div>
-          <div className="chore-hero__actions">
-            {isAdmin && (
+        <PageHero
+          eyebrow={t('chores.listEyebrow')}
+          title={t('chores.title')}
+          description={t('chores.description')}
+          actions={
+            isAdmin ? (
               <button
                 className="primary-button icon-button"
                 type="button"
@@ -73,9 +74,9 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
                 <AddTaskIcon />
                 {t('chores.add')}
               </button>
-            )}
-          </div>
-        </section>
+            ) : undefined
+          }
+        />
 
         <section className="chore-board" aria-labelledby="chore-board-heading">
           <GroupScopedToolbar
@@ -92,38 +93,16 @@ export function ChoresPage({ onUnauthorized }: ChoresPageProps) {
           />
 
           {state.selectedGroup && (
-            <div className="chore-category-toolbar">
-              <nav className="chore-category-filter" aria-label={t('chores.categoryFilter')}>
-                <button
-                  className={`chore-category-filter__button${effectiveSelectedCategory === ALL_CATEGORIES ? ' chore-category-filter__button--active' : ''}`}
-                  type="button"
-                  aria-pressed={effectiveSelectedCategory === ALL_CATEGORIES}
-                  onClick={() => setSelectedCategory(ALL_CATEGORIES)}
-                >
-                  {t('chores.allCategories')}
-                </button>
-                {state.categories.map((category) => (
-                  <button
-                    className={`chore-category-filter__button${effectiveSelectedCategory === category.id ? ' chore-category-filter__button--active' : ''}`}
-                    key={category.id}
-                    type="button"
-                    aria-pressed={effectiveSelectedCategory === category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </nav>
-              <button
-                className="secondary-button icon-button"
-                type="button"
-                disabled={state.submitting}
-                onClick={state.openCategoryDialog}
-              >
-                <CategoryIcon />
-                {t('chores.categoryManage')}
-              </button>
-            </div>
+            <CategoryFilterToolbar
+              categories={state.categories}
+              selectedCategory={effectiveSelectedCategory}
+              allLabel={t('chores.allCategories')}
+              ariaLabel={t('chores.categoryFilter')}
+              manageLabel={t('chores.categoryManage')}
+              manageDisabled={state.submitting}
+              onSelectCategory={setSelectedCategory}
+              onManage={state.openCategoryDialog}
+            />
           )}
 
           <div className="section-heading chore-board__heading">

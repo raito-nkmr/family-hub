@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CategoryIcon, DeleteIcon, EditIcon, PlusIcon, ShoppingCartIcon } from '../../shared/ui/icons'
+import { DeleteIcon, EditIcon, PlusIcon, ShoppingCartIcon } from '../../shared/ui/icons'
+import { CategoryFilterToolbar } from '../../shared/ui/CategoryFilterToolbar'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
+import { PageHero } from '../../shared/ui/PageHero'
 import { useConfirmation } from '../../shared/ui/confirmation'
 import type { ShoppingCategory, ShoppingRequest } from './api'
 import { ShoppingCategoryManagerDialog } from './components/ShoppingCategoryManagerDialog'
@@ -84,13 +86,11 @@ export function ShoppingListPage({ onUnauthorized }: ShoppingListPageProps) {
   return (
     <>
       <main id="top" className="shopping-page">
-        <section className="shopping-hero shopping-hero--compact shopping-hero--with-action">
-          <div>
-            <p className="eyebrow">{t('shopping.listEyebrow')}</p>
-            <h1>{t('shopping.listTitle')}</h1>
-            <p>{t('shopping.listDescription')}</p>
-          </div>
-          <div className="shopping-hero__actions">
+        <PageHero
+          eyebrow={t('shopping.listEyebrow')}
+          title={t('shopping.listTitle')}
+          description={t('shopping.listDescription')}
+          actions={
             <button
               className="primary-button icon-button"
               type="button"
@@ -100,8 +100,8 @@ export function ShoppingListPage({ onUnauthorized }: ShoppingListPageProps) {
               <PlusIcon />
               {t('shopping.add')}
             </button>
-          </div>
-        </section>
+          }
+        />
 
         <section className="shopping-board shopping-management" aria-labelledby="shopping-list-heading">
           <GroupScopedToolbar
@@ -124,49 +124,20 @@ export function ShoppingListPage({ onUnauthorized }: ShoppingListPageProps) {
             />
           ) : (
             <>
-              <div className="shopping-category-toolbar">
-                <nav className="shopping-category-filter" aria-label={t('shopping.categoryFilter')}>
-                  <button
-                    className={`shopping-category-filter__button${effectiveSelectedCategory === ALL_CATEGORIES ? ' shopping-category-filter__button--active' : ''}`}
-                    type="button"
-                    aria-pressed={effectiveSelectedCategory === ALL_CATEGORIES}
-                    onClick={() => setSelectedCategory(ALL_CATEGORIES)}
-                  >
-                    {t('shopping.allCategories')}
-                  </button>
-                  {state.categories.map((category) => (
-                    <button
-                      className={`shopping-category-filter__button${effectiveSelectedCategory === category.id ? ' shopping-category-filter__button--active' : ''}`}
-                      key={category.id}
-                      type="button"
-                      aria-pressed={effectiveSelectedCategory === category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                  <button
-                    className={`shopping-category-filter__button${effectiveSelectedCategory === NO_CATEGORY ? ' shopping-category-filter__button--active' : ''}`}
-                    type="button"
-                    aria-pressed={effectiveSelectedCategory === NO_CATEGORY}
-                    onClick={() => setSelectedCategory(NO_CATEGORY)}
-                  >
-                    {t('shopping.noCategory')}
-                  </button>
-                </nav>
-                <button
-                  className="secondary-button icon-button"
-                  type="button"
-                  disabled={state.submitting}
-                  onClick={() => {
-                    state.clearCategoryDialogError()
-                    setShowCategoryDialog(true)
-                  }}
-                >
-                  <CategoryIcon />
-                  {t('shopping.categoryManage')}
-                </button>
-              </div>
+              <CategoryFilterToolbar
+                categories={state.categories}
+                selectedCategory={effectiveSelectedCategory}
+                allLabel={t('shopping.allCategories')}
+                ariaLabel={t('shopping.categoryFilter')}
+                manageLabel={t('shopping.categoryManage')}
+                manageDisabled={state.submitting}
+                noCategory={{ value: NO_CATEGORY, label: t('shopping.noCategory') }}
+                onSelectCategory={setSelectedCategory}
+                onManage={() => {
+                  state.clearCategoryDialogError()
+                  setShowCategoryDialog(true)
+                }}
+              />
 
               <div className="section-heading shopping-management__heading">
                 <div>

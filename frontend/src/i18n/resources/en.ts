@@ -608,6 +608,7 @@ export const en = {
     reportLoading: 'Loading monthly report',
     reportEmpty: 'No chore tasks recorded this month',
     reportEmptyHelp: 'Completions will appear here after someone records a task.',
+    listEyebrow: 'TASK LIST',
     add: 'Add chore task',
     group: 'Family group',
     categoryFilter: 'Chore categories',

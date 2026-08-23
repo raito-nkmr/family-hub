@@ -603,6 +603,7 @@ export const ja: TranslationShape = {
     reportLoading: '月次レポートを読み込み中',
     reportEmpty: 'この月の家事タスクの記録はありません',
     reportEmptyHelp: 'タスクの完了を記録すると、ここに集計が表示されます。',
+    listEyebrow: 'タスク一覧',
     add: '家事タスクを追加',
     group: '家族グループ',
     categoryFilter: '家事カテゴリー',
