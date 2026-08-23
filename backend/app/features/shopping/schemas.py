@@ -137,6 +137,7 @@ class ShoppingTripStart(BaseModel):
 class ShoppingTripUpdate(BaseModel):
     total_amount_yen: int | None = Field(default=None, ge=0)
     finalize: bool = True
+    delete_if_empty: bool = False
 
 
 class ShoppingPurchaseResponse(BaseModel):
@@ -171,6 +172,9 @@ class ShoppingTripResponse(BaseModel):
     started_by_username: str
     started_at: datetime
     finalized_at: datetime | None
+    discarded_at: datetime | None
+    discarded_by_user_id: UUID | None
+    discarded_by_username: str | None
     total_amount_yen: int | None
     recorded_by_user_id: UUID | None
     recorded_by_username: str | None
@@ -179,7 +183,7 @@ class ShoppingTripResponse(BaseModel):
     active_purchase_count: int
     purchases: list[ShoppingPurchaseResponse] = Field(default_factory=list)
 
-    @field_validator("started_at", "finalized_at", "updated_at")
+    @field_validator("started_at", "finalized_at", "discarded_at", "updated_at")
     @classmethod
     def normalize_trip_datetime(cls, value: datetime | None) -> datetime | None:
         if value is None:

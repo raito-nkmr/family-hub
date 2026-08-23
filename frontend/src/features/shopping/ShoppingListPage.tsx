@@ -84,7 +84,7 @@ export function ShoppingListPage({ onUnauthorized }: ShoppingListPageProps) {
   return (
     <>
       <main id="top" className="shopping-page">
-        <section className="shopping-hero shopping-hero--compact">
+        <section className="shopping-hero shopping-hero--compact shopping-hero--with-action">
           <div>
             <p className="eyebrow">{t('shopping.listEyebrow')}</p>
             <h1>{t('shopping.listTitle')}</h1>

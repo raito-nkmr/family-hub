@@ -2180,6 +2180,18 @@ export type ShoppingTripResponse = {
    */
   active_purchase_count: number
   /**
+   * Discarded At
+   */
+  discarded_at: string | null
+  /**
+   * Discarded By User Id
+   */
+  discarded_by_user_id: string | null
+  /**
+   * Discarded By Username
+   */
+  discarded_by_username: string | null
+  /**
    * Finalized At
    */
   finalized_at: string | null
@@ -2233,6 +2245,10 @@ export type ShoppingTripResponse = {
  * ShoppingTripUpdate
  */
 export type ShoppingTripUpdate = {
+  /**
+   * Delete If Empty
+   */
+  delete_if_empty?: boolean
   /**
    * Finalize
    */
@@ -5860,6 +5876,44 @@ export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostRespon
 export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponse =
   PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses[keyof PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses]
 
+export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Trip Id
+     */
+    trip_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/trips/{trip_id}'
+}
+
+export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteError =
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors[keyof DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors]
+
+export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses = {
+  /**
+   * Successful Response
+   */
+  204: void
+}
+
+export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponse =
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses[keyof DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses]
+
 export type GetShoppingTripApiV1ShoppingTripsTripIdGetData = {
   body?: never
   path: {
@@ -5922,13 +5976,53 @@ export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchError =
 
 export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses = {
   /**
+   * Response Update Shopping Trip Api V1 Shopping Trips  Trip Id  Patch
+   *
+   * Successful Response
+   */
+  200: ShoppingTripResponse | null
+}
+
+export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponse =
+  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses[keyof UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses]
+
+export type DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostData = {
+  body?: never
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Trip Id
+     */
+    trip_id: string
+  }
+  query?: never
+  url: '/api/v1/shopping/trips/{trip_id}/discard'
+}
+
+export type DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostError =
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors[keyof DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors]
+
+export type DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses = {
+  /**
    * Successful Response
    */
   200: ShoppingTripResponse
 }
 
-export type UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponse =
-  UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses[keyof UpdateShoppingTripApiV1ShoppingTripsTripIdPatchResponses]
+export type DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponse =
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses[keyof DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses]
 
 export type AddUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPostData = {
   body: ShoppingUnplannedPurchaseCreate

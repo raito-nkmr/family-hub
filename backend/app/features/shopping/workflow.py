@@ -95,6 +95,9 @@ class ShoppingTripSummary:
     started_by_username: str
     started_at: datetime
     finalized_at: datetime | None
+    discarded_at: datetime | None
+    discarded_by_user_id: UUID | None
+    discarded_by_username: str | None
     total_amount_yen: int | None
     recorded_by_user_id: UUID | None
     recorded_by_username: str | None
@@ -262,6 +265,19 @@ class ShoppingWorkflowService:
 
     def start_trip(self, group_id: UUID, user_id: UUID) -> ShoppingTripSummary:
         self._lock_membership(group_id, user_id)
+        trip = self._session.scalar(
+            select(ShoppingTrip)
+            .where(
+                ShoppingTrip.group_id == group_id,
+                ShoppingTrip.finalized_at.is_(None),
+                ShoppingTrip.discarded_at.is_(None),
+            )
+            .order_by(ShoppingTrip.started_at.desc(), ShoppingTrip.id.desc())
+            .limit(1)
+            .with_for_update()
+        )
+        if trip is not None:
+            return self._trip_summary(trip, self._trip_purchases(trip.id))
         trip = self._new_trip(group_id, user_id)
         self._commit("Could not start shopping trip")
         return self._trip_summary(trip, [])
@@ -275,7 +291,7 @@ class ShoppingWorkflowService:
         if item.purchased_at is not None:
             raise ShoppingWorkflowConflictError
         trip = self._resolve_trip(group_id, user_id, trip_id)
-        if trip.finalized_at is not None:
+        if trip.finalized_at is not None or trip.discarded_at is not None:
             raise ShoppingWorkflowConflictError
         now = datetime.now(UTC)
         assignee_username = self._username(item.assignee_user_id)
@@ -313,6 +329,10 @@ class ShoppingWorkflowService:
         )
         if purchase is None and item.purchased_at is None:
             raise ShoppingWorkflowConflictError
+        if purchase is not None:
+            trip = self._locked_trip(purchase.trip_id)
+            if trip.discarded_at is not None:
+                raise ShoppingWorkflowConflictError
         now = datetime.now(UTC)
         if purchase is not None:
             purchase.reversed_at = now
@@ -355,11 +375,30 @@ class ShoppingWorkflowService:
         return self._trip_summary(trip, self._trip_purchases(trip.id))
 
     def update_trip(
-        self, trip_id: UUID, user_id: UUID, total_amount_yen: int | None, finalize: bool
-    ) -> ShoppingTripSummary:
+        self,
+        trip_id: UUID,
+        user_id: UUID,
+        total_amount_yen: int | None,
+        finalize: bool,
+        delete_if_empty: bool = False,
+    ) -> ShoppingTripSummary | None:
         group_id = self._trip_group_id(trip_id)
         self._lock_membership(group_id, user_id)
         trip = self._locked_trip(trip_id)
+        if trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
+        if delete_if_empty and (trip.finalized_at is not None or not finalize):
+            raise ShoppingWorkflowConflictError
+        if delete_if_empty:
+            purchases = list(
+                self._session.scalars(
+                    select(ShoppingPurchase).where(ShoppingPurchase.trip_id == trip.id).with_for_update()
+                ).all()
+            )
+            if not purchases:
+                self._session.delete(trip)
+                self._commit("Could not delete empty shopping trip")
+                return None
         trip.total_amount_yen = total_amount_yen
         if finalize and trip.finalized_at is None:
             trip.finalized_at = datetime.now(UTC)
@@ -380,6 +419,8 @@ class ShoppingWorkflowService:
         group_id = self._trip_group_id(trip_id)
         self._lock_membership(group_id, user_id)
         trip = self._locked_trip(trip_id)
+        if trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
         self._validate_category(trip.group_id, category_id)
         purchaser_id = purchased_by_user_id or user_id
         self._validate_membership(trip.group_id, purchaser_id)
@@ -410,6 +451,9 @@ class ShoppingWorkflowService:
         group_id = self._purchase_group_id(purchase_id)
         self._lock_membership(group_id, user_id)
         purchase = self._locked_purchase(purchase_id)
+        trip = self._locked_trip(purchase.trip_id)
+        if trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
         self._validate_category(purchase.group_id, category_id)
         self._validate_membership(purchase.group_id, purchased_by_user_id or purchase.purchased_by_user_id)
         purchase.category_id = category_id
@@ -423,6 +467,9 @@ class ShoppingWorkflowService:
         group_id = self._purchase_group_id(purchase_id)
         self._lock_membership(group_id, user_id)
         purchase = self._locked_purchase(purchase_id)
+        trip = self._locked_trip(purchase.trip_id)
+        if trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
         if purchase.reversed_at is not None:
             raise ShoppingWorkflowConflictError
         if purchase.shopping_item_id is not None:
@@ -437,6 +484,57 @@ class ShoppingWorkflowService:
         purchase.updated_at = datetime.now(UTC)
         self._commit("Could not reverse shopping purchase")
         return self._purchase_summary(purchase)
+
+    def discard_trip(self, trip_id: UUID, user_id: UUID) -> ShoppingTripSummary:
+        group_id = self._trip_group_id(trip_id)
+        self._lock_membership(group_id, user_id)
+        trip = self._locked_trip(trip_id)
+        if trip.finalized_at is not None or trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
+        purchases = list(
+            self._session.scalars(
+                select(ShoppingPurchase)
+                .where(ShoppingPurchase.trip_id == trip.id)
+                .order_by(ShoppingPurchase.purchased_at.asc(), ShoppingPurchase.id.asc())
+                .with_for_update()
+            ).all()
+        )
+        now = datetime.now(UTC)
+        for purchase in purchases:
+            if purchase.reversed_at is not None:
+                continue
+            if purchase.shopping_item_id is not None:
+                item = self._locked_item(purchase.shopping_item_id)
+                purchase.reversed_at = now
+                purchase.reversed_by_user_id = user_id
+                purchase.updated_at = now
+                self._sync_item_purchase_state(item)
+                item.updated_at = now
+            else:
+                purchase.reversed_at = now
+                purchase.reversed_by_user_id = user_id
+                purchase.updated_at = now
+        trip.discarded_at = now
+        trip.discarded_by_user_id = user_id
+        trip.updated_at = now
+        self._commit("Could not discard shopping trip")
+        return self._trip_summary(trip, purchases)
+
+    def delete_empty_trip(self, trip_id: UUID, user_id: UUID) -> None:
+        group_id = self._trip_group_id(trip_id)
+        self._lock_membership(group_id, user_id)
+        trip = self._locked_trip(trip_id)
+        if trip.finalized_at is not None or trip.discarded_at is not None:
+            raise ShoppingWorkflowConflictError
+        purchases = list(
+            self._session.scalars(
+                select(ShoppingPurchase).where(ShoppingPurchase.trip_id == trip.id).with_for_update()
+            ).all()
+        )
+        if purchases:
+            raise ShoppingWorkflowConflictError
+        self._session.delete(trip)
+        self._commit("Could not delete shopping trip")
 
     def statistics(self, group_id: UUID, user_id: UUID, from_date: date, to_date: date) -> dict[str, object]:
         self._require_membership(group_id, user_id)
@@ -454,17 +552,21 @@ class ShoppingWorkflowService:
                     ShoppingTrip.group_id == group_id,
                     ShoppingTrip.started_at >= start,
                     ShoppingTrip.started_at <= end,
+                    ShoppingTrip.discarded_at.is_(None),
                 )
             ).all()
         )
         purchases = list(
             self._session.scalars(
-                select(ShoppingPurchase).where(
+                select(ShoppingPurchase)
+                .where(
                     ShoppingPurchase.group_id == group_id,
                     ShoppingPurchase.purchased_at >= start,
                     ShoppingPurchase.purchased_at <= end,
                     ShoppingPurchase.reversed_at.is_(None),
                 )
+                .join(ShoppingTrip, ShoppingTrip.id == ShoppingPurchase.trip_id)
+                .where(ShoppingTrip.discarded_at.is_(None))
             ).all()
         )
         users = self._user_directory.list_by_ids(
@@ -528,12 +630,21 @@ class ShoppingWorkflowService:
             .where(
                 ShoppingTrip.group_id == group_id,
                 ShoppingTrip.finalized_at.is_(None),
+                ShoppingTrip.discarded_at.is_(None),
             )
             .order_by(ShoppingTrip.started_at.desc(), ShoppingTrip.id.desc())
             .limit(1)
             .with_for_update()
         )
-        return trip or self._new_trip(group_id, user_id)
+        if trip is not None:
+            return trip
+        trip = self._new_trip(group_id, user_id)
+        try:
+            self._session.flush()
+        except SQLAlchemyError as error:
+            self._session.rollback()
+            raise ShoppingWorkflowPersistenceError("Could not create shopping trip") from error
+        return trip
 
     def _trip_purchases(self, trip_id: UUID) -> list[ShoppingPurchase]:
         return list(
@@ -548,10 +659,13 @@ class ShoppingWorkflowService:
         ids = {trip.started_by_user_id}
         if trip.recorded_by_user_id is not None:
             ids.add(trip.recorded_by_user_id)
+        if trip.discarded_by_user_id is not None:
+            ids.add(trip.discarded_by_user_id)
         ids.update(purchase.purchased_by_user_id for purchase in purchases)
         users = self._user_directory.list_by_ids(ids)
         started_by = users.get(trip.started_by_user_id)
         recorded_by = users.get(trip.recorded_by_user_id) if trip.recorded_by_user_id else None
+        discarded_by = users.get(trip.discarded_by_user_id) if trip.discarded_by_user_id else None
         return ShoppingTripSummary(
             id=trip.id,
             group_id=trip.group_id,
@@ -559,6 +673,9 @@ class ShoppingWorkflowService:
             started_by_username=started_by.username if started_by else "unknown",
             started_at=trip.started_at,
             finalized_at=trip.finalized_at,
+            discarded_at=trip.discarded_at,
+            discarded_by_user_id=trip.discarded_by_user_id,
+            discarded_by_username=discarded_by.username if discarded_by else None,
             total_amount_yen=trip.total_amount_yen,
             recorded_by_user_id=trip.recorded_by_user_id,
             recorded_by_username=recorded_by.username if recorded_by else None,

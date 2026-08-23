@@ -320,7 +320,7 @@ each month, assignees, notifications, points, and completion undo are future fea
 Shopping is shared per family group and is split into three pages: a deliberately simple in-store mode, list management,
 and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
 completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
-an immediate undo. A trip is created on the first purchase or explicitly before shopping.
+an immediate undo. The start control resumes the latest in-progress trip for the group, or creates one when none exists.
 
 - All group members can add, edit, and delete unpurchased requests between 1 and 120 characters.
 - The list-management page keeps the active list as the primary view, filters it by all, a shared category, or no
@@ -330,6 +330,11 @@ an immediate undo. A trip is created on the first purchase or explicitly before 
 - Purchase events are append-only records with item, assignee, category snapshots, actual purchaser, and reversal state.
 - History is grouped by shopping trip, supports cursor pagination for all time, optional total yen entered after returning home,
   list-external purchases, purchaser/category correction, and date-based statistics.
+- Trips have in-progress, finished, and discarded states. Finishing is immediate; an empty trip is removed after confirmation,
+  while a trip with purchases leaves the nullable trip total for later entry in history. Discarding retains the trip and reverses
+  its purchases, restoring planned items to the active list.
+- Discarded trips and their purchase events remain visible for audit history but are excluded from spending, purchase counts, and
+  other statistics. An in-progress trip with no purchase events may be permanently deleted; trips with events cannot be deleted.
 - Unrecorded totals are shown explicitly and excluded from spending totals. Spending is recorded only at trip level.
 - Group membership, CSRF, row locking, and stale-state conflict handling apply to every write; non-members receive not-found behavior.
 

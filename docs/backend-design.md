@@ -135,10 +135,15 @@ defaults to `Asia/Tokyo`.
 Owns active shopping requests, shared categories, shopping trips, append-only purchase events, assignment snapshots, trip-level
 amounts, and statistics. All group members may perform the operations; an assignee is informational and never a purchase
 permission. In-store writes lock the group, recheck membership, then lock the item and trip, so concurrent completion of the
-same request produces one success and one `409`. Purchase events retain item, assignee, and category snapshots and are never
-deleted by undo or correction. Trip amounts are nullable non-negative yen integers and are excluded from totals when null.
-The history endpoint uses an opaque `(started_at, id)` cursor, and statistics convert date boundaries through the group's IANA
-time zone. Existing legacy purchase state is converted by `app.commands.migrate_shopping_history`, never by Alembic.
+same request produces one success and one `409`. Starting a trip locks the group and resumes the latest in-progress,
+non-discarded trip instead of creating a duplicate. Purchase events retain item, assignee, and category snapshots and are never
+deleted by undo, correction, or discard. Trip amounts are nullable non-negative yen integers and are excluded from totals when
+null. Trips can be finished immediately, discarded only while in progress, or permanently deleted only when in progress with
+zero purchase events. Finishing an empty trip uses the same locked transaction to remove it after confirmation; discard locks the
+trip, its events, and planned items, reverses events, and restores list state. Discarded
+trips and events are excluded from statistics. The history endpoint uses an opaque `(started_at, id)` cursor, and statistics
+convert date boundaries through the group's IANA time zone. Existing legacy purchase state is converted by
+`app.commands.migrate_shopping_history`, never by Alembic.
 
 ### `features.photos`
 

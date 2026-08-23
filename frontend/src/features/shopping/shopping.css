@@ -3,15 +3,19 @@
 }
 
 .shopping-hero {
+  max-width: 760px;
+  padding: clamp(3rem, 8vw, 6.5rem) 0;
+}
+
+.shopping-hero--with-action {
   display: flex;
   gap: 2rem;
   align-items: flex-end;
   justify-content: space-between;
   max-width: none;
-  padding: clamp(3rem, 8vw, 6.5rem) 0;
 }
 
-.shopping-hero > div:first-child {
+.shopping-hero--with-action > div:first-child {
   max-width: 760px;
 }
 
@@ -32,7 +36,8 @@
   line-height: 1.03;
 }
 
-.shopping-hero > div:first-child > p:last-child {
+.shopping-hero > p:last-child,
+.shopping-hero--with-action > div:first-child > p:last-child {
   max-width: 580px;
   margin: 1.5rem 0 0;
   color: var(--color-text-secondary);
@@ -233,13 +238,16 @@
 
 @media (max-width: 640px) {
   .shopping-hero {
-    align-items: stretch;
-    flex-direction: column;
     padding: 2.5rem 0 3.5rem;
   }
 
-  .shopping-hero__actions,
-  .shopping-hero__actions button {
+  .shopping-hero--with-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shopping-hero--with-action .shopping-hero__actions,
+  .shopping-hero--with-action .shopping-hero__actions button {
     width: 100%;
   }
 
@@ -293,6 +301,14 @@
 
 .shopping-store__controls {
   margin: 2rem 0 1.25rem;
+}
+
+.shopping-store__trip-controls {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .shopping-store__controls h2,
@@ -678,6 +694,23 @@
   opacity: 0.55;
 }
 
+.shopping-trip-status {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.shopping-trip--discarded {
+  opacity: 0.8;
+}
+
+.shopping-trip__amount-readonly {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
 .shopping-purchase__edit .form-control {
   min-width: 8rem;
 }
@@ -719,7 +752,14 @@
     flex-direction: column;
   }
 
+  .shopping-store__trip-controls {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
   .shopping-store__controls button,
+  .shopping-store__trip-controls button,
   .shopping-category-toolbar > button,
   .shopping-undo button,
   .shopping-trip__amount button {

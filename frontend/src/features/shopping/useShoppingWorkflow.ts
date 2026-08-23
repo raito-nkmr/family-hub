@@ -6,13 +6,16 @@ import { queryKeys } from '../../shared/api/queryKeys'
 import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { useGroupSelection } from '../../shared/routing/useGroupSelection'
 import { usePendingIds } from '../../shared/lib/usePendingIds'
+import { useConfirmation } from '../../shared/ui/confirmation'
 import { getGroups, getGroup, type FamilyGroup, type GroupDetail } from '../groups/api'
 import {
   addUnplannedShoppingPurchase,
   createShoppingCategory,
   createShoppingRequest,
+  deleteEmptyShoppingTrip,
   deleteShoppingCategory,
   deleteShoppingRequest,
+  discardShoppingTrip,
   getShoppingCategories,
   getShoppingRequests,
   getShoppingStatistics,
@@ -27,6 +30,7 @@ import {
   updateShoppingTrip,
   type ShoppingPurchase,
   type ShoppingRequest,
+  type ShoppingTrip,
 } from './api'
 
 interface ShoppingWorkflowOptions {
@@ -67,6 +71,7 @@ function useShoppingBase({ onUnauthorized }: ShoppingWorkflowOptions): ShoppingB
 export function useShoppingStore(options: ShoppingWorkflowOptions) {
   const queryClient = useQueryClient()
   const base = useShoppingBase(options)
+  const confirm = useConfirmation()
   const { pendingIds, start, finish } = usePendingIds()
   const [lastPurchase, setLastPurchase] = useState<ShoppingPurchase | null>(null)
   const [mutationError, setMutationError] = useState<string | null>(null)
@@ -90,10 +95,16 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
   const startMutation = useMutation({
     mutationFn: (groupId: string) => startShoppingTrip(groupId),
   })
+  const endMutation = useMutation({
+    mutationFn: (tripId: string) =>
+      updateShoppingTrip(tripId, { total_amount_yen: null, finalize: true, delete_if_empty: true }),
+  })
+  const discardMutation = useMutation({ mutationFn: discardShoppingTrip })
   const reverseMutation = useMutation({
     mutationFn: (purchaseId: string) => reverseShoppingPurchase(purchaseId),
   })
-  const activeTrip = tripsQuery.data?.items.find((trip) => trip.finalized_at === null) ?? null
+  const activeTrip =
+    tripsQuery.data?.items.find((trip) => trip.finalized_at === null && trip.discarded_at === null) ?? null
 
   const purchase = async (item: ShoppingRequest) => {
     if (!start(item.id)) return
@@ -141,6 +152,46 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
     }
   }
 
+  const endTrip = async () => {
+    if (!activeTrip || endMutation.isPending) return false
+    if (activeTrip.purchase_count === 0 && !(await confirm(i18n.t('shopping.finishEmptyTripConfirm')))) {
+      return false
+    }
+    setMutationError(null)
+    try {
+      await endMutation.mutateAsync(activeTrip.id)
+      setLastPurchase(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(activeTrip.group_id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(activeTrip.group_id) }),
+      ])
+      return true
+    } catch (error) {
+      if (isUnauthorizedError(error)) options.onUnauthorized()
+      else setMutationError(i18n.t('errors.shoppingTripEnd'))
+      return false
+    }
+  }
+
+  const discardTrip = async () => {
+    if (!activeTrip || discardMutation.isPending) return false
+    if (!(await confirm(i18n.t('shopping.discardTripConfirm')))) return false
+    setMutationError(null)
+    try {
+      await discardMutation.mutateAsync(activeTrip.id)
+      setLastPurchase(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(activeTrip.group_id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(activeTrip.group_id) }),
+      ])
+      return true
+    } catch (error) {
+      if (isUnauthorizedError(error)) options.onUnauthorized()
+      else setMutationError(i18n.t('errors.shoppingTripDiscard'))
+      return false
+    }
+  }
+
   return {
     ...base,
     items: requestsQuery.data ?? [],
@@ -149,10 +200,17 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
     pendingItemIds: pendingIds,
     loading: base.loadingGroups || base.loadingGroup || requestsQuery.isPending || tripsQuery.isPending,
     pageError: mutationError ?? (requestsQuery.error || tripsQuery.error ? i18n.t('errors.shoppingLoad') : null),
-    submitting: purchaseMutation.isPending || startMutation.isPending || reverseMutation.isPending,
+    submitting:
+      purchaseMutation.isPending ||
+      startMutation.isPending ||
+      endMutation.isPending ||
+      discardMutation.isPending ||
+      reverseMutation.isPending,
     purchase,
     undo,
     beginTrip,
+    endTrip,
+    discardTrip,
     refresh: async () => {
       setMutationError(null)
       await Promise.all([requestsQuery.refetch(), tripsQuery.refetch()])
@@ -338,6 +396,7 @@ function yearStartInput(): string {
 export function useShoppingHistory(options: ShoppingWorkflowOptions) {
   const queryClient = useQueryClient()
   const base = useShoppingBase(options)
+  const confirm = useConfirmation()
   const [fromDate, setFromDate] = useState(yearStartInput)
   const [toDate, setToDate] = useState(todayInput)
   const [mutationError, setMutationError] = useState<string | null>(null)
@@ -382,6 +441,8 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
     }) => updateShoppingPurchase(id, { category_id: categoryId, purchased_by_user_id: purchaserId }),
   })
   const reversePurchaseMutation = useMutation({ mutationFn: reverseShoppingPurchase })
+  const discardTripMutation = useMutation({ mutationFn: discardShoppingTrip })
+  const deleteEmptyTripMutation = useMutation({ mutationFn: deleteEmptyShoppingTrip })
 
   const invalidate = async () => {
     if (!base.selectedGroupId) return
@@ -424,7 +485,9 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       updateTripMutation.isPending ||
       addPurchaseMutation.isPending ||
       updatePurchaseMutation.isPending ||
-      reversePurchaseMutation.isPending,
+      reversePurchaseMutation.isPending ||
+      discardTripMutation.isPending ||
+      deleteEmptyTripMutation.isPending,
     fromDate,
     toDate,
     setFromDate,
@@ -436,6 +499,14 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
     updatePurchase: (id: string, categoryId: string | null, purchaserId: string | null) =>
       run(() => updatePurchaseMutation.mutateAsync({ id, categoryId, purchaserId }), 'errors.shoppingPurchaseUpdate'),
     reversePurchase: (id: string) => run(() => reversePurchaseMutation.mutateAsync(id), 'errors.shoppingReverse'),
+    discardTrip: async (trip: ShoppingTrip) => {
+      if (!(await confirm(i18n.t('shopping.discardTripConfirm')))) return false
+      return run(() => discardTripMutation.mutateAsync(trip.id), 'errors.shoppingTripDiscard')
+    },
+    deleteEmptyTrip: async (trip: ShoppingTrip) => {
+      if (!(await confirm(i18n.t('shopping.deleteEmptyTripConfirm')))) return false
+      return run(() => deleteEmptyTripMutation.mutateAsync(trip.id), 'errors.shoppingTripDelete')
+    },
     loadMore: () => (tripsQuery.hasNextPage ? tripsQuery.fetchNextPage() : Promise.resolve()),
     refresh: async () => {
       setMutationError(null)

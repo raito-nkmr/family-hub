@@ -18,6 +18,9 @@ const trip: ShoppingTrip = {
   started_by_username: '家族メンバー',
   started_at: '2026-07-15T01:00:00Z',
   finalized_at: null,
+  discarded_at: null,
+  discarded_by_user_id: null,
+  discarded_by_username: null,
   total_amount_yen: 1200,
   recorded_by_user_id: null,
   recorded_by_username: null,
@@ -64,5 +67,16 @@ describe('ShoppingHistoryPage', () => {
     await user.click(screen.getByRole('button', { name: '金額不明のままにする' }))
 
     expect(saveTripAmount).toHaveBeenCalledWith('trip-id', null)
+  })
+
+  it('shows discarded trips without amount editing controls', () => {
+    useShoppingHistory.mockReturnValueOnce({
+      ...useShoppingHistory(),
+      trips: [{ ...trip, discarded_at: '2026-07-15T03:00:00Z', finalized_at: null }],
+    })
+    render(<ShoppingHistoryPage onUnauthorized={vi.fn()} />)
+
+    expect(screen.getByText('破棄済み')).toBeInTheDocument()
+    expect(screen.queryByLabelText('買い物全体の金額（円）')).not.toBeInTheDocument()
   })
 })

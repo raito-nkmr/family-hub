@@ -181,10 +181,10 @@ sudo systemd-run --wait --pipe --collect \
   -m app.commands.check_photo_integrity
 ```
 
-The current resettable schema chain has four revisions, ending at `20260822_04_shopping_workflow`. The upgrade contains schema
+The current resettable schema chain has five revisions, ending at `20260822_05_shopping_trip_states`. The upgrade contains schema
 DDL only; it does not create users, groups, categories, tasks, or completion history. Run `create_user` and any other bootstrap
 commands separately. After upgrading an environment that contains legacy purchased shopping rows, run the idempotent conversion
-command below. Development
+command below. The trip-state migration only adds schema objects; it does not transform existing trips. Development
 reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
 command against the production-like service or volume.
 
@@ -211,6 +211,10 @@ uv run --locked python -m app.commands.migrate_shopping_history --apply
 
 Without `--apply`, the command reports the number of rows that would be converted and rolls back. It creates one finalized,
 amount-unrecorded trip and one purchase event per legacy purchased item, and is safe to run again.
+
+Existing in-progress trips are not automatically merged or removed. Empty in-progress trips can be permanently deleted from the
+history page or by confirming the finish action in the store. In-progress trips with purchase events should be discarded instead;
+discard preserves the trip and reverses its purchase events while restoring planned items to the active list.
 
 ## Initial cutover from the public test environment
 

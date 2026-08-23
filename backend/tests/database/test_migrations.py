@@ -15,9 +15,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260822_04_shopping_workflow"]
+    assert scripts.get_heads() == ["20260822_05_shopping_trip_states"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260822_05_shopping_trip_states",
         "20260822_04_shopping_workflow",
         "20260821_03_household",
         "20260821_02_media",

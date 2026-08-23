@@ -179,8 +179,11 @@ category nulls current and historical references but leaves category name snapsh
 ### `shopping_trips`
 
 Stores one shopping session per explicit or automatically created trip: group, starter, UTC start time, optional finalization,
-nullable non-negative total amount in Japanese yen, recording user, and update time. History pages order by `(started_at DESC,
-id DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
+discard timestamp and discarding user, nullable non-negative total amount in Japanese yen, recording user, and update time.
+Discard state requires both discard fields and cannot coexist with finalization. History pages order by `(started_at DESC, id
+DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
+Discarded trips are retained for history but are excluded from statistics; only an in-progress trip with no purchase events may be
+hard-deleted, including through the confirmed empty-trip finish flow.
 
 ### `shopping_purchases`
 
@@ -371,7 +374,7 @@ Do not add tables for person detection, tags, face recognition, or scene classif
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
 The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain,
-followed by the current workflow migration.
+followed by the current shopping workflow migrations.
 The current names are defined directly in these baseline revisions; naming-only revisions are not retained when the
 resettable databases are rebuilt:
 
@@ -379,6 +382,7 @@ resettable databases are rebuilt:
 - `20260821_02_media` — photos, activity, uploads, and albums
 - `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
 - `20260822_04_shopping_workflow` — shopping assignments, categories, trips, purchase events, and workflow indexes
+- `20260822_05_shopping_trip_states` — discarded trip state, integrity constraints, and discard-user index
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,

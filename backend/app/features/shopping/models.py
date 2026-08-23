@@ -80,6 +80,12 @@ class ShoppingTrip(Base):
         CheckConstraint(
             "total_amount_yen IS NULL OR total_amount_yen >= 0", name="ck_shopping_trips_amount_nonnegative"
         ),
+        CheckConstraint(
+            "(discarded_at IS NULL AND discarded_by_user_id IS NULL) OR "
+            "(discarded_at IS NOT NULL AND discarded_by_user_id IS NOT NULL)",
+            name="ck_shopping_trips_discard_state",
+        ),
+        CheckConstraint("discarded_at IS NULL OR finalized_at IS NULL", name="ck_shopping_trips_discard_not_finalized"),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -93,10 +99,16 @@ class ShoppingTrip(Base):
     )
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    discarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     total_amount_yen: Mapped[int | None] = mapped_column(Integer, nullable=True)
     recorded_by_user_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT", name="fk_shopping_trips_recorded_by_user_id_users"),
+        nullable=True,
+    )
+    discarded_by_user_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT", name="fk_shopping_trips_discarded_by_user_id_users"),
         nullable=True,
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
@@ -184,6 +196,7 @@ Index(
     "ix_shopping_trips_group_started_at", ShoppingTrip.group_id, ShoppingTrip.started_at.desc(), ShoppingTrip.id.desc()
 )
 Index("ix_shopping_trips_started_by_user_id", ShoppingTrip.started_by_user_id)
+Index("ix_shopping_trips_discarded_by_user_id", ShoppingTrip.discarded_by_user_id)
 Index("ix_shopping_purchases_group_purchased_at", ShoppingPurchase.group_id, ShoppingPurchase.purchased_at.desc())
 Index("ix_shopping_purchases_trip_id", ShoppingPurchase.trip_id)
 Index("ix_shopping_purchases_item_id", ShoppingPurchase.shopping_item_id)

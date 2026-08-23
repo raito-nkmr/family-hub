@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChartIcon, CancelIcon, PlusIcon, RefreshIcon, UndoIcon } from '../../shared/ui/icons'
+import { BarChartIcon, CancelIcon, DeleteIcon, PlusIcon, RefreshIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -67,7 +67,7 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
     }
   }
 
-  const renderPurchase = (purchase: ShoppingPurchase) => (
+  const renderPurchase = (purchase: ShoppingPurchase, editable: boolean) => (
     <li
       className={purchase.reversed_at ? 'shopping-purchase shopping-purchase--reversed' : 'shopping-purchase'}
       key={purchase.id}
@@ -84,7 +84,7 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
           className="form-control"
           aria-label={t('shopping.purchaseCategory', { itemName: purchase.item_name })}
           value={purchase.category_id ?? ''}
-          disabled={state.submitting || Boolean(purchase.reversed_at)}
+          disabled={state.submitting || !editable || Boolean(purchase.reversed_at)}
           onChange={(event) =>
             void state.updatePurchase(purchase.id, event.target.value || null, purchase.purchased_by_user_id)
           }
@@ -100,7 +100,7 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
           className="form-control"
           aria-label={t('shopping.purchaseBuyer', { itemName: purchase.item_name })}
           value={purchase.purchased_by_user_id}
-          disabled={state.submitting || Boolean(purchase.reversed_at)}
+          disabled={state.submitting || !editable || Boolean(purchase.reversed_at)}
           onChange={(event) => void state.updatePurchase(purchase.id, purchase.category_id, event.target.value || null)}
         >
           {state.members.map((member) => (
@@ -109,7 +109,7 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
             </option>
           ))}
         </select>
-        {!purchase.reversed_at && (
+        {editable && !purchase.reversed_at && (
           <button
             className="secondary-button icon-button"
             type="button"
@@ -258,7 +258,10 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
                 <p className="shopping-muted">{t('shopping.historyEmpty')}</p>
               ) : (
                 state.trips.map((trip) => (
-                  <article className="shopping-trip" key={trip.id}>
+                  <article
+                    className={trip.discarded_at ? 'shopping-trip shopping-trip--discarded' : 'shopping-trip'}
+                    key={trip.id}
+                  >
                     <header className="shopping-trip__header">
                       <div>
                         <h3>{formatDateTime(trip.started_at)}</h3>
@@ -266,85 +269,128 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
                           {t('shopping.startedBy', { username: trip.started_by_username })} ·{' '}
                           {t('shopping.purchaseSummary', { count: trip.active_purchase_count })}
                         </p>
+                        <span className="shopping-trip-status">
+                          {trip.discarded_at
+                            ? t('shopping.tripDiscarded')
+                            : trip.finalized_at
+                              ? t('shopping.tripFinished')
+                              : t('shopping.tripInProgress')}
+                        </span>
                       </div>
                       <div className="shopping-trip__amount">
-                        <label>
-                          {t('shopping.tripAmount')}
-                          <input
-                            className="form-control"
-                            inputMode="numeric"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={
-                              amounts[trip.id] ?? (trip.total_amount_yen === null ? '' : String(trip.total_amount_yen))
-                            }
-                            placeholder={t('shopping.amountUnrecorded')}
-                            onChange={(event) =>
-                              setAmounts((current) => ({ ...current, [trip.id]: event.target.value }))
-                            }
-                          />
-                        </label>
-                        <button
-                          className="success-button icon-button"
-                          type="button"
-                          disabled={state.submitting}
-                          onClick={() => void saveAmount(trip)}
-                        >
-                          <RefreshIcon />
-                          {t('shopping.saveAmount')}
-                        </button>
-                        <button
-                          className="secondary-button icon-button"
-                          type="button"
-                          disabled={
-                            state.submitting ||
-                            (trip.total_amount_yen === null && !(amounts[trip.id] ?? '').trim())
-                          }
-                          onClick={() => void markAmountUnrecorded(trip)}
-                        >
-                          <CancelIcon />
-                          {t('shopping.markAmountUnrecorded')}
-                        </button>
+                        {trip.discarded_at ? (
+                          <span className="shopping-trip__amount-readonly">
+                            {trip.total_amount_yen === null
+                              ? t('shopping.amountUnrecorded')
+                              : `${trip.total_amount_yen.toLocaleString()}円`}
+                          </span>
+                        ) : (
+                          <>
+                            <label>
+                              {t('shopping.tripAmount')}
+                              <input
+                                className="form-control"
+                                inputMode="numeric"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={
+                                  amounts[trip.id] ??
+                                  (trip.total_amount_yen === null ? '' : String(trip.total_amount_yen))
+                                }
+                                placeholder={t('shopping.amountUnrecorded')}
+                                onChange={(event) =>
+                                  setAmounts((current) => ({ ...current, [trip.id]: event.target.value }))
+                                }
+                              />
+                            </label>
+                            <button
+                              className="success-button icon-button"
+                              type="button"
+                              disabled={state.submitting}
+                              onClick={() => void saveAmount(trip)}
+                            >
+                              <RefreshIcon />
+                              {t('shopping.saveAmount')}
+                            </button>
+                            <button
+                              className="secondary-button icon-button"
+                              type="button"
+                              disabled={
+                                state.submitting || (trip.total_amount_yen === null && !(amounts[trip.id] ?? '').trim())
+                              }
+                              onClick={() => void markAmountUnrecorded(trip)}
+                            >
+                              <CancelIcon />
+                              {t('shopping.markAmountUnrecorded')}
+                            </button>
+                            {!trip.finalized_at && trip.purchase_count === 0 && (
+                              <button
+                                className="secondary-button icon-button"
+                                type="button"
+                                disabled={state.submitting}
+                                onClick={() => void state.deleteEmptyTrip(trip)}
+                              >
+                                <DeleteIcon />
+                                {t('shopping.deleteEmptyTrip')}
+                              </button>
+                            )}
+                            {!trip.finalized_at && (
+                              <button
+                                className="secondary-button icon-button"
+                                type="button"
+                                disabled={state.submitting}
+                                onClick={() => void state.discardTrip(trip)}
+                              >
+                                <CancelIcon />
+                                {t('shopping.discardTrip')}
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </header>
                     {trip.total_amount_yen === null && (
                       <p className="shopping-unrecorded">{t('shopping.amountUnrecorded')}</p>
                     )}
-                    <ul className="shopping-purchase-list">{(trip.purchases ?? []).map(renderPurchase)}</ul>
-                    <form className="shopping-unplanned-form" onSubmit={(event) => void addUnplanned(event, trip)}>
-                      <input
-                        className="form-control"
-                        value={unplannedNames[trip.id] ?? ''}
-                        maxLength={120}
-                        placeholder={t('shopping.unplannedPlaceholder')}
-                        onChange={(event) =>
-                          setUnplannedNames((current) => ({ ...current, [trip.id]: event.target.value }))
-                        }
-                      />
-                      <select
-                        className="form-control"
-                        value={unplannedCategories[trip.id] ?? ''}
-                        onChange={(event) =>
-                          setUnplannedCategories((current) => ({ ...current, [trip.id]: event.target.value }))
-                        }
-                      >
-                        <option value="">{t('shopping.noCategory')}</option>
-                        {state.categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        className="secondary-button icon-button"
-                        type="submit"
-                        disabled={state.submitting || !(unplannedNames[trip.id] ?? '').trim()}
-                      >
-                        <PlusIcon />
-                        {t('shopping.addUnplanned')}
-                      </button>
-                    </form>
+                    <ul className="shopping-purchase-list">
+                      {(trip.purchases ?? []).map((purchase) => renderPurchase(purchase, !trip.discarded_at))}
+                    </ul>
+                    {!trip.discarded_at && (
+                      <form className="shopping-unplanned-form" onSubmit={(event) => void addUnplanned(event, trip)}>
+                        <input
+                          className="form-control"
+                          value={unplannedNames[trip.id] ?? ''}
+                          maxLength={120}
+                          placeholder={t('shopping.unplannedPlaceholder')}
+                          onChange={(event) =>
+                            setUnplannedNames((current) => ({ ...current, [trip.id]: event.target.value }))
+                          }
+                        />
+                        <select
+                          className="form-control"
+                          value={unplannedCategories[trip.id] ?? ''}
+                          onChange={(event) =>
+                            setUnplannedCategories((current) => ({ ...current, [trip.id]: event.target.value }))
+                          }
+                        >
+                          <option value="">{t('shopping.noCategory')}</option>
+                          {state.categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="secondary-button icon-button"
+                          type="submit"
+                          disabled={state.submitting || !(unplannedNames[trip.id] ?? '').trim()}
+                        >
+                          <PlusIcon />
+                          {t('shopping.addUnplanned')}
+                        </button>
+                      </form>
+                    )}
                   </article>
                 ))
               )}

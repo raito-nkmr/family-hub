@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircleIcon, StartIcon, StoreIcon, UndoIcon } from '../../shared/ui/icons'
+import { CancelIcon, CheckCircleIcon, CheckIcon, StartIcon, StoreIcon, UndoIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { GroupScopedToolbar } from '../../shared/ui/GroupScopedToolbar'
 import { PageMessage } from '../../shared/ui/PageMessage'
@@ -39,15 +39,41 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
               <h2 id="shopping-store-heading">{t('shopping.storeList')}</h2>
               <p>{t('shopping.remaining', { count: state.items.length })}</p>
             </div>
-            <button
-              className="secondary-button icon-button"
-              type="button"
-              disabled={state.submitting}
-              onClick={() => void state.beginTrip()}
-            >
-              <StartIcon />
-              {t('shopping.startTrip')}
-            </button>
+            <div className="shopping-store__trip-controls">
+              {state.activeTrip ? (
+                <>
+                  <span className="shopping-trip-status">{t('shopping.tripInProgress')}</span>
+                  <button
+                    className="success-button icon-button"
+                    type="button"
+                    disabled={state.submitting}
+                    onClick={() => void state.endTrip()}
+                  >
+                    <CheckIcon />
+                    {t('shopping.endTrip')}
+                  </button>
+                  <button
+                    className="secondary-button icon-button"
+                    type="button"
+                    disabled={state.submitting}
+                    onClick={() => void state.discardTrip()}
+                  >
+                    <CancelIcon />
+                    {t('shopping.discardTrip')}
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="secondary-button icon-button"
+                  type="button"
+                  disabled={state.submitting}
+                  onClick={() => void state.beginTrip()}
+                >
+                  <StartIcon />
+                  {t('shopping.startTrip')}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -98,6 +98,9 @@ def _trip_response(trip: ShoppingTripSummary) -> ShoppingTripResponse:
         started_by_username=trip.started_by_username,
         started_at=trip.started_at,
         finalized_at=trip.finalized_at,
+        discarded_at=trip.discarded_at,
+        discarded_by_user_id=trip.discarded_by_user_id,
+        discarded_by_username=trip.discarded_by_username,
         total_amount_yen=trip.total_amount_yen,
         recorded_by_user_id=trip.recorded_by_user_id,
         recorded_by_username=trip.recorded_by_username,
@@ -420,7 +423,7 @@ def get_shopping_trip(
 
 @router.patch(
     "/trips/{trip_id}",
-    response_model=ShoppingTripResponse,
+    response_model=ShoppingTripResponse | None,
     dependencies=[Depends(require_csrf_token)],
 )
 def update_shopping_trip(
@@ -428,11 +431,51 @@ def update_shopping_trip(
     body: ShoppingTripUpdate,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
-) -> ShoppingTripResponse:
+) -> ShoppingTripResponse | None:
     try:
-        return _trip_response(service.update_trip(trip_id, authenticated_user.id, body.total_amount_yen, body.finalize))
+        trip = service.update_trip(
+            trip_id,
+            authenticated_user.id,
+            body.total_amount_yen,
+            body.finalize,
+            body.delete_if_empty,
+        )
+        return _trip_response(trip) if trip is not None else None
     except Exception as error:
         _raise_workflow_error(error)
+
+
+@router.post(
+    "/trips/{trip_id}/discard",
+    response_model=ShoppingTripResponse,
+    dependencies=[Depends(require_csrf_token)],
+)
+def discard_shopping_trip(
+    trip_id: UUID,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
+) -> ShoppingTripResponse:
+    try:
+        return _trip_response(service.discard_trip(trip_id, authenticated_user.id))
+    except Exception as error:
+        _raise_workflow_error(error)
+
+
+@router.delete(
+    "/trips/{trip_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_csrf_token)],
+)
+def delete_empty_shopping_trip(
+    trip_id: UUID,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
+) -> Response:
+    try:
+        service.delete_empty_trip(trip_id, authenticated_user.id)
+    except Exception as error:
+        _raise_workflow_error(error)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

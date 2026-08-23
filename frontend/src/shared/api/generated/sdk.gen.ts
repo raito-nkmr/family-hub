@@ -75,6 +75,9 @@ import type {
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteData,
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors,
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses,
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData,
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteErrors,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses,
@@ -84,6 +87,9 @@ import type {
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteData,
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors,
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses,
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostData,
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors,
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetData,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetErrors,
   DownloadPhotoOriginalApiV1PhotosPhotoIdDownloadGetResponses,
@@ -2042,6 +2048,22 @@ export const purchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePost = <T
   >({ url: '/api/v1/shopping/requests/{item_id}/purchase', ...options })
 
 /**
+ * Delete Empty Shopping Trip
+ */
+export const deleteEmptyShoppingTripApiV1ShoppingTripsTripIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData, ThrowOnError>,
+): RequestResult<
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
+  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
+    DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/trips/{trip_id}', ...options })
+
+/**
  * Get Shopping Trip
  */
 export const getShoppingTripApiV1ShoppingTripsTripIdGet = <ThrowOnError extends boolean = false>(
@@ -2079,6 +2101,22 @@ export const updateShoppingTripApiV1ShoppingTripsTripIdPatch = <ThrowOnError ext
       ...options.headers,
     },
   })
+
+/**
+ * Discard Shopping Trip
+ */
+export const discardShoppingTripApiV1ShoppingTripsTripIdDiscardPost = <ThrowOnError extends boolean = false>(
+  options: Options<DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostData, ThrowOnError>,
+): RequestResult<
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses,
+  DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses,
+    DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors,
+    ThrowOnError
+  >({ url: '/api/v1/shopping/trips/{trip_id}/discard', ...options })
 
 /**
  * Add Unplanned Shopping Purchase

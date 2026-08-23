@@ -9,6 +9,7 @@ from app.features.auth.public import PublicUser, UserDirectory
 from app.features.groups.models import FamilyGroupMember
 from app.features.shopping.models import ShoppingItem, ShoppingPurchase, ShoppingTrip
 from app.features.shopping.workflow import (
+    ShoppingWorkflowConflictError,
     ShoppingWorkflowNotFoundError,
     ShoppingWorkflowService,
 )
@@ -129,3 +130,141 @@ def test_workflow_purchase_row_is_saved_with_current_buyer() -> None:
 
     assert item.purchased_by_user_id == buyer_id
     assert item.purchased_at is not None
+    session.flush.assert_called_once()
+
+
+def test_start_trip_reuses_latest_in_progress_trip() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.return_value = trip
+    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.get.return_value = make_member(group_id, user_id)
+    service, directory = make_service(session)
+    directory.list_by_ids.return_value = {
+        user_id: PublicUser(id=user_id, username="購入者", is_active=True),
+    }
+
+    result = service.start_trip(group_id, user_id)
+
+    assert result.id == trip.id
+    session.add.assert_not_called()
+    session.commit.assert_not_called()
+
+
+def test_discard_trip_reverses_purchases_and_restores_items() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    item = make_shopping_item(group_id=group_id, purchased_by_user_id=user_id)
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    purchase = ShoppingPurchase(
+        id=uuid4(),
+        group_id=group_id,
+        trip_id=trip.id,
+        shopping_item_id=item.id,
+        item_name_snapshot=item.name,
+        purchased_by_user_id=user_id,
+        purchased_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.side_effect = [group_id, trip, item, None]
+    session.scalars.return_value.all.side_effect = [[group_id], [purchase]]
+    session.get.return_value = make_member(group_id, user_id)
+    service, directory = make_service(session)
+    directory.list_by_ids.return_value = {
+        user_id: PublicUser(id=user_id, username="購入者", is_active=True),
+    }
+
+    result = service.discard_trip(trip.id, user_id)
+
+    assert result.id == trip.id
+    assert trip.discarded_at is not None
+    assert trip.discarded_by_user_id == user_id
+    assert purchase.reversed_at is not None
+    assert purchase.reversed_by_user_id == user_id
+    assert item.purchased_at is None
+    assert item.purchased_by_user_id is None
+    session.commit.assert_called_once()
+
+
+def test_discarded_trip_rejects_amount_changes() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        discarded_at=datetime.now(UTC),
+        discarded_by_user_id=user_id,
+    )
+    session.scalar.side_effect = [group_id, trip]
+    session.scalars.return_value.all.return_value = [group_id]
+    session.get.return_value = make_member(group_id, user_id)
+    service, _ = make_service(session)
+
+    with pytest.raises(ShoppingWorkflowConflictError):
+        service.update_trip(trip.id, user_id, 1000, True)
+
+    session.commit.assert_not_called()
+
+
+def test_delete_empty_in_progress_trip_is_allowed() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.side_effect = [group_id, trip]
+    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.get.return_value = make_member(group_id, user_id)
+    service, _ = make_service(session)
+
+    service.delete_empty_trip(trip.id, user_id)
+
+    session.delete.assert_called_once_with(trip)
+    session.commit.assert_called_once()
+
+
+def test_finishing_empty_trip_deletes_it_atomically() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.side_effect = [group_id, trip]
+    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.get.return_value = make_member(group_id, user_id)
+    service, _ = make_service(session)
+
+    result = service.update_trip(trip.id, user_id, None, True, True)
+
+    assert result is None
+    session.delete.assert_called_once_with(trip)
+    session.commit.assert_called_once()
