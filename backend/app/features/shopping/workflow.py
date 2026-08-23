@@ -346,10 +346,17 @@ class ShoppingWorkflowService:
         return self._purchase_summary(purchase) if purchase is not None else None
 
     def list_trips(
-        self, group_id: UUID, user_id: UUID, cursor: str | None, limit: int = 20
+        self,
+        group_id: UUID,
+        user_id: UUID,
+        cursor: str | None,
+        limit: int = 20,
+        include_discarded: bool = False,
     ) -> tuple[list[ShoppingTripSummary], str | None]:
         self._require_membership(group_id, user_id)
         statement = select(ShoppingTrip).where(ShoppingTrip.group_id == group_id)
+        if not include_discarded:
+            statement = statement.where(ShoppingTrip.discarded_at.is_(None))
         if cursor:
             cursor_started_at, cursor_id = self._decode_cursor(cursor)
             statement = statement.where(

@@ -402,9 +402,10 @@ def list_shopping_trips(
     service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
     cursor: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
+    include_discarded: bool = False,
 ) -> ShoppingTripListResponse:
     try:
-        items, next_cursor = service.list_trips(group_id, authenticated_user.id, cursor, limit)
+        items, next_cursor = service.list_trips(group_id, authenticated_user.id, cursor, limit, include_discarded)
         return ShoppingTripListResponse(items=[_trip_response(item) for item in items], next_cursor=next_cursor)
     except Exception as error:
         _raise_workflow_error(error)

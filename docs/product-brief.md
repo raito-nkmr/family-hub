@@ -335,9 +335,10 @@ an immediate undo. The start control resumes the latest in-progress trip for the
   while a trip with purchases leaves the nullable trip total for later entry in history. A finished trip can also be permanently
   deleted after confirmation; this removes its purchase events and restores affected planned items unless a later purchase keeps
   them purchased. Discarding retains the trip and reverses its purchases, restoring planned items to the active list.
-- Discarded trips and their purchase events remain visible for audit history but are excluded from spending, purchase counts, and
-  other statistics. An in-progress trip with no purchase events may be permanently deleted, and a finished trip may be permanently
-  deleted together with all of its purchase events; discarded trips cannot be deleted.
+- Discarded trips and their purchase events are retained for audit history but are hidden from the history list by default; members
+  can opt in to show them. They remain excluded from spending, purchase counts, and other statistics. An in-progress trip with no
+  purchase events may be permanently deleted, and a finished trip may be permanently deleted together with all of its purchase
+  events; discarded trips cannot be deleted.
 - Unrecorded totals are shown explicitly and excluded from spending totals. Spending is recorded only at trip level.
 - Group membership, CSRF, row locking, and stale-state conflict handling apply to every write; non-members receive not-found behavior.
 

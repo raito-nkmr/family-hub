@@ -125,6 +125,11 @@ def test_shopping_routes_are_registered_and_mutations_require_csrf() -> None:
     assert "get" in paths["/api/v1/shopping/groups/{group_id}/statistics"]
     assert "post" in paths["/api/v1/shopping/requests/{item_id}/purchase"]
     assert {"get", "patch", "delete"} <= set(paths["/api/v1/shopping/trips/{trip_id}"])
+    trip_query_parameters = {
+        parameter["name"]: parameter
+        for parameter in paths["/api/v1/shopping/groups/{group_id}/trips"]["get"]["parameters"]
+    }
+    assert trip_query_parameters["include_discarded"]["schema"]["default"] is False
     assert "post" in paths["/api/v1/shopping/trips/{trip_id}/discard"]
     assert "post" in paths["/api/v1/shopping/purchases/{purchase_id}/reverse"]
 

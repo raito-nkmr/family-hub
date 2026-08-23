@@ -30,7 +30,8 @@ export const queryKeys = {
   shoppingRequests: (groupId: string) => ['groups', groupId, 'shopping-requests'] as const,
   shoppingCategories: (groupId: string) => ['groups', groupId, 'shopping-categories'] as const,
   shoppingTrips: (groupId: string) => ['groups', groupId, 'shopping-trips'] as const,
-  shoppingTripHistory: (groupId: string) => ['groups', groupId, 'shopping-trips', 'history'] as const,
+  shoppingTripHistory: (groupId: string, includeDiscarded = false) =>
+    ['groups', groupId, 'shopping-trips', 'history', includeDiscarded] as const,
   shoppingTrip: (tripId: string) => ['shopping-trips', tripId] as const,
   shoppingStatistics: (groupId: string, fromDate: string, toDate: string) =>
     ['groups', groupId, 'shopping-statistics', fromDate, toDate] as const,

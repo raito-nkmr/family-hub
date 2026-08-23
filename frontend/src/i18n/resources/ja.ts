@@ -753,6 +753,7 @@ export const ja: TranslationShape = {
     monthlyTrend: '月別支出推移',
     tripHistory: '買い物履歴',
     tripHistoryHelp: '取り消した購入も含め、すべての購入イベントを保持します。',
+    showDiscarded: '破棄済みの買い物を表示',
     historyEmpty: '買い物履歴はまだありません。',
     startedBy: '{{username}}さんが開始',
     purchaseSummary: '有効な購入{{count}}件',

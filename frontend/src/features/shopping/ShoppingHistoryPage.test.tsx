@@ -6,6 +6,7 @@ import { ShoppingHistoryPage } from './ShoppingHistoryPage'
 
 const saveTripAmount = vi.fn()
 const deleteTrip = vi.fn()
+const setIncludeDiscarded = vi.fn()
 const useShoppingHistory = vi.fn()
 
 vi.mock('./useShoppingWorkflow', () => ({
@@ -36,6 +37,7 @@ describe('ShoppingHistoryPage', () => {
     saveTripAmount.mockReset()
     saveTripAmount.mockResolvedValue(true)
     deleteTrip.mockReset()
+    setIncludeDiscarded.mockReset()
     useShoppingHistory.mockReturnValue({
       groups: [{ id: 'group-id', name: '同居家族' }],
       selectedGroupId: 'group-id',
@@ -55,6 +57,8 @@ describe('ShoppingHistoryPage', () => {
       setToDate: vi.fn(),
       saveTripAmount,
       deleteTrip,
+      includeDiscarded: false,
+      setIncludeDiscarded,
       addUnplanned: vi.fn(),
       updatePurchase: vi.fn(),
       reversePurchase: vi.fn(),
@@ -101,5 +105,16 @@ describe('ShoppingHistoryPage', () => {
     await user.click(screen.getByRole('button', { name: '買い物を削除' }))
 
     expect(deleteTrip).toHaveBeenCalledWith(finishedTrip)
+  })
+
+  it('keeps discarded trips hidden by default and allows showing them', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingHistoryPage onUnauthorized={vi.fn()} />)
+
+    const toggle = screen.getByRole('checkbox', { name: '破棄済みの買い物を表示' })
+    expect(toggle).not.toBeChecked()
+    await user.click(toggle)
+
+    expect(setIncludeDiscarded).toHaveBeenCalledWith(true)
   })
 })

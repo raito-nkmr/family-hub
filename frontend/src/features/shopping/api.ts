@@ -148,11 +148,12 @@ export async function getShoppingTrips(
   cursor?: string,
   signal?: AbortSignal,
   limit?: number,
+  includeDiscarded = false,
 ): Promise<ShoppingTripList> {
   return sdkData(
     listShoppingTripsApiV1ShoppingGroupsGroupIdTripsGet({
       path: { group_id: groupId },
-      query: cursor || limit ? { cursor, limit } : undefined,
+      query: cursor || limit || includeDiscarded ? { cursor, limit, include_discarded: includeDiscarded } : undefined,
       signal,
     }),
   )

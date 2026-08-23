@@ -428,6 +428,7 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
   const queryClient = useQueryClient()
   const base = useShoppingBase(options)
   const confirm = useConfirmation()
+  const [includeDiscarded, setIncludeDiscarded] = useState(false)
   const [dateOverride, setDateOverride] = useState<{
     key: string
     fromDate: string
@@ -454,8 +455,9 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       toDate: value,
     }))
   const tripsQuery = useInfiniteQuery({
-    queryKey: queryKeys.shoppingTripHistory(base.selectedGroupId ?? ''),
-    queryFn: ({ pageParam, signal }) => getShoppingTrips(base.selectedGroupId!, pageParam, signal),
+    queryKey: queryKeys.shoppingTripHistory(base.selectedGroupId ?? '', includeDiscarded),
+    queryFn: ({ pageParam, signal }) =>
+      getShoppingTrips(base.selectedGroupId!, pageParam, signal, undefined, includeDiscarded),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.next_cursor ?? undefined,
     enabled: base.selectedGroupId !== null,
@@ -524,6 +526,8 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
     loadingMore: tripsQuery.isFetchingNextPage,
     statistics: statsQuery.data ?? null,
     categories: categoriesQuery.data ?? [],
+    includeDiscarded,
+    setIncludeDiscarded,
     members: base.selectedGroup?.members.filter((member) => member.is_active) ?? [],
     pageError:
       mutationError ??

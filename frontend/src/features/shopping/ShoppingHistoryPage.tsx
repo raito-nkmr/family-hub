@@ -251,6 +251,14 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
                   <h2>{t('shopping.tripHistory')}</h2>
                   <p>{t('shopping.tripHistoryHelp')}</p>
                 </div>
+                <label className="shopping-history__discarded-toggle">
+                  <input
+                    type="checkbox"
+                    checked={state.includeDiscarded}
+                    onChange={(event) => state.setIncludeDiscarded(event.target.checked)}
+                  />
+                  {t('shopping.showDiscarded')}
+                </label>
               </div>
               {state.loading ? (
                 <p>{t('shopping.loading')}</p>

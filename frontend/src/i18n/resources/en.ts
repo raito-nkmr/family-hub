@@ -758,6 +758,7 @@ export const en = {
     monthlyTrend: 'Monthly spending',
     tripHistory: 'Trips',
     tripHistoryHelp: 'Every purchase event stays in the record, including reversals.',
+    showDiscarded: 'Show discarded trips',
     historyEmpty: 'No shopping trips have been recorded yet.',
     startedBy: 'Started by {{username}}',
     purchaseSummary: '{{count}} active purchases',

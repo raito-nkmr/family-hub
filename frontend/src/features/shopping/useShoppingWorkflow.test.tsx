@@ -194,6 +194,21 @@ describe('useShoppingWorkflow', () => {
     })
   })
 
+  it('hides discarded trips by default and refetches them when enabled', async () => {
+    const { result } = renderHook(() => useShoppingHistory({ onUnauthorized: vi.fn() }), {
+      wrapper: makeWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.selectedGroupId).toBe('group-1'))
+    expect(result.current.includeDiscarded).toBe(false)
+    expect(vi.mocked(getShoppingTrips).mock.calls.at(-1)?.[4]).toBe(false)
+
+    await act(() => result.current.setIncludeDiscarded(true))
+
+    await waitFor(() => expect(result.current.includeDiscarded).toBe(true))
+    expect(vi.mocked(getShoppingTrips).mock.calls.at(-1)?.[4]).toBe(true)
+  })
+
   it('removes a deleted finished trip from history and refreshes related queries', async () => {
     const queryClient = createAppQueryClient()
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')

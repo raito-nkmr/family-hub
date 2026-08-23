@@ -5543,6 +5543,10 @@ export type ListShoppingTripsApiV1ShoppingGroupsGroupIdTripsGetData = {
      * Limit
      */
     limit?: number
+    /**
+     * Include Discarded
+     */
+    include_discarded?: boolean
   }
   url: '/api/v1/shopping/groups/{group_id}/trips'
 }

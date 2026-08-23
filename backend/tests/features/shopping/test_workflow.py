@@ -160,6 +160,24 @@ def test_start_trip_reuses_latest_in_progress_trip() -> None:
     session.commit.assert_not_called()
 
 
+def test_list_trips_hides_discarded_trips_by_default() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    session.get.return_value = make_member(group_id, user_id)
+    session.scalars.return_value.all.return_value = []
+    service, _ = make_service(session)
+
+    service.list_trips(group_id, user_id, None)
+    default_statement = str(session.scalars.call_args.args[0])
+
+    service.list_trips(group_id, user_id, None, include_discarded=True)
+    audit_statement = str(session.scalars.call_args.args[0])
+
+    assert "shopping_trips.discarded_at IS NULL" in default_statement
+    assert "shopping_trips.discarded_at IS NULL" not in audit_statement
+
+
 def test_discard_trip_reverses_purchases_and_restores_items() -> None:
     session = MagicMock(spec=Session)
     group_id = uuid4()

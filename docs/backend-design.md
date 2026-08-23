@@ -147,9 +147,9 @@ deleted by undo, correction, or discard. Trip amounts are nullable non-negative 
 null. Trips can be finished immediately, discarded only while in progress, or permanently deleted when in progress with zero
 purchase events or when finished. Deleting a finished trip removes its purchase events in the same locked transaction and
 synchronizes affected planned-item state; deleting an empty trip uses the same locked transaction to remove it after confirmation.
-Discarded
-trips and events are excluded from statistics. The history endpoint uses an opaque `(started_at, id)` cursor, and statistics
-convert date boundaries through the group's IANA time zone. Shopping trip PATCH requests preserve omitted fields; an explicit
+Discarded trips and events are excluded from statistics. The history endpoint hides discarded trips by default and accepts
+`include_discarded=true` for audit viewing; it uses an opaque `(started_at, id)` cursor, and statistics convert date boundaries
+through the group's IANA time zone. Shopping trip PATCH requests preserve omitted fields; an explicit
 `total_amount_yen: null` clears the amount. Purchase PATCH requests preserve omitted category and purchaser fields, allow an
 explicit null category, and reject an explicit null purchaser with `422`. Existing legacy purchase state is converted by
 `app.commands.migrate_shopping_history`, never by Alembic.

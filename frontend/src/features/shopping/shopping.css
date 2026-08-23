@@ -659,6 +659,19 @@
   margin-top: 2rem;
 }
 
+.shopping-history__discarded-toggle {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.shopping-history__discarded-toggle input {
+  width: auto;
+}
+
 .shopping-trip {
   display: grid;
   gap: 0.75rem;

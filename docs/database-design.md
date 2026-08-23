@@ -192,8 +192,8 @@ Stores one shopping session per explicit or automatically created trip: group, s
 discard timestamp and discarding user, nullable non-negative total amount in Japanese yen, recording user, and update time.
 Discard state requires both discard fields and cannot coexist with finalization. History pages order by `(started_at DESC, id
 DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
-Discarded trips are retained for history but are excluded from statistics. An in-progress trip with no purchase events may be
-hard-deleted, including through the confirmed empty-trip finish flow. A finalized trip may also be hard-deleted after confirmation;
+Discarded trips are retained for audit history, hidden from the history list by default, and excluded from statistics. An in-progress
+trip with no purchase events may be hard-deleted, including through the confirmed empty-trip finish flow. A finalized trip may also be hard-deleted after confirmation;
 its purchase events are removed and affected planned-item purchase state is synchronized with any remaining purchase events.
 
 ### `shopping_purchases`
