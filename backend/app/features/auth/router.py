@@ -3,8 +3,10 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.database.session import get_session
 from app.features.auth.dependencies import (
     get_auth_context,
     get_auth_service,
@@ -66,12 +68,13 @@ def login(
     credentials: LoginRequest,
     request: Request,
     response: Response,
+    session: Annotated[Session, Depends(get_session)],
     service: Annotated[AuthService, Depends(get_auth_service)],
     rate_limiter: Annotated[LoginRateLimiter, Depends(get_login_rate_limiter)],
 ) -> AuthSessionResponse:
     client_host = request.client.host if request.client else "unknown"
     rate_limit_key = f"{client_host}:{credentials.username}"
-    retry_after = rate_limiter.retry_after(rate_limit_key)
+    retry_after = rate_limiter.try_acquire(session, rate_limit_key)
     if retry_after is not None:
         logger.warning("Login rate limit triggered username=%s", credentials.username)
         raise HTTPException(
@@ -83,11 +86,10 @@ def login(
     try:
         created = service.login(credentials.username, credentials.password)
     except InvalidCredentialsError as error:
-        rate_limiter.record_failure(rate_limit_key)
         logger.warning("Login failed username=%s", credentials.username)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password") from error
 
-    rate_limiter.reset(rate_limit_key)
+    rate_limiter.reset(session, rate_limit_key)
     logger.info("Login succeeded user_id=%s", created.user.id)
     settings: Settings = request.app.state.settings
     response.set_cookie(

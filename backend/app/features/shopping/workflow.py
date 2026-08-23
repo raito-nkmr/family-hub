@@ -13,6 +13,8 @@ from app.features.auth.public import UserDirectory
 from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_user_group_ids
 from app.features.shopping.models import ShoppingCategory, ShoppingItem, ShoppingPurchase, ShoppingTrip
 
+UNSET = object()
+
 
 class ShoppingWorkflowNotFoundError(Exception):
     pass
@@ -378,7 +380,7 @@ class ShoppingWorkflowService:
         self,
         trip_id: UUID,
         user_id: UUID,
-        total_amount_yen: int | None,
+        total_amount_yen: int | None | object,
         finalize: bool,
         delete_if_empty: bool = False,
     ) -> ShoppingTripSummary | None:
@@ -399,7 +401,8 @@ class ShoppingWorkflowService:
                 self._session.delete(trip)
                 self._commit("Could not delete empty shopping trip")
                 return None
-        trip.total_amount_yen = total_amount_yen
+        if total_amount_yen is not UNSET:
+            trip.total_amount_yen = total_amount_yen
         if finalize and trip.finalized_at is None:
             trip.finalized_at = datetime.now(UTC)
         if finalize:
@@ -445,8 +448,8 @@ class ShoppingWorkflowService:
         self,
         purchase_id: UUID,
         user_id: UUID,
-        category_id: UUID | None,
-        purchased_by_user_id: UUID | None,
+        category_id: UUID | None | object,
+        purchased_by_user_id: UUID | object,
     ) -> ShoppingPurchaseSummary:
         group_id = self._purchase_group_id(purchase_id)
         self._lock_membership(group_id, user_id)
@@ -454,11 +457,13 @@ class ShoppingWorkflowService:
         trip = self._locked_trip(purchase.trip_id)
         if trip.discarded_at is not None:
             raise ShoppingWorkflowConflictError
-        self._validate_category(purchase.group_id, category_id)
-        self._validate_membership(purchase.group_id, purchased_by_user_id or purchase.purchased_by_user_id)
-        purchase.category_id = category_id
-        purchase.category_name_snapshot = self._category_name(category_id)
-        purchase.purchased_by_user_id = purchased_by_user_id or purchase.purchased_by_user_id
+        if category_id is not UNSET:
+            self._validate_category(purchase.group_id, category_id)
+            purchase.category_id = category_id
+            purchase.category_name_snapshot = self._category_name(category_id)
+        if purchased_by_user_id is not UNSET:
+            self._validate_membership(purchase.group_id, purchased_by_user_id)
+            purchase.purchased_by_user_id = purchased_by_user_id
         purchase.updated_at = datetime.now(UTC)
         self._commit("Could not update shopping purchase")
         return self._purchase_summary(purchase)

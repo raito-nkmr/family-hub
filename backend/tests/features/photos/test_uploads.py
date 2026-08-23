@@ -330,7 +330,7 @@ def test_complete_item_treats_an_unrelated_integrity_error_as_persistence_failur
 
     session.rollback.assert_called_once_with()
     storage.cleanup_finalized.assert_called_once_with(finalized)
-    storage.cleanup_resumable.assert_called_once_with(item.id)
+    storage.cleanup_resumable.assert_not_called()
 
 
 def test_get_offset_rejects_terminal_item_without_changing_progress() -> None:
@@ -367,21 +367,50 @@ def test_cancel_batch_locks_batch_and_items_before_changing_status() -> None:
     session.commit.assert_called_once_with()
 
 
+def test_cancel_batch_keeps_resumable_file_when_commit_fails() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item()
+    item.status = UploadItemStatus.PROCESSING
+    session.scalar.return_value = batch
+    session.scalars.return_value.all.return_value = [item]
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+
+    with pytest.raises(UploadBatchPersistenceError):
+        service.cancel_batch(batch.id, batch.owner_user_id)
+
+    storage.cleanup_resumable.assert_not_called()
+    session.rollback.assert_called_once_with()
+
+
 def test_expire_stale_batches_locks_batches_and_items_before_cleanup() -> None:
     service, session, storage = make_service()
     batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
     item.status = UploadItemStatus.UPLOADING
     session.scalars.return_value.all.side_effect = [[batch], [item]]
 
-    service._expire_stale_batches(commit=False)
+    cleanup_ids = service._expire_stale_batches(commit=False)
 
     batch_statement = session.scalars.call_args_list[0].args[0]
     items_statement = session.scalars.call_args_list[1].args[0]
     assert "FOR UPDATE" in str(batch_statement)
     assert "FOR UPDATE" in str(items_statement)
-    storage.cleanup_resumable.assert_called_once_with(item.id)
+    assert cleanup_ids == [item.id]
+    storage.cleanup_resumable.assert_not_called()
     assert batch.status is UploadBatchStatus.CANCELED
     assert item.status is UploadItemStatus.FAILED
+
+
+def test_expire_batch_keeps_resumable_file_when_commit_fails() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    item.status = UploadItemStatus.UPLOADING
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+
+    with pytest.raises(UploadBatchPersistenceError):
+        service._expire_batch(batch, [item])
+
+    storage.cleanup_resumable.assert_not_called()
+    session.rollback.assert_called_once_with()
 
 
 def test_expired_item_path_locks_all_items_before_cleanup() -> None:

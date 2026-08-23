@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
@@ -46,6 +46,11 @@ interface ShoppingBaseState {
   selectGroup: (groupId: string) => Promise<void>
 }
 
+interface LastPurchaseState {
+  purchase: ShoppingPurchase
+  groupId: string
+}
+
 function useShoppingBase({ onUnauthorized }: ShoppingWorkflowOptions): ShoppingBaseState {
   const groupsQuery = useQuery({ queryKey: queryKeys.groups, queryFn: ({ signal }) => getGroups(signal) })
   const groups = groupsQuery.data ?? []
@@ -73,7 +78,11 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
   const base = useShoppingBase(options)
   const confirm = useConfirmation()
   const { pendingIds, start, finish } = usePendingIds()
-  const [lastPurchase, setLastPurchase] = useState<ShoppingPurchase | null>(null)
+  const [lastPurchase, setLastPurchase] = useState<LastPurchaseState | null>(null)
+  const selectedGroupIdRef = useRef(base.selectedGroupId)
+  useEffect(() => {
+    selectedGroupIdRef.current = base.selectedGroupId
+  }, [base.selectedGroupId])
   const [mutationError, setMutationError] = useState<string | null>(null)
   const requestsQuery = useQuery({
     queryKey: queryKeys.shoppingRequests(base.selectedGroupId ?? ''),
@@ -111,7 +120,9 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
     setMutationError(null)
     try {
       const purchaseRecord = await purchaseMutation.mutateAsync({ item, tripId: activeTrip?.id })
-      setLastPurchase(purchaseRecord)
+      if (selectedGroupIdRef.current === item.group_id) {
+        setLastPurchase({ purchase: purchaseRecord, groupId: item.group_id })
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(item.group_id) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(item.group_id) }),
@@ -125,14 +136,14 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
   }
 
   const undo = async () => {
-    if (!lastPurchase || reverseMutation.isPending) return
+    if (!lastPurchase || lastPurchase.groupId !== base.selectedGroupId || reverseMutation.isPending) return
     setMutationError(null)
     try {
-      await reverseMutation.mutateAsync(lastPurchase.id)
+      await reverseMutation.mutateAsync(lastPurchase.purchase.id)
       setLastPurchase(null)
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(base.selectedGroupId ?? '') }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(base.selectedGroupId ?? '') }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(lastPurchase.groupId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(lastPurchase.groupId) }),
       ])
     } catch (error) {
       if (isUnauthorizedError(error)) options.onUnauthorized()
@@ -150,6 +161,11 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
       if (isUnauthorizedError(error)) options.onUnauthorized()
       else setMutationError(i18n.t('errors.shoppingTripStart'))
     }
+  }
+
+  const selectGroup = async (groupId: string) => {
+    setLastPurchase(null)
+    await base.selectGroup(groupId)
   }
 
   const endTrip = async () => {
@@ -194,9 +210,10 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
 
   return {
     ...base,
+    selectGroup,
     items: requestsQuery.data ?? [],
     activeTrip,
-    lastPurchase,
+    lastPurchase: lastPurchase?.groupId === base.selectedGroupId ? lastPurchase : null,
     pendingItemIds: pendingIds,
     loading: base.loadingGroups || base.loadingGroup || requestsQuery.isPending || tripsQuery.isPending,
     pageError: mutationError ?? (requestsQuery.error || tripsQuery.error ? i18n.t('errors.shoppingLoad') : null),
@@ -384,22 +401,58 @@ export function useShoppingList(options: ShoppingWorkflowOptions) {
   }
 }
 
-function todayInput(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+function datePartsForTimezone(timezone: string, date: Date): Record<string, string> {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(date)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value]),
+  )
 }
 
-function yearStartInput(): string {
-  return `${new Date().getFullYear()}-01-01`
+export function todayInput(timezone: string, date = new Date()): string {
+  const parts = datePartsForTimezone(timezone, date)
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
+export function yearStartInput(timezone: string, date = new Date()): string {
+  return `${datePartsForTimezone(timezone, date).year}-01-01`
 }
 
 export function useShoppingHistory(options: ShoppingWorkflowOptions) {
   const queryClient = useQueryClient()
   const base = useShoppingBase(options)
   const confirm = useConfirmation()
-  const [fromDate, setFromDate] = useState(yearStartInput)
-  const [toDate, setToDate] = useState(todayInput)
+  const [dateOverride, setDateOverride] = useState<{
+    key: string
+    fromDate: string
+    toDate: string
+  } | null>(null)
   const [mutationError, setMutationError] = useState<string | null>(null)
+  const groupTimezone = base.selectedGroup?.timezone
+  const dateTimezone = groupTimezone ?? 'UTC'
+  const dateKey = `${base.selectedGroupId ?? ''}:${dateTimezone}`
+  const defaultFromDate = yearStartInput(dateTimezone)
+  const defaultToDate = todayInput(dateTimezone)
+  const fromDate = dateOverride?.key === dateKey ? dateOverride.fromDate : defaultFromDate
+  const toDate = dateOverride?.key === dateKey ? dateOverride.toDate : defaultToDate
+  const setFromDate = (value: string) =>
+    setDateOverride((current) => ({
+      key: dateKey,
+      fromDate: value,
+      toDate: current?.key === dateKey ? current.toDate : toDate,
+    }))
+  const setToDate = (value: string) =>
+    setDateOverride((current) => ({
+      key: dateKey,
+      fromDate: current?.key === dateKey ? current.fromDate : fromDate,
+      toDate: value,
+    }))
   const tripsQuery = useInfiniteQuery({
     queryKey: queryKeys.shoppingTripHistory(base.selectedGroupId ?? ''),
     queryFn: ({ pageParam, signal }) => getShoppingTrips(base.selectedGroupId!, pageParam, signal),
@@ -430,15 +483,8 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       addUnplannedShoppingPurchase(tripId, { name, category_id: categoryId }),
   })
   const updatePurchaseMutation = useMutation({
-    mutationFn: ({
-      id,
-      categoryId,
-      purchaserId,
-    }: {
-      id: string
-      categoryId: string | null
-      purchaserId: string | null
-    }) => updateShoppingPurchase(id, { category_id: categoryId, purchased_by_user_id: purchaserId }),
+    mutationFn: ({ id, categoryId, purchaserId }: { id: string; categoryId: string | null; purchaserId: string }) =>
+      updateShoppingPurchase(id, { category_id: categoryId, purchased_by_user_id: purchaserId }),
   })
   const reversePurchaseMutation = useMutation({ mutationFn: reverseShoppingPurchase })
   const discardTripMutation = useMutation({ mutationFn: discardShoppingTrip })
@@ -496,7 +542,7 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       run(() => updateTripMutation.mutateAsync({ tripId, amount }), 'errors.shoppingTripUpdate'),
     addUnplanned: (tripId: string, name: string, categoryId: string | null) =>
       run(() => addPurchaseMutation.mutateAsync({ tripId, name, categoryId }), 'errors.shoppingUnplannedCreate'),
-    updatePurchase: (id: string, categoryId: string | null, purchaserId: string | null) =>
+    updatePurchase: (id: string, categoryId: string | null, purchaserId: string) =>
       run(() => updatePurchaseMutation.mutateAsync({ id, categoryId, purchaserId }), 'errors.shoppingPurchaseUpdate'),
     reversePurchase: (id: string) => run(() => reversePurchaseMutation.mutateAsync(id), 'errors.shoppingReverse'),
     discardTrip: async (trip: ShoppingTrip) => {

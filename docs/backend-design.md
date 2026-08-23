@@ -80,8 +80,9 @@ the exact readiness path with `404` on the public route. Detailed authenticated 
 ### `features.auth`
 
 Owns family login, server-side sessions, system roles, invitation-based account creation, CSRF validation, and login-rate
-limiting. It contains routers, service logic, `User`, `UserSession`, and `UserInvitation` models, Argon2id password helpers,
-rate limiting, authentication dependencies, invitation handling, and a deliberately small `public.py` boundary.
+limiting. It contains routers, service logic, `User`, `UserSession`, `UserInvitation`, and `LoginRateLimit` models,
+Argon2id password helpers, rate limiting, authentication dependencies, invitation handling, and a deliberately small
+`public.py` boundary.
 
 Login, password changes, and current-password reauthentication lock the target `User` row with `FOR UPDATE` before
 verifying the current hash. This prevents an old-password login or protected mutation from passing concurrently with a
@@ -94,6 +95,11 @@ acceptance, and those accounts do not receive the forced-change flag.
 
 Other features may use only `features.auth.public`, `require_authenticated_user`, `require_password_change_complete`, and
 `require_csrf_token`; they must not import auth internals directly.
+
+Login rate limiting is shared by all application processes through PostgreSQL. The request key combines the trusted client IP
+and normalized username, but only its SHA-256 hash is stored. A PostgreSQL transaction advisory lock serializes attempts for
+the hash; the attempt row is created or updated atomically, successful authentication removes it, and stale rows are removed
+opportunistically. A database outage is surfaced rather than silently falling back to a per-process limiter.
 
 ### `features.groups`
 
@@ -142,7 +148,9 @@ null. Trips can be finished immediately, discarded only while in progress, or pe
 zero purchase events. Finishing an empty trip uses the same locked transaction to remove it after confirmation; discard locks the
 trip, its events, and planned items, reverses events, and restores list state. Discarded
 trips and events are excluded from statistics. The history endpoint uses an opaque `(started_at, id)` cursor, and statistics
-convert date boundaries through the group's IANA time zone. Existing legacy purchase state is converted by
+convert date boundaries through the group's IANA time zone. Shopping trip PATCH requests preserve omitted fields; an explicit
+`total_amount_yen: null` clears the amount. Purchase PATCH requests preserve omitted category and purchaser fields, allow an
+explicit null category, and reject an explicit null purchaser with `422`. Existing legacy purchase state is converted by
 `app.commands.migrate_shopping_history`, never by Alembic.
 
 ### `features.photos`
@@ -329,7 +337,11 @@ The response-stream abort is a workaround for development uploads sent directly 
 FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI;
 the production response stream is not aborted by the browser.
 
-The production React client always uses chunked upload. The Cloudflare request limit and whole-file
+The upload router streams each request body into a bounded temporary file and checks `Content-Length` before reading when it
+is available. The service then streams that file into the durable `.part` file, so a request does not retain all received
+chunks in memory. Upload state is committed before a cancel or expiration removes `.part`; if the database commit fails,
+the `.part` remains available for offset reconciliation. Cleanup is best effort and the orphan-file maintenance command
+recovers failed deletions. The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
 duplicate, and failure independently; retry failed files without rolling back successful ones.
 

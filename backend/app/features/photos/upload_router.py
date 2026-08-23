@@ -1,5 +1,7 @@
 import logging
+import tempfile
 import time
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
@@ -202,24 +204,32 @@ async def append_upload_chunk(
         upload_offset,
         _content_length(request),
     )
-    payload = bytearray()
+    temporary_path: Path | None = None
     try:
-        async for chunk in request.stream():
-            payload.extend(chunk)
-            received_bytes += len(chunk)
-            if len(payload) > MAX_UPLOAD_CHUNK_BYTES:
-                logger.warning(
-                    "Upload chunk receive rejected item_id=%s attempt_id=%s retry_count=%s route=%s "
-                    "expected_offset=%d received_bytes=%d reason=chunk_too_large duration_ms=%.1f",
-                    item_id,
-                    attempt_id,
-                    retry_count,
-                    upload_route,
-                    upload_offset,
-                    received_bytes,
-                    (time.perf_counter() - receive_started) * 1000,
-                )
-                _raise_upload_error(UploadChunkTooLargeError())
+        content_length = _content_length(request)
+        if content_length is not None and content_length > MAX_UPLOAD_CHUNK_BYTES:
+            _raise_upload_error(UploadChunkTooLargeError())
+        with tempfile.NamedTemporaryFile(prefix="family-hub-upload-", suffix=".part", delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+            async for chunk in request.stream():
+                received_bytes += len(chunk)
+                if received_bytes > MAX_UPLOAD_CHUNK_BYTES:
+                    logger.warning(
+                        "Upload chunk receive rejected item_id=%s attempt_id=%s retry_count=%s route=%s "
+                        "expected_offset=%d received_bytes=%d reason=chunk_too_large duration_ms=%.1f",
+                        item_id,
+                        attempt_id,
+                        retry_count,
+                        upload_route,
+                        upload_offset,
+                        received_bytes,
+                        (time.perf_counter() - receive_started) * 1000,
+                    )
+                    if temporary_path is not None:
+                        temporary_path.unlink(missing_ok=True)
+                    _raise_upload_error(UploadChunkTooLargeError())
+                await run_in_threadpool(temporary.write, chunk)
+            await run_in_threadpool(temporary.flush)
     except ClientDisconnect:
         logger.warning(
             "Upload chunk client disconnected item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
@@ -232,6 +242,12 @@ async def append_upload_chunk(
             received_bytes,
             (time.perf_counter() - receive_started) * 1000,
         )
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
+    except Exception:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
         raise
     logger.info(
         "Upload chunk body received item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
@@ -246,7 +262,13 @@ async def append_upload_chunk(
     )
     persist_started = time.perf_counter()
     try:
-        next_offset = await run_in_threadpool(service.append_chunk, item_id, user.id, upload_offset, bytes(payload))
+        next_offset = await run_in_threadpool(
+            service.append_chunk_file,
+            item_id,
+            user.id,
+            upload_offset,
+            temporary_path,
+        )
     except (
         UploadItemNotFoundError,
         UploadBatchInvalidError,
@@ -268,7 +290,13 @@ async def append_upload_chunk(
             error.actual_offset if isinstance(error, UploadOffsetError) else None,
             (time.perf_counter() - persist_started) * 1000,
         )
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
         _raise_upload_error(error)
+    except Exception:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
     logger.info(
         "Upload chunk persisted item_id=%s attempt_id=%s retry_count=%s route=%s expected_offset=%d "
         "received_bytes=%d next_offset=%d duration_ms=%.1f",
@@ -281,6 +309,8 @@ async def append_upload_chunk(
         next_offset,
         (time.perf_counter() - persist_started) * 1000,
     )
+    if temporary_path is not None:
+        temporary_path.unlink(missing_ok=True)
     return PlainTextResponse("ok", headers={"Upload-Offset": str(next_offset)})
 
 

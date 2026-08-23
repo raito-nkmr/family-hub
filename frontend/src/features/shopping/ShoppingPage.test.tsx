@@ -105,7 +105,7 @@ describe('ShoppingPage', () => {
     useShoppingStore.mockReturnValueOnce({
       ...useShoppingStore(),
       items: [],
-      lastPurchase: purchaseRecord,
+      lastPurchase: { purchase: purchaseRecord, groupId: item.group_id },
     })
     render(<ShoppingPage onUnauthorized={vi.fn()} />)
 

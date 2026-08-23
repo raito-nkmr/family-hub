@@ -9,7 +9,7 @@ class Base(DeclarativeBase):
 def get_model_metadata() -> MetaData:
     from app.features.albums.models import Album, AlbumPhoto
     from app.features.audit.models import AdministrativeAuditEvent
-    from app.features.auth.models import User, UserInvitation, UserSession
+    from app.features.auth.models import LoginRateLimit, User, UserInvitation, UserSession
     from app.features.chores.models import ChoreCategory, ChoreCompletion, ChoreTask
     from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation
     from app.features.maintenance.models import MaintenanceRun
@@ -44,6 +44,7 @@ def get_model_metadata() -> MetaData:
         FamilyGroup,
         FamilyGroupMember,
         FamilyGroupMembershipInvitation,
+        LoginRateLimit,
         MaintenanceRun,
         NotificationDelivery,
         NotificationOutbox,

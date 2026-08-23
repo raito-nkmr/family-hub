@@ -2088,7 +2088,7 @@ export type ShoppingPurchaseUpdate = {
   /**
    * Purchased By User Id
    */
-  purchased_by_user_id?: string | null
+  purchased_by_user_id?: string
 }
 
 /**

@@ -40,6 +40,7 @@ from app.features.shopping.service import (
     ShoppingStateConflictError,
 )
 from app.features.shopping.workflow import (
+    UNSET,
     ShoppingCategoryDuplicateError,
     ShoppingCategoryInUseError,
     ShoppingCategorySummary,
@@ -436,7 +437,7 @@ def update_shopping_trip(
         trip = service.update_trip(
             trip_id,
             authenticated_user.id,
-            body.total_amount_yen,
+            body.total_amount_yen if "total_amount_yen" in body.model_fields_set else UNSET,
             body.finalize,
             body.delete_if_empty,
         )
@@ -533,13 +534,15 @@ def update_shopping_purchase(
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
 ) -> ShoppingPurchaseResponse:
+    if "purchased_by_user_id" in body.model_fields_set and body.purchased_by_user_id is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Purchaser is required")
     try:
         return _purchase_response(
             service.update_purchase(
                 purchase_id,
                 authenticated_user.id,
-                body.category_id,
-                body.purchased_by_user_id,
+                body.category_id if "category_id" in body.model_fields_set else UNSET,
+                body.purchased_by_user_id if "purchased_by_user_id" in body.model_fields_set else UNSET,
             )
         )
     except Exception as error:

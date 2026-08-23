@@ -9,6 +9,7 @@ from app.features.auth.public import PublicUser, UserDirectory
 from app.features.groups.models import FamilyGroupMember
 from app.features.shopping.models import ShoppingItem, ShoppingPurchase, ShoppingTrip
 from app.features.shopping.workflow import (
+    UNSET,
     ShoppingWorkflowConflictError,
     ShoppingWorkflowNotFoundError,
     ShoppingWorkflowService,
@@ -32,7 +33,7 @@ def test_create_item_accepts_another_group_member_as_assignee() -> None:
     assignee_id = uuid4()
     creator_membership = make_member(group_id, creator_id)
     assignee_membership = make_member(group_id, assignee_id)
-    session.scalars.return_value.all.return_value = [group_id]
+    session.scalars.return_value.all.side_effect = [[group_id], []]
     session.get.side_effect = [creator_membership, assignee_membership]
     directory = MagicMock(spec=UserDirectory)
     directory.list_by_ids.return_value = {
@@ -267,4 +268,70 @@ def test_finishing_empty_trip_deletes_it_atomically() -> None:
 
     assert result is None
     session.delete.assert_called_once_with(trip)
+    session.commit.assert_called_once()
+
+
+def test_updating_trip_without_amount_preserves_existing_amount() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        total_amount_yen=1250,
+    )
+    session.scalar.side_effect = [group_id, trip]
+    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.get.return_value = make_member(group_id, user_id)
+    service, directory = make_service(session)
+    directory.list_by_ids.return_value = {
+        user_id: PublicUser(id=user_id, username="購入者", is_active=True),
+    }
+
+    service.update_trip(trip.id, user_id, UNSET, True)
+
+    assert trip.total_amount_yen == 1250
+    assert trip.finalized_at is not None
+    session.commit.assert_called_once()
+
+
+def test_updating_purchase_without_fields_preserves_existing_values() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    category_id = uuid4()
+    purchase = ShoppingPurchase(
+        id=uuid4(),
+        group_id=group_id,
+        trip_id=uuid4(),
+        item_name_snapshot="電池",
+        category_id=category_id,
+        category_name_snapshot="日用品",
+        purchased_by_user_id=user_id,
+        purchased_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    trip = ShoppingTrip(
+        id=purchase.trip_id,
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.side_effect = [group_id, purchase, trip]
+    session.scalars.return_value.all.return_value = [group_id]
+    session.get.return_value = make_member(group_id, user_id)
+    service, directory = make_service(session)
+    directory.list_by_ids.return_value = {
+        user_id: PublicUser(id=user_id, username="購入者", is_active=True),
+    }
+
+    service.update_purchase(purchase.id, user_id, UNSET, UNSET)
+
+    assert purchase.category_id == category_id
+    assert purchase.category_name_snapshot == "日用品"
+    assert purchase.purchased_by_user_id == user_id
     session.commit.assert_called_once()

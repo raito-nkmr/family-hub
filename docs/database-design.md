@@ -31,6 +31,7 @@ users 1 ───── 0..N push_subscriptions N..1 ───── 1 user_sess
 users 1 ───── 0..N notification_preferences
 users 1 ───── 0..N notification_outbox 1 ───── 0..N notification_deliveries
 push_subscriptions 1 ───── 0..N notification_deliveries
+login_rate_limits (shared PostgreSQL login-attempt windows; hashed keys only)
 maintenance_runs
 administrative_audit_events
 ```
@@ -44,7 +45,8 @@ current relational contract.
 - Generate UUID v4 in Python before writing temporary files, originals, or database rows.
 - Store timestamps as `TIMESTAMPTZ` in UTC; keep the PostgreSQL session time zone at UTC.
 - FastAPI returns UTC ISO 8601 timestamps and never converts them to JST at the DB/API boundary.
-- React explicitly converts display values to `Asia/Tokyo`; JST date boundaries are used for date search and grouping.
+- React passes an explicit IANA time zone for date formatting and boundaries. Photo date search uses `Asia/Tokyo`, while
+  group-scoped shopping statistics use the selected group's time zone.
 - Store the denormalized `effective_captured_at` sort value as owner override, original `captured_at_original`, then
   `uploaded_at`; keep the source and override fields separate so upload time is never presented as a known capture time.
 - Do not store image data, absolute HDD paths, or environment-specific mount points in PostgreSQL.
@@ -105,6 +107,14 @@ Stores server-side sessions. The raw cookie token is not stored; only its lowerc
 `token_hash` column. The table also stores a session-bound CSRF token, creation time, `last_used_at`, absolute expiry, and
 optional revocation time. `expires_at` must be later than `created_at`. Index `user_id` as `ix_user_sessions_user_id` to
 revoke all sessions efficiently.
+
+### `login_rate_limits`
+
+Stores only the lowercase SHA-256 hash of the trusted client-IP and normalized-username rate-limit key, the start of its
+current window, the attempt count, and the last update time. The hash is the primary key and the update-time index supports
+opportunistic removal of expired rows. Login attempts acquire a PostgreSQL transaction advisory lock derived from the hash,
+then consume a window slot atomically across processes; successful logins delete the row. This table contains no seed or
+backfill data.
 
 ### `family_groups`
 
@@ -286,8 +296,11 @@ counts, status (`queued`, `uploading`, `processing`, `succeeded`, `duplicate`, o
 timestamps. `(batch_id, client_id)` is unique and received bytes must be between zero and size. Files complete independently;
 one failure does not roll back successful photos.
 
-After each chunk, commit `received_bytes` so the `.part` size can be reconciled after interruption. After receipt, commit the
-item as `processing`, finalize original, sidecar, and WebP thumbnail, then insert `photos`, `photo_metadata`,
+After each chunk, commit `received_bytes` so the `.part` size can be reconciled after interruption. Request bodies are first
+streamed through a bounded temporary file and then appended to the durable `.part` file in bounded reads. Cancel and expiry
+commit the database state before attempting `.part` deletion; a failed commit leaves the `.part` for offset reconciliation,
+and failed cleanup is recovered by orphan maintenance. After receipt, commit the item as `processing`, finalize original,
+sidecar, and WebP thumbnail, then insert `photos`, `photo_metadata`,
 `photo_derivatives`, required shares, and activity rows in one transaction. Use `UploadItem.id` as `Photo.id` to make retries
 idempotent.
 
@@ -374,7 +387,7 @@ Do not add tables for person detection, tags, face recognition, or scene classif
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
 The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain,
-followed by the current shopping workflow migrations.
+followed by approved feature migrations for shopping workflow and shared authentication state.
 The current names are defined directly in these baseline revisions; naming-only revisions are not retained when the
 resettable databases are rebuilt:
 
@@ -383,6 +396,7 @@ resettable databases are rebuilt:
 - `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
 - `20260822_04_shopping_workflow` — shopping assignments, categories, trips, purchase events, and workflow indexes
 - `20260822_05_shopping_trip_states` — discarded trip state, integrity constraints, and discard-user index
+- `20260823_06_login_rate_limits` — shared PostgreSQL login-rate-limit state (schema only)
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,

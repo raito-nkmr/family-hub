@@ -123,7 +123,7 @@ export function ShoppingPage({ onUnauthorized }: ShoppingPageProps) {
 
         {state.lastPurchase && (
           <div className="shopping-undo" role="status">
-            <span>{t('shopping.purchasedNotice', { itemName: state.lastPurchase.item_name })}</span>
+            <span>{t('shopping.purchasedNotice', { itemName: state.lastPurchase.purchase.item_name })}</span>
             <button className="secondary-button icon-button" type="button" onClick={() => void state.undo()}>
               <UndoIcon />
               {t('shopping.undoImmediately')}

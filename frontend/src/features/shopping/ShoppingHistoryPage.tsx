@@ -101,7 +101,7 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
           aria-label={t('shopping.purchaseBuyer', { itemName: purchase.item_name })}
           value={purchase.purchased_by_user_id}
           disabled={state.submitting || !editable || Boolean(purchase.reversed_at)}
-          onChange={(event) => void state.updatePurchase(purchase.id, purchase.category_id, event.target.value || null)}
+          onChange={(event) => void state.updatePurchase(purchase.id, purchase.category_id, event.target.value)}
         >
           {state.members.map((member) => (
             <option key={member.user_id} value={member.user_id}>

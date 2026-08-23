@@ -214,7 +214,7 @@ class ShoppingUnplannedPurchaseCreate(BaseModel):
 
 class ShoppingPurchaseUpdate(BaseModel):
     category_id: UUID | None = None
-    purchased_by_user_id: UUID | None = None
+    purchased_by_user_id: UUID = Field(default=None)
 
 
 class ShoppingStatisticsResponse(BaseModel):

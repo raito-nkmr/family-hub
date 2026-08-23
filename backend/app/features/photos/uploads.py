@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
@@ -101,7 +102,7 @@ class UploadBatchService:
             raise UploadBatchInvalidError("A file is unsupported or exceeds the size limit")
 
         self._session.execute(select(func.pg_advisory_xact_lock(UPLOAD_CAPACITY_LOCK_ID)))
-        self._expire_stale_batches(commit=False)
+        expired_item_ids = self._expire_stale_batches(commit=False)
         reserved = self._session.scalar(
             select(func.coalesce(func.sum(UploadItem.size_bytes - UploadItem.received_bytes), 0))
             .join(UploadBatch, UploadBatch.id == UploadItem.batch_id)
@@ -145,6 +146,7 @@ class UploadBatchService:
         ]
         self._session.add_all([batch, *items])
         self._commit()
+        self._cleanup_resumable(expired_item_ids)
         return batch, items
 
     def get_batch(
@@ -207,6 +209,28 @@ class UploadBatchService:
         self._require_active(batch, item)
         try:
             next_offset = self._storage.append_resumable_chunk(item.id, offset, data, item.size_bytes)
+        except UploadOffsetMismatchError as error:
+            item.received_bytes = error.actual_offset
+            self._commit()
+            raise UploadOffsetError(error.actual_offset) from error
+        except (UploadTooLargeError, PhotoStorageError) as error:
+            raise UploadBatchStorageError(_storage_status(error)) from error
+        item.received_bytes = next_offset
+        item.status = UploadItemStatus.UPLOADING
+        self._commit()
+        return next_offset
+
+    def append_chunk_file(self, item_id: UUID, owner_user_id: UUID, offset: int, source_path: Path) -> int:
+        try:
+            source_size = source_path.stat().st_size
+        except OSError as error:
+            raise UploadBatchStorageError from error
+        if source_size > MAX_UPLOAD_CHUNK_BYTES:
+            raise UploadChunkTooLargeError
+        batch, item = self._get_item(item_id, owner_user_id, lock=True)
+        self._require_active(batch, item)
+        try:
+            next_offset = self._storage.append_resumable_file(item.id, offset, source_path, item.size_bytes)
         except UploadOffsetMismatchError as error:
             item.received_bytes = error.actual_offset
             self._commit()
@@ -287,14 +311,14 @@ class UploadBatchService:
         except IntegrityError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
-            self._storage.cleanup_resumable(item.id)
             if _is_duplicate_photo_integrity_error(error):
-                return self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+                result = self._finish_item(batch, item, UploadItemStatus.DUPLICATE, error_code="duplicate")
+                self._storage.cleanup_resumable(item.id)
+                return result
             raise UploadBatchPersistenceError from error
         except SQLAlchemyError as error:
             self._session.rollback()
             self._storage.cleanup_finalized(registered.finalized_upload)
-            self._storage.cleanup_resumable(item.id)
             raise UploadBatchPersistenceError from error
 
         try:
@@ -307,15 +331,17 @@ class UploadBatchService:
         batch, items = self.get_batch(batch_id, owner_user_id, lock=True)
         if batch.status != UploadBatchStatus.ACTIVE:
             return
+        cleanup_ids: list[UUID] = []
         for item in items:
             if UploadItemStatus(item.status) not in TERMINAL_ITEM_STATUSES:
-                self._storage.cleanup_resumable(item.id)
+                cleanup_ids.append(item.id)
                 item.status = UploadItemStatus.FAILED
                 item.error_code = "canceled"
                 item.completed_at = datetime.now(UTC)
         batch.status = UploadBatchStatus.CANCELED
         batch.completed_at = datetime.now(UTC)
         self._commit()
+        self._cleanup_resumable(cleanup_ids)
 
     def _get_item(self, item_id: UUID, owner_user_id: UUID, *, lock: bool = False) -> tuple[UploadBatch, UploadItem]:
         statement = (
@@ -346,16 +372,18 @@ class UploadBatchService:
         items = list(
             self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
         )
+        cleanup_ids: list[UUID] = []
         for item in items:
             if UploadItemStatus(item.status) in TERMINAL_ITEM_STATUSES:
                 continue
-            self._storage.cleanup_resumable(item.id)
+            cleanup_ids.append(item.id)
             item.status = UploadItemStatus.FAILED
             item.error_code = "sharing_access_revoked"
             item.completed_at = now
         batch.status = UploadBatchStatus.CANCELED
         batch.completed_at = now
         self._commit()
+        self._cleanup_resumable(cleanup_ids)
 
     def _finish_item(
         self,
@@ -385,7 +413,7 @@ class UploadBatchService:
         self._commit()
         return item
 
-    def _expire_stale_batches(self, *, commit: bool = True) -> None:
+    def _expire_stale_batches(self, *, commit: bool = True) -> list[UUID]:
         batches = list(
             self._session.scalars(
                 select(UploadBatch)
@@ -396,19 +424,23 @@ class UploadBatchService:
                 .with_for_update()
             ).all()
         )
+        cleanup_ids: list[UUID] = []
         for batch in batches:
             items = list(
                 self._session.scalars(select(UploadItem).where(UploadItem.batch_id == batch.id).with_for_update()).all()
             )
-            self._expire_batch(batch, items, commit=False)
+            cleanup_ids.extend(self._expire_batch(batch, items, commit=False))
         if batches and commit:
             self._commit()
+            self._cleanup_resumable(cleanup_ids)
+        return cleanup_ids
 
-    def _expire_batch(self, batch: UploadBatch, items: list[UploadItem], *, commit: bool = True) -> None:
+    def _expire_batch(self, batch: UploadBatch, items: list[UploadItem], *, commit: bool = True) -> list[UUID]:
         now = datetime.now(UTC)
+        cleanup_ids: list[UUID] = []
         for item in items:
             if UploadItemStatus(item.status) not in TERMINAL_ITEM_STATUSES:
-                self._storage.cleanup_resumable(item.id)
+                cleanup_ids.append(item.id)
                 item.status = UploadItemStatus.FAILED
                 item.error_code = "expired"
                 item.completed_at = now
@@ -416,6 +448,12 @@ class UploadBatchService:
         batch.completed_at = now
         if commit:
             self._commit()
+            self._cleanup_resumable(cleanup_ids)
+        return cleanup_ids
+
+    def _cleanup_resumable(self, item_ids: list[UUID]) -> None:
+        for item_id in item_ids:
+            self._storage.cleanup_resumable(item_id)
 
     def _commit(self) -> None:
         try:

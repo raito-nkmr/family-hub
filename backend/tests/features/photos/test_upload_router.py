@@ -18,7 +18,7 @@ from app.features.photos import upload_router as upload_router_module
 from app.features.photos.dependencies import get_upload_batch_service
 from app.features.photos.storage import StorageStatusCode
 from app.features.photos.upload_router import _raise_upload_error, append_upload_chunk, get_upload_offset, router
-from app.features.photos.uploads import UploadBatchStorageError, UploadOffsetError
+from app.features.photos.uploads import MAX_UPLOAD_CHUNK_BYTES, UploadBatchStorageError, UploadOffsetError
 from app.main import create_app
 
 
@@ -89,11 +89,11 @@ async def test_append_chunk_runs_sync_service_off_the_event_loop(monkeypatch: py
             yield b"chunk"
 
     class UploadServiceStub:
-        def append_chunk(self, item_id, user_id, offset, payload):
+        def append_chunk_file(self, item_id, user_id, offset, source_path):
             nonlocal service_thread
             service_thread = threading.get_ident()
-            assert payload == b"chunk"
-            return offset + len(payload)
+            assert source_path.read_bytes() == b"chunk"
+            return offset + source_path.stat().st_size
 
     response = await append_upload_chunk(
         item_id,
@@ -183,6 +183,51 @@ async def test_append_chunk_logs_client_disconnect(monkeypatch: pytest.MonkeyPat
         3,
         ANY,
     )
+
+
+@pytest.mark.anyio
+async def test_append_chunk_rejects_content_length_before_reading_body() -> None:
+    class RequestStub:
+        headers = {"content-length": str(MAX_UPLOAD_CHUNK_BYTES + 1)}
+
+        async def stream(self):
+            raise AssertionError("the body must not be read after an oversized Content-Length")
+            yield b""
+
+    with pytest.raises(HTTPException) as error:
+        await append_upload_chunk(
+            uuid4(),
+            RequestStub(),
+            0,
+            AuthenticatedUser(id=uuid4(), username="owner"),
+            MagicMock(),
+        )
+
+    assert error.value.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_append_chunk_rejects_streamed_body_over_the_limit() -> None:
+    service = MagicMock()
+
+    class RequestStub:
+        headers = {}
+
+        async def stream(self):
+            yield b"x" * MAX_UPLOAD_CHUNK_BYTES
+            yield b"x"
+
+    with pytest.raises(HTTPException) as error:
+        await append_upload_chunk(
+            uuid4(),
+            RequestStub(),
+            0,
+            AuthenticatedUser(id=uuid4(), username="owner"),
+            service,
+        )
+
+    assert error.value.status_code == 422
+    service.append_chunk_file.assert_not_called()
 
 
 @pytest.mark.parametrize(

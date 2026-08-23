@@ -186,7 +186,7 @@ export function addUnplannedShoppingPurchase(
 
 export function updateShoppingPurchase(
   purchaseId: string,
-  body: { category_id?: string | null; purchased_by_user_id?: string | null },
+  body: { category_id?: string | null; purchased_by_user_id?: string },
 ): Promise<ShoppingPurchase> {
   return sdkData(
     updateShoppingPurchaseApiV1ShoppingPurchasesPurchaseIdPatch({ path: { purchase_id: purchaseId }, body }),

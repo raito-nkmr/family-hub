@@ -390,6 +390,16 @@ def test_resumable_upload_appends_chunks_and_builds_staged_metadata(
     assert staged.sha256 == hashlib.sha256(b"photo").hexdigest()
 
 
+def test_resumable_upload_appends_a_file_in_bounded_reads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+    item_id = uuid4()
+    source = tmp_path / "chunk"
+    source.write_bytes(b"photo")
+
+    assert storage.append_resumable_file(item_id, 0, source, 5) == 5
+    assert (tmp_path / "incoming" / f"{item_id}.part").read_bytes() == b"photo"
+
+
 def test_resumable_upload_validates_offset_for_empty_chunks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     storage = make_available_storage(tmp_path, monkeypatch)
     item_id = uuid4()

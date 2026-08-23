@@ -15,9 +15,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260822_05_shopping_trip_states"]
+    assert scripts.get_heads() == ["20260823_06_login_rate_limits"]
     assert scripts.get_bases() == ["20260821_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260823_06_login_rate_limits",
         "20260822_05_shopping_trip_states",
         "20260822_04_shopping_workflow",
         "20260821_03_household",
@@ -76,6 +77,8 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "CREATE TABLE shopping_purchases" in sql
     assert "assignee_user_id UUID" in sql
     assert "total_amount_yen INTEGER" in sql
+    assert "CREATE TABLE login_rate_limits" in sql
+    assert "pk_login_rate_limits" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
