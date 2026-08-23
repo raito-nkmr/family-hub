@@ -242,9 +242,47 @@ def test_delete_empty_in_progress_trip_is_allowed() -> None:
     session.get.return_value = make_member(group_id, user_id)
     service, _ = make_service(session)
 
-    service.delete_empty_trip(trip.id, user_id)
+    service.delete_trip(trip.id, user_id)
 
     session.delete.assert_called_once_with(trip)
+    session.commit.assert_called_once()
+
+
+def test_delete_finalized_trip_removes_purchases_and_restores_list_items() -> None:
+    session = MagicMock(spec=Session)
+    group_id = uuid4()
+    user_id = uuid4()
+    item = make_shopping_item(group_id=group_id, created_by_user_id=user_id, purchased_by_user_id=user_id)
+    trip = ShoppingTrip(
+        id=uuid4(),
+        group_id=group_id,
+        started_by_user_id=user_id,
+        started_at=datetime.now(UTC),
+        finalized_at=datetime.now(UTC),
+        total_amount_yen=1800,
+        recorded_by_user_id=user_id,
+        updated_at=datetime.now(UTC),
+    )
+    purchase = ShoppingPurchase(
+        id=uuid4(),
+        group_id=group_id,
+        trip_id=trip.id,
+        shopping_item_id=item.id,
+        item_name_snapshot=item.name,
+        purchased_by_user_id=user_id,
+        purchased_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    session.scalar.side_effect = [group_id, trip, item, None]
+    session.scalars.return_value.all.side_effect = [[group_id], [purchase]]
+    session.get.return_value = make_member(group_id, user_id)
+    service, _ = make_service(session)
+
+    service.delete_trip(trip.id, user_id)
+
+    assert item.purchased_at is None
+    assert item.purchased_by_user_id is None
+    assert session.delete.call_args_list == [((purchase,), {}), ((trip,), {})]
     session.commit.assert_called_once()
 
 

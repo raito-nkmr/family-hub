@@ -75,9 +75,6 @@ import type {
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteData,
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteErrors,
   DeleteChoreCategoryApiV1ChoresCategoriesCategoryIdDeleteResponses,
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData,
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteData,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteErrors,
   DeletePushSubscriptionApiV1NotificationsSubscriptionsSubscriptionIdDeleteResponses,
@@ -87,6 +84,9 @@ import type {
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteData,
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteErrors,
   DeleteShoppingRequestApiV1ShoppingRequestsItemIdDeleteResponses,
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteData,
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
   DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostData,
   DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostErrors,
   DiscardShoppingTripApiV1ShoppingTripsTripIdDiscardPostResponses,
@@ -2048,18 +2048,18 @@ export const purchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePost = <T
   >({ url: '/api/v1/shopping/requests/{item_id}/purchase', ...options })
 
 /**
- * Delete Empty Shopping Trip
+ * Delete Shopping Trip
  */
-export const deleteEmptyShoppingTripApiV1ShoppingTripsTripIdDelete = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData, ThrowOnError>,
+export const deleteShoppingTripApiV1ShoppingTripsTripIdDelete = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteData, ThrowOnError>,
 ): RequestResult<
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
   ThrowOnError
 > =>
   (options.client ?? client).delete<
-    DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
-    DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
+    DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses,
+    DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors,
     ThrowOnError
   >({ url: '/api/v1/shopping/trips/{trip_id}', ...options })
 

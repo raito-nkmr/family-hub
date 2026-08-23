@@ -467,13 +467,13 @@ def discard_shopping_trip(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_csrf_token)],
 )
-def delete_empty_shopping_trip(
+def delete_shopping_trip(
     trip_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[ShoppingWorkflowService, Depends(get_shopping_workflow_service)],
 ) -> Response:
     try:
-        service.delete_empty_trip(trip_id, authenticated_user.id)
+        service.delete_trip(trip_id, authenticated_user.id)
     except Exception as error:
         _raise_workflow_error(error)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

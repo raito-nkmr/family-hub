@@ -192,15 +192,18 @@ Stores one shopping session per explicit or automatically created trip: group, s
 discard timestamp and discarding user, nullable non-negative total amount in Japanese yen, recording user, and update time.
 Discard state requires both discard fields and cannot coexist with finalization. History pages order by `(started_at DESC, id
 DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
-Discarded trips are retained for history but are excluded from statistics; only an in-progress trip with no purchase events may be
-hard-deleted, including through the confirmed empty-trip finish flow.
+Discarded trips are retained for history but are excluded from statistics. An in-progress trip with no purchase events may be
+hard-deleted, including through the confirmed empty-trip finish flow. A finalized trip may also be hard-deleted after confirmation;
+its purchase events are removed and affected planned-item purchase state is synchronized with any remaining purchase events.
 
 ### `shopping_purchases`
 
-Append-only purchase events reference a trip and optionally the current `shopping_items` row. They store item name, assignee,
-and category snapshots, actual purchaser, purchase time, and nullable reversal actor/time. The optional item reference uses
-`ON DELETE SET NULL`; trip/group references cascade only with their owning group/trip. Reversal changes state and never deletes an
-event, preserving repeated purchases, corrections, planned-vs-unplanned counts, and time-series statistics.
+Purchase events are append-only during normal corrections and reversals and reference a trip and optionally the current
+`shopping_items` row. They store item name, assignee, and category snapshots, actual purchaser, purchase time, and nullable
+reversal actor/time. The optional item reference uses `ON DELETE SET NULL`; trip/group references cascade only with their owning
+group/trip. Reversal changes state and never deletes an event, preserving repeated purchases, corrections, planned-vs-unplanned
+counts, and time-series statistics. Explicit finalized-trip deletion removes all events belonging to that trip as one destructive
+operation.
 
 ## Photo tables
 

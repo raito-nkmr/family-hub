@@ -5,6 +5,7 @@ import type { ShoppingTrip } from './api'
 import { ShoppingHistoryPage } from './ShoppingHistoryPage'
 
 const saveTripAmount = vi.fn()
+const deleteTrip = vi.fn()
 const useShoppingHistory = vi.fn()
 
 vi.mock('./useShoppingWorkflow', () => ({
@@ -34,6 +35,7 @@ describe('ShoppingHistoryPage', () => {
   beforeEach(() => {
     saveTripAmount.mockReset()
     saveTripAmount.mockResolvedValue(true)
+    deleteTrip.mockReset()
     useShoppingHistory.mockReturnValue({
       groups: [{ id: 'group-id', name: '同居家族' }],
       selectedGroupId: 'group-id',
@@ -52,6 +54,7 @@ describe('ShoppingHistoryPage', () => {
       setFromDate: vi.fn(),
       setToDate: vi.fn(),
       saveTripAmount,
+      deleteTrip,
       addUnplanned: vi.fn(),
       updatePurchase: vi.fn(),
       reversePurchase: vi.fn(),
@@ -78,5 +81,25 @@ describe('ShoppingHistoryPage', () => {
 
     expect(screen.getByText('破棄済み')).toBeInTheDocument()
     expect(screen.queryByLabelText('買い物全体の金額（円）')).not.toBeInTheDocument()
+  })
+
+  it('allows deleting a finished trip from history', async () => {
+    const user = userEvent.setup()
+    const finishedTrip = {
+      ...trip,
+      finalized_at: '2026-07-15T03:00:00Z',
+      purchase_count: 1,
+      active_purchase_count: 1,
+    }
+    useShoppingHistory.mockReturnValueOnce({
+      ...useShoppingHistory(),
+      trips: [finishedTrip],
+    })
+
+    render(<ShoppingHistoryPage onUnauthorized={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: '買い物を削除' }))
+
+    expect(deleteTrip).toHaveBeenCalledWith(finishedTrip)
   })
 })

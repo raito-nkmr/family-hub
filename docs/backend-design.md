@@ -138,15 +138,16 @@ defaults to `Asia/Tokyo`.
 
 ### `features.shopping`
 
-Owns active shopping requests, shared categories, shopping trips, append-only purchase events, assignment snapshots, trip-level
-amounts, and statistics. All group members may perform the operations; an assignee is informational and never a purchase
+Owns active shopping requests, shared categories, shopping trips, purchase events that are append-only during normal correction
+flows, assignment snapshots, trip-level amounts, and statistics. All group members may perform the operations; an assignee is informational and never a purchase
 permission. In-store writes lock the group, recheck membership, then lock the item and trip, so concurrent completion of the
 same request produces one success and one `409`. Starting a trip locks the group and resumes the latest in-progress,
 non-discarded trip instead of creating a duplicate. Purchase events retain item, assignee, and category snapshots and are never
 deleted by undo, correction, or discard. Trip amounts are nullable non-negative yen integers and are excluded from totals when
-null. Trips can be finished immediately, discarded only while in progress, or permanently deleted only when in progress with
-zero purchase events. Finishing an empty trip uses the same locked transaction to remove it after confirmation; discard locks the
-trip, its events, and planned items, reverses events, and restores list state. Discarded
+null. Trips can be finished immediately, discarded only while in progress, or permanently deleted when in progress with zero
+purchase events or when finished. Deleting a finished trip removes its purchase events in the same locked transaction and
+synchronizes affected planned-item state; deleting an empty trip uses the same locked transaction to remove it after confirmation.
+Discarded
 trips and events are excluded from statistics. The history endpoint uses an opaque `(started_at, id)` cursor, and statistics
 convert date boundaries through the group's IANA time zone. Shopping trip PATCH requests preserve omitted fields; an explicit
 `total_amount_yen: null` clears the amount. Purchase PATCH requests preserve omitted category and purchaser fields, allow an

@@ -6,7 +6,7 @@ import {
   addUnplannedShoppingPurchaseApiV1ShoppingTripsTripIdPurchasesPost,
   createShoppingCategoryApiV1ShoppingGroupsGroupIdCategoriesPost,
   createShoppingRequestApiV1ShoppingGroupsGroupIdRequestsPost,
-  deleteEmptyShoppingTripApiV1ShoppingTripsTripIdDelete,
+  deleteShoppingTripApiV1ShoppingTripsTripIdDelete,
   deleteShoppingCategoryApiV1ShoppingCategoriesCategoryIdDelete,
   deleteShoppingRequestApiV1ShoppingRequestsItemIdDelete,
   discardShoppingTripApiV1ShoppingTripsTripIdDiscardPost,
@@ -173,8 +173,8 @@ export function discardShoppingTrip(tripId: string): Promise<ShoppingTrip> {
   return sdkData(discardShoppingTripApiV1ShoppingTripsTripIdDiscardPost({ path: { trip_id: tripId } }))
 }
 
-export function deleteEmptyShoppingTrip(tripId: string): Promise<void> {
-  return sdkData(deleteEmptyShoppingTripApiV1ShoppingTripsTripIdDelete({ path: { trip_id: tripId } }))
+export function deleteShoppingTrip(tripId: string): Promise<void> {
+  return sdkData(deleteShoppingTripApiV1ShoppingTripsTripIdDelete({ path: { trip_id: tripId } }))
 }
 
 export function addUnplannedShoppingPurchase(

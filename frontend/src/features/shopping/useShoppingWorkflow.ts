@@ -12,7 +12,7 @@ import {
   addUnplannedShoppingPurchase,
   createShoppingCategory,
   createShoppingRequest,
-  deleteEmptyShoppingTrip,
+  deleteShoppingTrip,
   deleteShoppingCategory,
   deleteShoppingRequest,
   discardShoppingTrip,
@@ -488,12 +488,13 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
   })
   const reversePurchaseMutation = useMutation({ mutationFn: reverseShoppingPurchase })
   const discardTripMutation = useMutation({ mutationFn: discardShoppingTrip })
-  const deleteEmptyTripMutation = useMutation({ mutationFn: deleteEmptyShoppingTrip })
+  const deleteTripMutation = useMutation({ mutationFn: deleteShoppingTrip })
 
   const invalidate = async () => {
     if (!base.selectedGroupId) return
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTrips(base.selectedGroupId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingTripHistory(base.selectedGroupId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.shoppingRequests(base.selectedGroupId) }),
       queryClient.invalidateQueries({ queryKey: ['groups', base.selectedGroupId, 'shopping-statistics'] }),
     ])
   }
@@ -533,7 +534,7 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       updatePurchaseMutation.isPending ||
       reversePurchaseMutation.isPending ||
       discardTripMutation.isPending ||
-      deleteEmptyTripMutation.isPending,
+      deleteTripMutation.isPending,
     fromDate,
     toDate,
     setFromDate,
@@ -549,9 +550,10 @@ export function useShoppingHistory(options: ShoppingWorkflowOptions) {
       if (!(await confirm(i18n.t('shopping.discardTripConfirm')))) return false
       return run(() => discardTripMutation.mutateAsync(trip.id), 'errors.shoppingTripDiscard')
     },
-    deleteEmptyTrip: async (trip: ShoppingTrip) => {
-      if (!(await confirm(i18n.t('shopping.deleteEmptyTripConfirm')))) return false
-      return run(() => deleteEmptyTripMutation.mutateAsync(trip.id), 'errors.shoppingTripDelete')
+    deleteTrip: async (trip: ShoppingTrip) => {
+      const confirmationKey = trip.finalized_at ? 'shopping.deleteTripConfirm' : 'shopping.deleteEmptyTripConfirm'
+      if (!(await confirm(i18n.t(confirmationKey)))) return false
+      return run(() => deleteTripMutation.mutateAsync(trip.id), 'errors.shoppingTripDelete')
     },
     loadMore: () => (tripsQuery.hasNextPage ? tripsQuery.fetchNextPage() : Promise.resolve()),
     refresh: async () => {

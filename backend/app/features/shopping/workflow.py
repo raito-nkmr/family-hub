@@ -525,19 +525,29 @@ class ShoppingWorkflowService:
         self._commit("Could not discard shopping trip")
         return self._trip_summary(trip, purchases)
 
-    def delete_empty_trip(self, trip_id: UUID, user_id: UUID) -> None:
+    def delete_trip(self, trip_id: UUID, user_id: UUID) -> None:
         group_id = self._trip_group_id(trip_id)
         self._lock_membership(group_id, user_id)
         trip = self._locked_trip(trip_id)
-        if trip.finalized_at is not None or trip.discarded_at is not None:
+        if trip.discarded_at is not None:
             raise ShoppingWorkflowConflictError
         purchases = list(
             self._session.scalars(
                 select(ShoppingPurchase).where(ShoppingPurchase.trip_id == trip.id).with_for_update()
             ).all()
         )
-        if purchases:
+        if trip.finalized_at is None and purchases:
             raise ShoppingWorkflowConflictError
+        now = datetime.now(UTC)
+        items: list[ShoppingItem] = []
+        for purchase in purchases:
+            if purchase.shopping_item_id is not None:
+                item = self._locked_item(purchase.shopping_item_id)
+                items.append(item)
+            self._session.delete(purchase)
+        for item in items:
+            self._sync_item_purchase_state(item)
+            item.updated_at = now
         self._session.delete(trip)
         self._commit("Could not delete shopping trip")
 

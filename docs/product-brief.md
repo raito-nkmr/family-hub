@@ -327,14 +327,17 @@ an immediate undo. The start control resumes the latest in-progress trip for the
   category, and opens item forms and category management in dialogs rather than showing management forms permanently.
 - An optional assignee is either anyone or an active member of the same group; assignment never restricts purchasing.
 - Categories are optional shared master data with editable order and are used for counts/frequency, not per-item amounts.
-- Purchase events are append-only records with item, assignee, category snapshots, actual purchaser, and reversal state.
+- Purchase events are append-only during normal correction flows and store item, assignee, category snapshots, actual purchaser,
+  and reversal state; explicit finalized-trip deletion removes all events in that trip.
 - History is grouped by shopping trip, supports cursor pagination for all time, optional total yen entered after returning home,
   list-external purchases, purchaser/category correction, and date-based statistics.
 - Trips have in-progress, finished, and discarded states. Finishing is immediate; an empty trip is removed after confirmation,
-  while a trip with purchases leaves the nullable trip total for later entry in history. Discarding retains the trip and reverses
-  its purchases, restoring planned items to the active list.
+  while a trip with purchases leaves the nullable trip total for later entry in history. A finished trip can also be permanently
+  deleted after confirmation; this removes its purchase events and restores affected planned items unless a later purchase keeps
+  them purchased. Discarding retains the trip and reverses its purchases, restoring planned items to the active list.
 - Discarded trips and their purchase events remain visible for audit history but are excluded from spending, purchase counts, and
-  other statistics. An in-progress trip with no purchase events may be permanently deleted; trips with events cannot be deleted.
+  other statistics. An in-progress trip with no purchase events may be permanently deleted, and a finished trip may be permanently
+  deleted together with all of its purchase events; discarded trips cannot be deleted.
 - Unrecorded totals are shown explicitly and excluded from spending totals. Spending is recorded only at trip level.
 - Group membership, CSRF, row locking, and stale-state conflict handling apply to every write; non-members receive not-found behavior.
 

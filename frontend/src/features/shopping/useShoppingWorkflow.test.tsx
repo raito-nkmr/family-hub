@@ -11,19 +11,22 @@ import {
   getShoppingRequests,
   getShoppingStatistics,
   getShoppingTrips,
+  deleteShoppingTrip,
   purchaseShoppingRequest,
   reverseShoppingPurchase,
   type ShoppingPurchase,
   type ShoppingRequest,
+  type ShoppingTrip,
 } from './api'
 import { todayInput, useShoppingHistory, useShoppingStore } from './useShoppingWorkflow'
 
 vi.mock('../groups/api', () => ({ getGroup: vi.fn(), getGroups: vi.fn() }))
+vi.mock('../../shared/ui/confirmation', () => ({ useConfirmation: vi.fn(() => async () => true) }))
 vi.mock('./api', () => ({
   addUnplannedShoppingPurchase: vi.fn(),
   createShoppingCategory: vi.fn(),
   createShoppingRequest: vi.fn(),
-  deleteEmptyShoppingTrip: vi.fn(),
+  deleteShoppingTrip: vi.fn(),
   deleteShoppingCategory: vi.fn(),
   deleteShoppingRequest: vi.fn(),
   discardShoppingTrip: vi.fn(),
@@ -189,5 +192,41 @@ describe('useShoppingWorkflow', () => {
       expect(result.current.toDate).toBe(secondGroupToday)
       expect(result.current.fromDate).toBe(`${currentYear}-01-01`)
     })
+  })
+
+  it('removes a deleted finished trip from history and refreshes related queries', async () => {
+    const queryClient = createAppQueryClient()
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
+    const trip: ShoppingTrip = {
+      id: 'trip-1',
+      group_id: 'group-1',
+      started_by_user_id: 'user-1',
+      started_by_username: '家族',
+      started_at: '2026-07-15T01:00:00Z',
+      finalized_at: '2026-07-15T02:00:00Z',
+      discarded_at: null,
+      discarded_by_user_id: null,
+      discarded_by_username: null,
+      total_amount_yen: 1000,
+      recorded_by_user_id: 'user-1',
+      recorded_by_username: '家族',
+      updated_at: '2026-07-15T02:00:00Z',
+      purchase_count: 1,
+      active_purchase_count: 1,
+      purchases: [],
+    }
+    vi.mocked(deleteShoppingTrip).mockResolvedValue(undefined)
+    const { result } = renderHook(() => useShoppingHistory({ onUnauthorized: vi.fn() }), {
+      wrapper: makeWrapper(queryClient),
+    })
+
+    await waitFor(() => expect(result.current.selectedGroupId).toBe('group-1'))
+    await act(async () => {
+      expect(await result.current.deleteTrip(trip)).toBe(true)
+    })
+
+    expect(deleteShoppingTrip).toHaveBeenCalledWith(trip.id, expect.anything())
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.shoppingTripHistory('group-1') })
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: queryKeys.shoppingRequests('group-1') })
   })
 })

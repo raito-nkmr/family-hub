@@ -324,15 +324,15 @@ export function ShoppingHistoryPage({ onUnauthorized }: ShoppingHistoryPageProps
                               <CancelIcon />
                               {t('shopping.markAmountUnrecorded')}
                             </button>
-                            {!trip.finalized_at && trip.purchase_count === 0 && (
+                            {((!trip.finalized_at && trip.purchase_count === 0) || trip.finalized_at) && (
                               <button
-                                className="secondary-button icon-button"
+                                className="danger-button icon-button"
                                 type="button"
                                 disabled={state.submitting}
-                                onClick={() => void state.deleteEmptyTrip(trip)}
+                                onClick={() => void state.deleteTrip(trip)}
                               >
                                 <DeleteIcon />
-                                {t('shopping.deleteEmptyTrip')}
+                                {t(trip.finalized_at ? 'shopping.deleteTrip' : 'shopping.deleteEmptyTrip')}
                               </button>
                             )}
                             {!trip.finalized_at && (

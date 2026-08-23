@@ -5876,7 +5876,7 @@ export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostRespon
 export type PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponse =
   PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses[keyof PurchaseShoppingRequestApiV1ShoppingRequestsItemIdPurchasePostResponses]
 
-export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData = {
+export type DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteData = {
   body?: never
   headers?: {
     /**
@@ -5894,25 +5894,25 @@ export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteData = {
   url: '/api/v1/shopping/trips/{trip_id}'
 }
 
-export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors = {
+export type DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError
 }
 
-export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteError =
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors[keyof DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteErrors]
+export type DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteError =
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors[keyof DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteErrors]
 
-export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses = {
+export type DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses = {
   /**
    * Successful Response
    */
   204: void
 }
 
-export type DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponse =
-  DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses[keyof DeleteEmptyShoppingTripApiV1ShoppingTripsTripIdDeleteResponses]
+export type DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponse =
+  DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses[keyof DeleteShoppingTripApiV1ShoppingTripsTripIdDeleteResponses]
 
 export type GetShoppingTripApiV1ShoppingTripsTripIdGetData = {
   body?: never
