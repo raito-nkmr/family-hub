@@ -8,7 +8,7 @@ from errno import EDQUOT, ENOSPC
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
-from app.features.photos.storage_types import (
+from app.features.photos.storage.types import (
     PhotoStorageError,
     StagedUpload,
     StorageStatusCode,

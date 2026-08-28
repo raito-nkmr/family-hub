@@ -16,7 +16,7 @@ from app.features.auth.dependencies import (
 )
 from app.features.photos import upload_router as upload_router_module
 from app.features.photos.dependencies import get_upload_batch_service
-from app.features.photos.storage import StorageStatusCode
+from app.features.photos.storage.types import StorageStatusCode
 from app.features.photos.upload_router import _raise_upload_error, append_upload_chunk, get_upload_offset, router
 from app.features.photos.uploads import MAX_UPLOAD_CHUNK_BYTES, UploadBatchStorageError, UploadOffsetError
 from app.main import create_app

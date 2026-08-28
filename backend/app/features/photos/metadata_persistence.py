@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.features.photos.errors import PhotoUpdatePersistenceError, PhotoUpdateStorageError
-from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError, SidecarMetadata
 
 logger = logging.getLogger(__name__)
 

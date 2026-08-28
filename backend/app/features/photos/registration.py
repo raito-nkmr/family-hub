@@ -17,7 +17,7 @@ from app.features.photos.models import (
     PhotoMetadata,
     PhotoShare,
 )
-from app.features.photos.storage import (
+from app.features.photos.storage.facade import (
     FinalizedUpload,
     PhotoStorage,
     PhotoStorageError,

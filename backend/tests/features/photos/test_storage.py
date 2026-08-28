@@ -10,8 +10,8 @@ import pytest
 from PIL import Image
 
 from app.core.config import Settings
-from app.features.photos import storage as storage_module
-from app.features.photos.storage import (
+from app.features.photos.storage import facade as storage_module
+from app.features.photos.storage.facade import (
     FinalizedUpload,
     InvalidStorageKeyError,
     OriginalNotFoundError,

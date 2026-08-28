@@ -31,7 +31,8 @@ from app.features.photos.schemas import (
     PhotoSharing,
     PhotoUpdate,
 )
-from app.features.photos.storage import PhotoStorage, StorageStatus, StorageStatusCode
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import StorageStatus, StorageStatusCode
 from app.features.photos.types import BulkPhotoSharingResult, PhotoContent, TrashedPhotoPage
 from app.main import create_app
 from tests.features.photos.factories import make_photo

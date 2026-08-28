@@ -32,7 +32,7 @@ from app.features.photos.models import (
     PhotoVisibility,
 )
 from app.features.photos.registration import PhotoUploadStorageError, register_staged_photo
-from app.features.photos.storage import (
+from app.features.photos.storage.facade import (
     OriginalNotFoundError,
     PhotoStorage,
     PhotoStorageError,

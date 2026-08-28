@@ -160,10 +160,11 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`errors.py` owns photo-domain exceptions and `types.py` owns photo DTO/result types. `storage_paths.py` owns storage-key and
-path safety validation, while `storage_types.py` owns storage status, error, and staged/finalized-file types.
-`storage_uploads.py` and `storage_files.py` implement resumable upload, sidecar, finalization, and deletion operations;
-`storage.py` remains the compatibility `PhotoStorage` facade for those operations and storage state;
+`errors.py` owns photo-domain exceptions and `types.py` owns photo DTO/result types. The `storage/` package groups the
+filesystem implementation: `storage/paths.py` owns storage-key and path safety validation, while `storage/types.py` owns
+storage status, error, and staged/finalized-file types. `storage/uploads.py` and `storage/files.py` implement resumable
+upload, sidecar, finalization, and deletion operations; `storage/facade.py` exposes the `PhotoStorage` facade for those
+operations and storage state;
 `thumbnails.py` creates WebP thumbnails from images or the first video frame, and `video_validation.py` validates supported
 video containers with `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo

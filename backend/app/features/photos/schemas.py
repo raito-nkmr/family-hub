@@ -11,7 +11,7 @@ from app.features.photos.models import (
     UploadBatchStatus,
     UploadItemStatus,
 )
-from app.features.photos.storage import StorageStatusCode
+from app.features.photos.storage.types import StorageStatusCode
 
 
 class StorageStatusResponse(BaseModel):

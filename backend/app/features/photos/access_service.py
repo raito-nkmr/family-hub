@@ -15,7 +15,7 @@ from app.features.photos.errors import (
 )
 from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite
 from app.features.photos.public import visible_share_group_ids
-from app.features.photos.storage import PhotoStorage, PhotoStorageError
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError
 from app.features.photos.types import PhotoContent
 
 

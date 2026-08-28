@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.commands.check_photo_integrity import IntegrityReport, check_photo_integrity
 from app.core.config import get_management_settings
 from app.database.session import create_database_engine
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 
 ORPHAN_ISSUE_CODES = frozenset({"orphan_original", "orphan_sidecar", "orphan_derivative", "orphan_part"})
 DEFAULT_MIN_AGE = timedelta(hours=24)

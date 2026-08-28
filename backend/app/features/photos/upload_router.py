@@ -19,7 +19,7 @@ from app.features.auth.dependencies import (
 from app.features.photos.dependencies import get_upload_batch_service
 from app.features.photos.models import UploadBatch, UploadItem
 from app.features.photos.schemas import UploadBatchCreate, UploadBatchResponse, UploadItemResponse
-from app.features.photos.storage import StorageStatusCode
+from app.features.photos.storage.types import StorageStatusCode
 from app.features.photos.uploads import (
     MAX_UPLOAD_CHUNK_BYTES,
     UploadBatchInvalidError,

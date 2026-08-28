@@ -18,7 +18,7 @@ from app.features.groups.service import GroupMembershipInvitationError, GroupSer
 from app.features.notifications.models import NotificationType
 from app.features.notifications.public import enqueue_group_notification
 from app.features.photos.schemas import UploadFileCreate
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.uploads import UploadBatchInvalidError, UploadBatchService
 from app.features.shopping.models import ShoppingItem
 from app.features.shopping.service import ShoppingNotFoundError, ShoppingService

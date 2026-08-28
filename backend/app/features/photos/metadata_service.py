@@ -21,7 +21,7 @@ from app.features.photos.errors import (
 from app.features.photos.metadata_persistence import PhotoMetadataPersistence
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
 from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
-from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError, SidecarMetadata
 from app.features.photos.types import BulkPhotoSharingResult
 
 

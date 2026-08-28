@@ -17,7 +17,8 @@ from app.features.photos.models import (
 )
 from app.features.photos.registration import DuplicatePhotoError, RegisteredPhoto
 from app.features.photos.schemas import UploadFileCreate
-from app.features.photos.storage import FinalizedUpload, PhotoStorage, StorageStatusCode, StorageUnavailableError
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import FinalizedUpload, StorageStatusCode, StorageUnavailableError
 from app.features.photos.uploads import (
     DUPLICATE_PHOTO_CONSTRAINT,
     UPLOAD_CAPACITY_LOCK_ID,

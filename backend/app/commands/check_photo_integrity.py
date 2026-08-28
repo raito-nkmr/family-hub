@@ -14,7 +14,7 @@ from app.features.maintenance.models import MaintenanceJobType, MaintenanceRunSt
 from app.features.maintenance.service import MaintenanceService
 from app.features.photos.models import Photo, UploadItem, UploadItemStatus
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import PhotoStorage, PhotoStorageError
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError
 
 
 @dataclass(frozen=True, slots=True)

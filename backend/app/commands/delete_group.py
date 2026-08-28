@@ -21,7 +21,7 @@ from app.features.photos.models import (
     UploadBatchGroupShare,
 )
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import PhotoStorage, PhotoStorageError
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError
 from app.features.shopping.models import ShoppingCategory, ShoppingItem, ShoppingPurchase, ShoppingTrip
 
 

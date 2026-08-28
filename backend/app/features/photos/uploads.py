@@ -25,7 +25,7 @@ from app.features.photos.registration import (
     register_staged_photo,
 )
 from app.features.photos.schemas import UploadFileCreate
-from app.features.photos.storage import (
+from app.features.photos.storage.facade import (
     PhotoStorage,
     PhotoStorageError,
     StorageStatusCode,

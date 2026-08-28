@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.features.auth.models import SystemRole, User
 from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.models import Photo, PhotoFavorite, PhotoLifecycleState
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 

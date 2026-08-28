@@ -64,7 +64,7 @@ from app.features.photos.schemas import (
     StorageStatusResponse,
     photo_response_from_model,
 )
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.trash_router import router as trash_router
 
 router = APIRouter(
