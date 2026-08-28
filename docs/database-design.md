@@ -389,17 +389,18 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history is reset and rebuilt as the following three-revision immutable baseline chain,
-followed by approved feature migrations for shopping workflow and shared authentication state.
-The current names are defined directly in these baseline revisions; naming-only revisions are not retained when the
-resettable databases are rebuilt:
+The development and pre-production history is reset and rebuilt as the following four-revision immutable domain baseline
+chain. The current names are defined directly in these baseline revisions; naming-only revisions are not retained when
+the resettable databases are rebuilt:
 
-- `20260821_01_core` — extensions, identity, and family groups
-- `20260821_02_media` — photos, activity, uploads, and albums
-- `20260821_03_household` — complete chores, shopping, notifications, maintenance, and audit schema
-- `20260822_04_shopping_workflow` — shopping assignments, categories, trips, purchase events, and workflow indexes
-- `20260822_05_shopping_trip_states` — discarded trip state, integrity constraints, and discard-user index
-- `20260823_06_login_rate_limits` — shared PostgreSQL login-rate-limit state (schema only)
+- `20260829_01_core` — extensions, identity, family groups, and shared login-rate-limit state
+- `20260829_02_media` — photos, activity, uploads, and albums
+- `20260829_03_household` — chores, notifications, maintenance, and audit schema
+- `20260829_04_shopping` — shopping items, categories, assignments, trips, purchase history, and discarded-trip state
+
+This is a history rebuild, not a forward-compatible upgrade path from the retired revisions. Disposable databases still
+stamped with a retired revision ID must be reset before applying this chain; real-data environments require a reviewed
+transition or restoration plan.
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,

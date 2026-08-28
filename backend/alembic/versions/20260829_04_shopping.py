@@ -1,19 +1,18 @@
-"""Add shopping assignments, trips, purchase history, and categories.
+"""Create the complete shopping schema, including discarded trip state.
 
-Revision ID: 20260822_04_shopping_workflow
-Revises: 20260821_03_household
-Create Date: 2026-08-22
+Revision ID: 20260829_04_shopping
+Revises: 20260829_03_household
+Create Date: 2026-08-29
 
-This revision is schema-only. Existing purchase-state rows are converted by a
-separate idempotent management command.
+This revision is schema-only. Existing application data is not transformed.
 """
 
 import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260822_04_shopping_workflow"
-down_revision: str | None = "20260821_03_household"
+revision: str = "20260829_04_shopping"
+down_revision: str | None = "20260829_03_household"
 branch_labels: str | None = None
 depends_on: str | None = None
 
@@ -238,9 +237,45 @@ def upgrade() -> None:
         ["purchased_by_user_id"],
         unique=False,
     )
+    # Discarded shopping-trip state.
+    op.add_column("shopping_trips", sa.Column("discarded_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column("shopping_trips", sa.Column("discarded_by_user_id", sa.UUID(), nullable=True))
+    op.create_foreign_key(
+        "fk_shopping_trips_discarded_by_user_id_users",
+        "shopping_trips",
+        "users",
+        ["discarded_by_user_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
+    op.create_check_constraint(
+        "ck_shopping_trips_discard_state",
+        "shopping_trips",
+        "(discarded_at IS NULL AND discarded_by_user_id IS NULL) OR "
+        "(discarded_at IS NOT NULL AND discarded_by_user_id IS NOT NULL)",
+    )
+    op.create_check_constraint(
+        "ck_shopping_trips_discard_not_finalized",
+        "shopping_trips",
+        "discarded_at IS NULL OR finalized_at IS NULL",
+    )
+    op.create_index(
+        "ix_shopping_trips_discarded_by_user_id",
+        "shopping_trips",
+        ["discarded_by_user_id"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:
+    # Discarded shopping-trip state.
+    op.drop_index("ix_shopping_trips_discarded_by_user_id", table_name="shopping_trips")
+    op.drop_constraint("ck_shopping_trips_discard_not_finalized", "shopping_trips", type_="check")
+    op.drop_constraint("ck_shopping_trips_discard_state", "shopping_trips", type_="check")
+    op.drop_constraint("fk_shopping_trips_discarded_by_user_id_users", "shopping_trips", type_="foreignkey")
+    op.drop_column("shopping_trips", "discarded_by_user_id")
+    op.drop_column("shopping_trips", "discarded_at")
+
     op.drop_index("ix_shopping_purchases_purchased_by_user_id", table_name="shopping_purchases")
     op.drop_index("ix_shopping_purchases_item_id", table_name="shopping_purchases")
     op.drop_index("ix_shopping_purchases_trip_id", table_name="shopping_purchases")

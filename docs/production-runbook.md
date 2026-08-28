@@ -181,12 +181,12 @@ sudo systemd-run --wait --pipe --collect \
   -m app.commands.check_photo_integrity
 ```
 
-The current resettable schema chain has five revisions, ending at `20260822_05_shopping_trip_states`. The upgrade contains schema
-DDL only; it does not create users, groups, categories, tasks, or completion history. Run `create_user` and any other bootstrap
-commands separately. After upgrading an environment that contains legacy purchased shopping rows, run the idempotent conversion
-command below. The trip-state migration only adds schema objects; it does not transform existing trips. Development
-reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
-command against the production-like service or volume.
+The current resettable schema chain has four readable domain revisions, ending at `20260829_04_shopping`. The upgrade contains
+schema DDL only; it does not create users, groups, categories, tasks, completion history, or other application data. Run
+`create_user` and any other bootstrap commands separately. Development reset and production-like reset are independent
+procedures: never run the development `docker compose down --volumes` command against the production-like service or volume.
+These revisions replace the disposable pre-production history; a database stamped with a retired revision ID must be rebuilt
+using the reset procedure below, not upgraded in place. Never apply that reset to a real-data environment.
 
 Create the initial administrator with a PTY so password input is hidden:
 

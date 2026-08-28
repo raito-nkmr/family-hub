@@ -65,11 +65,11 @@ for feature logic.
 
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
-function or registry for Alembic. The current Alembic chain consists of three explicit schema-only baseline revisions followed
-by approved feature migrations
-(`core`, `media`, and `household`). The `household` baseline contains the complete current chore schema, including
-categories, completion snapshots, report settings, and category ordering. Migrations must not write application data,
-seed rows, or perform backfills.
+function or registry for Alembic. The current Alembic chain consists of four explicit schema-only domain baseline revisions
+(`core`, `media`, `household`, and `shopping`). The `household` baseline contains the complete current chore schema,
+including categories, completion snapshots, report settings, and category ordering. The `shopping` baseline contains the
+complete current shopping schema, including categories, assignments, trips, purchase history, and discarded-trip state.
+Migrations must not write application data, seed rows, or perform backfills.
 
 ### `features.health`
 

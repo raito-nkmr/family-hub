@@ -1,8 +1,8 @@
 """Create household, notification, maintenance, and audit schema.
 
-Revision ID: 20260821_03_household
-Revises: 20260821_02_media
-Create Date: 2026-08-21
+Revision ID: 20260829_03_household
+Revises: 20260829_02_media
+Create Date: 2026-08-29
 
 """
 
@@ -15,8 +15,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "20260821_03_household"
-down_revision: str | None = "20260821_02_media"
+revision: str = "20260829_03_household"
+down_revision: str | None = "20260829_02_media"
 branch_labels: str | None = None
 depends_on: str | None = None
 

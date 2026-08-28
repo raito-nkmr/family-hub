@@ -15,15 +15,13 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260823_06_login_rate_limits"]
-    assert scripts.get_bases() == ["20260821_01_core"]
+    assert scripts.get_heads() == ["20260829_04_shopping"]
+    assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260823_06_login_rate_limits",
-        "20260822_05_shopping_trip_states",
-        "20260822_04_shopping_workflow",
-        "20260821_03_household",
-        "20260821_02_media",
-        "20260821_01_core",
+        "20260829_04_shopping",
+        "20260829_03_household",
+        "20260829_02_media",
+        "20260829_01_core",
     ]
 
 
@@ -77,6 +75,9 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "CREATE TABLE shopping_purchases" in sql
     assert "assignee_user_id UUID" in sql
     assert "total_amount_yen INTEGER" in sql
+    assert "discarded_at TIMESTAMP WITH TIME ZONE" in sql
+    assert "fk_shopping_trips_discarded_by_user_id_users" in sql
+    assert "ck_shopping_trips_discard_state" in sql
     assert "CREATE TABLE login_rate_limits" in sql
     assert "pk_login_rate_limits" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None

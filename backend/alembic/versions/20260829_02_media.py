@@ -1,8 +1,8 @@
 """Create the media, activity, upload, and album schema.
 
-Revision ID: 20260821_02_media
-Revises: 20260821_01_core
-Create Date: 2026-08-21
+Revision ID: 20260829_02_media
+Revises: 20260829_01_core
+Create Date: 2026-08-29
 
 """
 
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260821_02_media"
-down_revision: str | None = "20260821_01_core"
+revision: str = "20260829_02_media"
+down_revision: str | None = "20260829_01_core"
 branch_labels: str | None = None
 depends_on: str | None = None
 

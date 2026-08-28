@@ -1,8 +1,8 @@
-"""Create the core identity and family-group schema.
+"""Create the core identity, family-group, and login-rate-limit schema.
 
-Revision ID: 20260821_01_core
+Revision ID: 20260829_01_core
 Revises:
-Create Date: 2026-08-21
+Create Date: 2026-08-29
 
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260821_01_core"
+revision: str = "20260829_01_core"
 down_revision: str | None = None
 branch_labels: str | None = None
 depends_on: str | None = None
@@ -232,9 +232,30 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
+    # Shared authentication rate-limit state.
+    op.create_table(
+        "login_rate_limits",
+        sa.Column("key_hash", sa.String(length=64), nullable=False),
+        sa.Column("window_started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        ),
+        sa.CheckConstraint("key_hash ~ '^[0-9a-f]{64}$'", name="ck_login_rate_limits_key_hash_lower_hex"),
+        sa.CheckConstraint("attempt_count >= 0", name="ck_login_rate_limits_attempt_count_nonnegative"),
+        sa.PrimaryKeyConstraint("key_hash", name="pk_login_rate_limits"),
+    )
+    op.create_index("ix_login_rate_limits_updated_at", "login_rate_limits", ["updated_at"], unique=False)
 
 
 def downgrade() -> None:
+    # Shared authentication rate-limit state.
+    op.drop_index("ix_login_rate_limits_updated_at", table_name="login_rate_limits")
+    op.drop_table("login_rate_limits")
+
     op.drop_constraint(
         "fk_family_group_membership_invitations_invitee_user_id_users",
         "family_group_membership_invitations",
