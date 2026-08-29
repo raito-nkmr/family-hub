@@ -86,7 +86,7 @@ class AdministrativeService:
                     User.is_active.is_(True),
                     UserSession.revoked_at.is_(None),
                     UserSession.expires_at > now,
-                    UserSession.last_seen_at > now - timedelta(seconds=self._settings.auth_session_idle_seconds),
+                    UserSession.last_used_at > now - timedelta(seconds=self._settings.auth_session_idle_seconds),
                     UserSession.created_at >= User.password_changed_at,
                 )
                 .group_by(UserSession.user_id)

@@ -1,3 +1,3 @@
-from app.features.shopping.models import ShoppingItem
+from app.features.shopping.models import ShoppingCategory, ShoppingItem, ShoppingPurchase, ShoppingTrip
 
-__all__ = ["ShoppingItem"]
+__all__ = ["ShoppingCategory", "ShoppingItem", "ShoppingPurchase", "ShoppingTrip"]

@@ -9,7 +9,7 @@ from app.features.photos.activity import PhotoActivityService
 from app.features.photos.export_service import PhotoExportService
 from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.queries import PhotoQueryService
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.trash_service import PhotoTrashService
 from app.features.photos.uploads import UploadBatchService
 

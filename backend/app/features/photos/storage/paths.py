@@ -3,7 +3,7 @@ import re
 import shutil
 from pathlib import Path, PurePosixPath
 
-from app.features.photos.storage_types import InvalidStorageKeyError, PhotoStorageError
+from app.features.photos.storage.types import InvalidStorageKeyError, PhotoStorageError
 
 LINUX_MOUNTINFO_PATH = Path("/proc/self/mountinfo")
 MOUNTINFO_ESCAPE_PATTERN = re.compile(r"\\([0-7]{3})")

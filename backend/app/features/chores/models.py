@@ -42,8 +42,8 @@ class ChoreTask(Base):
     __tablename__ = "chore_tasks"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_chore_tasks"),
-        CheckConstraint("name = btrim(name)", name="ck_chore_tasks_name_trimmed"),
-        CheckConstraint("char_length(name) BETWEEN 1 AND 120", name="ck_chore_tasks_name_length"),
+        CheckConstraint("task_name = btrim(task_name)", name="ck_chore_tasks_task_name_trimmed"),
+        CheckConstraint("char_length(task_name) BETWEEN 1 AND 120", name="ck_chore_tasks_task_name_length"),
         CheckConstraint("interval_days BETWEEN 1 AND 3650", name="ck_chore_tasks_interval_days"),
     )
 
@@ -52,7 +52,7 @@ class ChoreTask(Base):
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_chore_tasks_group_id_family_groups"),
     )
-    name: Mapped[str] = mapped_column(String(120))
+    task_name: Mapped[str] = mapped_column(String(120))
     category_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey(

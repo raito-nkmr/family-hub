@@ -19,7 +19,7 @@ class ImageMetadata:
     extension: str
     width: int
     height: int
-    captured_at: datetime | None
+    captured_at_original: datetime | None
 
 
 _FORMAT_DETAILS = {
@@ -55,9 +55,9 @@ def _inspect_with_pillow(path: Path, declared_content_type: str, default_timezon
             raise InvalidImageError("Declared content type does not match uploaded image")
 
         image.load()
-        captured_at = _get_captured_at(image, default_timezone)
+        captured_at_original = _get_captured_at_original(image, default_timezone)
         width, height = _get_display_dimensions(image)
-    return ImageMetadata(content_type, extension, width, height, captured_at)
+    return ImageMetadata(content_type, extension, width, height, captured_at_original)
 
 
 def _inspect_heif(path: Path, declared_content_type: str, default_timezone: str) -> ImageMetadata:
@@ -73,9 +73,9 @@ def _inspect_heif(path: Path, declared_content_type: str, default_timezone: str)
         raise InvalidImageError("Uploaded image dimensions exceed the safety limit")
     with heif_file.to_pillow() as image:
         image.load()
-        captured_at = _get_captured_at(image, default_timezone)
+        captured_at_original = _get_captured_at_original(image, default_timezone)
         width, height = _get_display_dimensions(image)
-    return ImageMetadata(content_type, extension, width, height, captured_at)
+    return ImageMetadata(content_type, extension, width, height, captured_at_original)
 
 
 def _get_display_dimensions(image: Image.Image) -> tuple[int, int]:
@@ -87,7 +87,7 @@ def _get_display_dimensions(image: Image.Image) -> tuple[int, int]:
             oriented.close()
 
 
-def _get_captured_at(image: Image.Image, default_timezone: str) -> datetime | None:
+def _get_captured_at_original(image: Image.Image, default_timezone: str) -> datetime | None:
     try:
         exif = image.getexif()
         value = exif.get(Base.DateTimeOriginal) or exif.get(Base.DateTimeDigitized) or exif.get(Base.DateTime)

@@ -6,7 +6,7 @@ function makeTask(overrides: Partial<ChoreTask> = {}): ChoreTask {
   return {
     id: 'task-id',
     group_id: 'group-id',
-    name: 'お風呂',
+    task_name: 'お風呂',
     category_id: 'chore-id',
     interval_days: 1,
     is_active: true,
@@ -36,7 +36,7 @@ describe('getChoreDueStatus', () => {
   it('marks an inactive task independently of its due date', () => {
     expect(getChoreDueStatus(makeTask({ is_active: false }), now)).toEqual({
       state: 'inactive',
-      label: '停止中',
+      label: '一時停止中',
     })
   })
 })

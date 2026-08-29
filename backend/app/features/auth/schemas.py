@@ -104,7 +104,7 @@ class PasswordChangeRequest(BaseModel):
 class UserSessionResponse(BaseModel):
     id: UUID
     created_at: datetime
-    last_seen_at: datetime
+    last_used_at: datetime
     expires_at: datetime
     current: bool
 

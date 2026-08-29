@@ -6,8 +6,8 @@ import { uploadItemContent } from './uploadApi'
 const item: UploadItem = {
   id: '00000000-0000-4000-8000-000000000001',
   client_id: 'client-photo',
-  filename: 'photo.jpeg',
-  content_type: 'image/jpeg',
+  original_filename: 'photo.jpeg',
+  declared_content_type: 'image/jpeg',
   size_bytes: 5,
   received_bytes: 0,
   status: 'queued',
@@ -129,7 +129,7 @@ describe('bulk photo sharing', () => {
 
   it('adds groups to the selected photos', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ operation_id: 'operation-1', updated_count: 2, unchanged_count: 0 }), {
+      new Response(JSON.stringify({ activity_operation_id: 'operation-1', updated_count: 2, unchanged_count: 0 }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -143,7 +143,7 @@ describe('bulk photo sharing', () => {
     expect(request.method).toBe('POST')
     await expect(request.clone().json()).resolves.toEqual({
       photo_ids: ['photo-1', 'photo-2'],
-      add_group_ids: ['group-1'],
+      group_ids_to_add: ['group-1'],
     })
   })
 })

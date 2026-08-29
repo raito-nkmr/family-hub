@@ -23,7 +23,7 @@ def make_session(
     user_id,
     *,
     created_at: datetime,
-    last_seen_at: datetime,
+    last_used_at: datetime,
     expires_at: datetime,
     revoked_at: datetime | None = None,
 ) -> UserSession:
@@ -34,7 +34,7 @@ def make_session(
         token_hash=token,
         csrf_token="a" * 43,
         created_at=created_at,
-        last_seen_at=last_seen_at,
+        last_used_at=last_used_at,
         expires_at=expires_at,
         revoked_at=revoked_at,
     )
@@ -69,38 +69,38 @@ def test_list_users_counts_only_currently_authenticatable_sessions() -> None:
     valid_session = make_session(
         active_user_id,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now - timedelta(hours=1),
+        last_used_at=now - timedelta(hours=1),
         expires_at=now + timedelta(days=1),
     )
     idle_session = make_session(
         active_user_id,
         created_at=now - timedelta(days=2),
-        last_seen_at=now - timedelta(seconds=settings.auth_session_idle_seconds + 1),
+        last_used_at=now - timedelta(seconds=settings.auth_session_idle_seconds + 1),
         expires_at=now + timedelta(days=1),
     )
     expired_session = make_session(
         active_user_id,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now - timedelta(hours=1),
+        last_used_at=now - timedelta(hours=1),
         expires_at=now - timedelta(seconds=1),
     )
     revoked_session = make_session(
         active_user_id,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now - timedelta(hours=1),
+        last_used_at=now - timedelta(hours=1),
         expires_at=now + timedelta(days=1),
         revoked_at=now,
     )
     password_old_session = make_session(
         active_user_id,
         created_at=password_changed_at - timedelta(seconds=1),
-        last_seen_at=now - timedelta(hours=1),
+        last_used_at=now - timedelta(hours=1),
         expires_at=now + timedelta(days=1),
     )
     inactive_user_session = make_session(
         inactive_user_id,
         created_at=now - timedelta(hours=1),
-        last_seen_at=now - timedelta(hours=1),
+        last_used_at=now - timedelta(hours=1),
         expires_at=now + timedelta(days=1),
     )
 

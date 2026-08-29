@@ -17,8 +17,10 @@ const media = [
   uploaded_by_username: 'family-member',
   visibility: 'private',
   is_favorite: false,
-  captured_at: '2026-08-20T00:00:00Z',
+  captured_at_original: '2026-08-20T00:00:00Z',
+  captured_at_override: null,
   uploaded_at: '2026-08-20T00:00:00Z',
+  effective_captured_at: '2026-08-20T00:00:00Z',
 }))
 
 const details = Object.fromEntries(
@@ -26,7 +28,7 @@ const details = Object.fromEntries(
     item.id,
     {
       ...item,
-      sharing: { type: 'private', group_ids: [] },
+      sharing: { group_ids: [] },
       memo: null,
       memo_updated_by_user_id: 'user-1',
       memo_updated_by_username: 'family-member',
@@ -39,8 +41,6 @@ const details = Object.fromEntries(
       trashed_at: null,
       purge_after: null,
       purge_requested_at: null,
-      captured_at_original: item.captured_at,
-      captured_at_override: null,
     },
   ]),
 )

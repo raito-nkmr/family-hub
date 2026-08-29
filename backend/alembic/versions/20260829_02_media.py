@@ -1,8 +1,8 @@
 """Create the media, activity, upload, and album schema.
 
-Revision ID: 20260821_02_media
-Revises: 20260821_01_core
-Create Date: 2026-08-21
+Revision ID: 20260829_02_media
+Revises: 20260829_01_core
+Create Date: 2026-08-29
 
 """
 
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260821_02_media"
-down_revision: str | None = "20260821_01_core"
+revision: str = "20260829_02_media"
+down_revision: str | None = "20260829_01_core"
 branch_labels: str | None = None
 depends_on: str | None = None
 
@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("sha256", sa.String(length=64), nullable=False),
         sa.Column("width", sa.Integer(), nullable=False),
         sa.Column("height", sa.Integer(), nullable=False),
-        sa.Column("captured_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("captured_at_original", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "uploaded_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
@@ -154,7 +154,7 @@ def upgrade() -> None:
         sa.Column("actor_user_id", sa.UUID(), nullable=False),
         sa.Column("actor_username", sa.String(length=64), nullable=False),
         sa.Column("event_type", sa.String(length=16), nullable=False),
-        sa.Column("operation_id", sa.UUID(), nullable=False),
+        sa.Column("activity_operation_id", sa.UUID(), nullable=False),
         sa.Column(
             "occurred_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
@@ -167,7 +167,12 @@ def upgrade() -> None:
         [sa.literal_column("occurred_at DESC"), sa.literal_column("id DESC")],
         unique=False,
     )
-    op.create_index("ix_photo_activity_events_operation_id", "photo_activity_events", ["operation_id"], unique=False)
+    op.create_index(
+        "ix_photo_activity_events_activity_operation_id",
+        "photo_activity_events",
+        ["activity_operation_id"],
+        unique=False,
+    )
     op.create_index("ix_photo_activity_events_photo_id", "photo_activity_events", ["photo_id"], unique=False)
     op.create_table(
         "photo_activity_event_groups",
@@ -496,7 +501,7 @@ def downgrade() -> None:
     op.drop_index("ix_photo_derivatives_photo_id", table_name="photo_derivatives")
     op.drop_table("photo_derivatives")
     op.drop_index("ix_photo_activity_events_photo_id", table_name="photo_activity_events")
-    op.drop_index("ix_photo_activity_events_operation_id", table_name="photo_activity_events")
+    op.drop_index("ix_photo_activity_events_activity_operation_id", table_name="photo_activity_events")
     op.drop_index("ix_photo_activity_events_occurred_at_id", table_name="photo_activity_events")
     op.drop_table("photo_activity_events")
     op.drop_index("ix_upload_batches_owner_user_id_created_at", table_name="upload_batches")

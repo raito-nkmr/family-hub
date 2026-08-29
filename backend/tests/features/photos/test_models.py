@@ -31,6 +31,7 @@ def test_photo_table_has_expected_constraints() -> None:
     assert str(constraints["ck_photos_dimensions"].sqltext) == "width > 0 AND height > 0"
     assert Photo.__table__.c.width.nullable is False
     assert Photo.__table__.c.height.nullable is False
+    assert Photo.__table__.c.captured_at_original.nullable is True
     assert Photo.__table__.c.effective_captured_at.nullable is False
     assert isinstance(constraints["fk_photos_uploaded_by_user_id_users"], ForeignKeyConstraint)
     duplicate_constraint = constraints["uq_photos_uploaded_by_user_id_sha256"]
@@ -83,7 +84,7 @@ def test_photo_activity_tables_have_expected_constraints_and_indexes() -> None:
     assert {index.name for index in PhotoActivityEvent.__table__.indexes} == {
         "ix_photo_activity_events_occurred_at_id",
         "ix_photo_activity_events_photo_id",
-        "ix_photo_activity_events_operation_id",
+        "ix_photo_activity_events_activity_operation_id",
     }
     assert {constraint.name for constraint in PhotoActivityEventGroup.__table__.constraints} >= {
         "pk_photo_activity_event_groups",

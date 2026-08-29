@@ -201,7 +201,7 @@ def test_complete_task_records_actor_and_resets_due_at() -> None:
     completion = session.add.call_args.args[0]
     assert isinstance(completion, ChoreCompletion)
     assert completion.completed_by_user_id == user_id
-    assert completion.task_name_snapshot == task.name
+    assert completion.task_name_snapshot == task.task_name
     assert completion.category_id == category.id
     assert completion.category_name_snapshot == category.name
     assert result.last_completion is not None

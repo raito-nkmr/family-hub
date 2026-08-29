@@ -5,7 +5,7 @@ from app.core.config import get_management_settings
 from app.database.session import create_database_engine
 from app.features.photos.models import Photo
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 
 
 def sync_photo_sidecars(session: Session, storage: PhotoStorage) -> int:

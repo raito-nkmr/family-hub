@@ -24,7 +24,15 @@ export const queryKeys = {
   photoTrash: ['photos', 'trash'] as const,
   choreCategories: (groupId: string) => ['groups', groupId, 'chore-categories'] as const,
   choreTasks: (groupId: string) => ['groups', groupId, 'chore-tasks'] as const,
-  choreReports: (groupId: string) => ['groups', groupId, 'chores-reports'] as const,
-  choreReport: (groupId: string, month: string) => ['groups', groupId, 'chores-reports', month] as const,
+  choreMonthlyReports: (groupId: string) => ['groups', groupId, 'chores-monthly'] as const,
+  choreMonthlyReport: (groupId: string, month: string) => ['groups', groupId, 'chores-monthly', month] as const,
   shoppingItems: (groupId: string) => ['groups', groupId, 'shopping-items'] as const,
+  shoppingRequests: (groupId: string) => ['groups', groupId, 'shopping-requests'] as const,
+  shoppingCategories: (groupId: string) => ['groups', groupId, 'shopping-categories'] as const,
+  shoppingTrips: (groupId: string) => ['groups', groupId, 'shopping-trips'] as const,
+  shoppingTripHistory: (groupId: string, includeDiscarded = false) =>
+    ['groups', groupId, 'shopping-trips', 'history', includeDiscarded] as const,
+  shoppingTrip: (tripId: string) => ['shopping-trips', tripId] as const,
+  shoppingStatistics: (groupId: string, fromDate: string, toDate: string) =>
+    ['groups', groupId, 'shopping-statistics', fromDate, toDate] as const,
 }

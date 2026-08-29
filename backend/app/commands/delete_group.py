@@ -21,8 +21,8 @@ from app.features.photos.models import (
     UploadBatchGroupShare,
 )
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import PhotoStorage, PhotoStorageError
-from app.features.shopping.models import ShoppingItem
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError
+from app.features.shopping.models import ShoppingCategory, ShoppingItem, ShoppingPurchase, ShoppingTrip
 
 
 class GroupDeletionNotFoundError(Exception):
@@ -55,6 +55,9 @@ class GroupDeletionImpact:
     chore_task_count: int
     chore_completion_count: int
     shopping_item_count: int
+    shopping_category_count: int
+    shopping_trip_count: int
+    shopping_purchase_count: int
     photo_share_count: int
     photo_activity_group_count: int
     upload_batch_group_share_count: int
@@ -69,6 +72,9 @@ class GroupDeletionImpact:
                 self.chore_task_count,
                 self.chore_completion_count,
                 self.shopping_item_count,
+                self.shopping_category_count,
+                self.shopping_trip_count,
+                self.shopping_purchase_count,
                 self.photo_share_count,
                 self.photo_activity_group_count,
                 self.upload_batch_group_share_count,
@@ -90,6 +96,9 @@ def get_group_deletion_impact(session: Session, group_id: UUID, *, lock: bool = 
             ChoreTask.group_id == group_id,
         ).label("chore_completion_count"),
         _count(ShoppingItem, ShoppingItem.group_id == group_id).label("shopping_item_count"),
+        _count(ShoppingCategory, ShoppingCategory.group_id == group_id).label("shopping_category_count"),
+        _count(ShoppingTrip, ShoppingTrip.group_id == group_id).label("shopping_trip_count"),
+        _count(ShoppingPurchase, ShoppingPurchase.group_id == group_id).label("shopping_purchase_count"),
         _count(PhotoShare, PhotoShare.group_id == group_id).label("photo_share_count"),
         _count(PhotoActivityEventGroup, PhotoActivityEventGroup.group_id == group_id).label(
             "photo_activity_group_count"
@@ -145,6 +154,10 @@ def delete_group(
                 "include_related_data": include_related_data,
                 "member_count": expected_impact.member_count,
                 "photo_share_count": expected_impact.photo_share_count,
+                "shopping_category_count": expected_impact.shopping_category_count,
+                "shopping_item_count": expected_impact.shopping_item_count,
+                "shopping_trip_count": expected_impact.shopping_trip_count,
+                "shopping_purchase_count": expected_impact.shopping_purchase_count,
             },
         )
         session.execute(delete(FamilyGroup).where(FamilyGroup.id == expected_impact.group_id))
@@ -193,7 +206,10 @@ def print_deletion_impact(impact: GroupDeletionImpact) -> None:
     print(f"  Album photo associations: {impact.album_photo_count}")
     print(f"  Chore tasks: {impact.chore_task_count}")
     print(f"  Chore completions: {impact.chore_completion_count}")
+    print(f"  Shopping categories: {impact.shopping_category_count}")
     print(f"  Shopping items: {impact.shopping_item_count}")
+    print(f"  Shopping trips: {impact.shopping_trip_count}")
+    print(f"  Shopping purchases: {impact.shopping_purchase_count}")
     print(f"  Photo shares: {impact.photo_share_count}")
     print(f"  Photo activity group associations: {impact.photo_activity_group_count}")
     print(f"  Upload batch group shares: {impact.upload_batch_group_share_count}")

@@ -15,12 +15,13 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260821_03_household"]
-    assert scripts.get_bases() == ["20260821_01_core"]
+    assert scripts.get_heads() == ["20260829_04_shopping"]
+    assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260821_03_household",
-        "20260821_02_media",
-        "20260821_01_core",
+        "20260829_04_shopping",
+        "20260829_03_household",
+        "20260829_02_media",
+        "20260829_01_core",
     ]
 
 
@@ -43,9 +44,12 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "fk_push_subscriptions_user_session_user_id_user_sessions" in sql
     assert "width INTEGER NOT NULL" in sql
     assert "height INTEGER NOT NULL" in sql
+    assert "captured_at_original TIMESTAMP WITH TIME ZONE" in sql
     assert "effective_captured_at TIMESTAMP WITH TIME ZONE" in sql
     assert "ix_photos_sort_date_id" in sql
     assert "effective_captured_at TIMESTAMP WITH TIME ZONE NOT NULL" in sql
+    assert "activity_operation_id UUID NOT NULL" in sql
+    assert "ix_photo_activity_events_activity_operation_id" in sql
     assert "CREATE TABLE chore_categories" in sql
     assert "CREATE TABLE chore_tasks" in sql
     assert "CREATE TABLE chore_completions" in sql
@@ -53,6 +57,12 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "uq_chore_categories_group_name_ci" in sql
     assert "fk_chore_tasks_category_id_chore_categories" in sql
     assert "timezone VARCHAR(64) DEFAULT 'Asia/Tokyo' NOT NULL" in sql
+    assert "task_name VARCHAR(120) NOT NULL" in sql
+    assert "ck_chore_tasks_task_name_length" in sql
+    assert "last_used_at TIMESTAMP WITH TIME ZONE NOT NULL" in sql
+    assert "invitee_user_id UUID NOT NULL" in sql
+    assert "invited_by_user_id UUID NOT NULL" in sql
+    assert "pk_family_group_membership_invitations" in sql
     assert "task_name_snapshot VARCHAR(120) NOT NULL" in sql
     assert "category_name_snapshot VARCHAR(40) NOT NULL" in sql
     assert "ix_chore_completions_completed_at_task_id" in sql
@@ -60,6 +70,16 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "ix_chore_categories_group_sort_order" in sql
     assert "ck_chore_tasks_category" not in sql
     assert "ALTER TABLE chore_completions ADD COLUMN task_name_snapshot" not in sql
+    assert "CREATE TABLE shopping_categories" in sql
+    assert "CREATE TABLE shopping_trips" in sql
+    assert "CREATE TABLE shopping_purchases" in sql
+    assert "assignee_user_id UUID" in sql
+    assert "total_amount_yen INTEGER" in sql
+    assert "discarded_at TIMESTAMP WITH TIME ZONE" in sql
+    assert "fk_shopping_trips_discarded_by_user_id_users" in sql
+    assert "ck_shopping_trips_discard_state" in sql
+    assert "CREATE TABLE login_rate_limits" in sql
+    assert "pk_login_rate_limits" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 

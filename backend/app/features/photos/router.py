@@ -64,7 +64,7 @@ from app.features.photos.schemas import (
     StorageStatusResponse,
     photo_response_from_model,
 )
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.trash_router import router as trash_router
 
 router = APIRouter(
@@ -98,7 +98,7 @@ async def get_storage_status(storage: Annotated[PhotoStorage, Depends(get_photo_
 
 
 @router.get("", response_model=PhotoListResponse)
-def list_photo_metadata(
+def list_photos(
     filters: Annotated[PhotoListQuery, Query()],
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[PhotoQueryService, Depends(get_photo_query_service)],
@@ -212,7 +212,7 @@ def bulk_add_photo_sharing(
     try:
         result = service.bulk_add_sharing(
             body.photo_ids,
-            set(body.add_group_ids),
+            set(body.group_ids_to_add),
             authenticated_user.id,
             authenticated_user.username,
         )
@@ -237,7 +237,7 @@ def bulk_add_photo_sharing(
 
 
 @router.get("/{photo_id}", response_model=PhotoResponse)
-def get_photo_metadata(
+def get_photo(
     photo_id: UUID,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],

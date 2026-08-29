@@ -9,8 +9,8 @@ from app.features.auth.dependencies import AuthenticatedUser, require_authentica
 from app.features.chores.reporting import (
     ChoreMonthlyDaily,
     ChoreMonthlyReport,
+    ChoreMonthlyReportInvalidMonthError,
     ChoreMonthlySummary,
-    ChoreReportInvalidMonthError,
 )
 from app.features.chores.router import (
     complete_chore_task,
@@ -48,7 +48,7 @@ def make_summary() -> ChoreTaskSummary:
     return ChoreTaskSummary(
         id=uuid4(),
         group_id=uuid4(),
-        name="お風呂",
+        task_name="お風呂",
         category_id=uuid4(),
         interval_days=1,
         is_active=True,
@@ -167,7 +167,7 @@ def test_create_chore_task_requires_group_admin() -> None:
     with pytest.raises(HTTPException) as error:
         create_chore_task(
             uuid4(),
-            ChoreTaskCreate(name="お風呂", interval_days=1, category_id=uuid4()),
+            ChoreTaskCreate(task_name="お風呂", interval_days=1, category_id=uuid4()),
             TEST_USER,
             ChoreServiceStub(error=ChoreForbiddenError()),
         )
@@ -263,7 +263,7 @@ def test_monthly_report_maps_invalid_month_to_unprocessable_entity() -> None:
             uuid4(),
             "2026-08",
             TEST_USER,
-            ChoreServiceStub(error=ChoreReportInvalidMonthError()),
+            ChoreServiceStub(error=ChoreMonthlyReportInvalidMonthError()),
         )
 
     assert error.value.status_code == 422

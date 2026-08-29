@@ -34,7 +34,7 @@ def test_inspect_video_reads_dimensions_and_creation_time(tmp_path: Path, monkey
     assert result.content_type == "video/quicktime"
     assert result.extension == ".mov"
     assert (result.width, result.height) == (1920, 1080)
-    assert result.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
+    assert result.captured_at_original == datetime(2026, 7, 14, 3, tzinfo=UTC)
 
 
 def test_inspect_video_uses_rotation_for_display_dimensions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

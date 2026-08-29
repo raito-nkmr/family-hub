@@ -17,7 +17,7 @@ from app.features.photos.queries import (
 
 
 def make_row(
-    *, captured_at: datetime | None = None, visibility: str = "private", is_favorite: bool = False
+    *, captured_at_original: datetime | None = None, visibility: str = "private", is_favorite: bool = False
 ) -> SimpleNamespace:
     uploaded_at = datetime(2026, 7, 14, 4, tzinfo=UTC)
     return SimpleNamespace(
@@ -29,17 +29,19 @@ def make_row(
         content_type="image/jpeg",
         width=4032,
         height=3024,
-        captured_at=captured_at,
+        captured_at_original=captured_at_original,
+        captured_at_override=None,
         uploaded_at=uploaded_at,
-        sort_at=captured_at or uploaded_at,
+        effective_captured_at=captured_at_original or uploaded_at,
+        sort_at=captured_at_original or uploaded_at,
         is_favorite=is_favorite,
     )
 
 
 def test_list_photos_returns_bounded_page_and_cursor() -> None:
     session = MagicMock(spec=Session)
-    first = make_row(captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC), visibility="shared")
-    second = make_row(captured_at=datetime(2026, 7, 13, 3, tzinfo=UTC))
+    first = make_row(captured_at_original=datetime(2026, 7, 14, 3, tzinfo=UTC), visibility="shared")
+    second = make_row(captured_at_original=datetime(2026, 7, 13, 3, tzinfo=UTC))
     session.scalar.return_value = 2
     session.execute.return_value.all.return_value = [first, second]
     service = PhotoQueryService(session, "Asia/Tokyo")
@@ -59,8 +61,8 @@ def test_list_photos_returns_bounded_page_and_cursor() -> None:
 
 def test_list_photos_applies_cursor_and_search_filters() -> None:
     session = MagicMock(spec=Session)
-    first = make_row(captured_at=datetime(2026, 7, 14, 3, tzinfo=UTC))
-    second = make_row(captured_at=datetime(2026, 7, 13, 3, tzinfo=UTC))
+    first = make_row(captured_at_original=datetime(2026, 7, 14, 3, tzinfo=UTC))
+    second = make_row(captured_at_original=datetime(2026, 7, 13, 3, tzinfo=UTC))
     session.scalar.return_value = 2
     session.execute.return_value.all.side_effect = [[first, second], []]
     service = PhotoQueryService(session, "Asia/Tokyo")
@@ -85,7 +87,7 @@ def test_list_photos_applies_cursor_and_search_filters() -> None:
     assert "photo_metadata" in sql
     assert "photos.original_filename" in sql
     assert "photos.uploaded_by_user_id" in sql
-    assert "coalesce(photo_metadata.captured_at_override, photos.captured_at) IS NOT NULL" in sql
+    assert "coalesce(photo_metadata.captured_at_override, photos.captured_at_original) IS NOT NULL" in sql
     assert "album_photos" in sql
     assert "photos.effective_captured_at <" in sql
 
@@ -121,8 +123,8 @@ def test_search_options_returns_visible_uploaders_and_groups_in_stable_order() -
 
     result = service.search_options(uuid4())
 
-    assert [(item.id, item.name) for item in result.uploaders] == [(uploader_id, "Alice")]
-    assert [(item.id, item.name) for item in result.groups] == [(group_id, "Family")]
+    assert [(item.id, item.label) for item in result.uploaders] == [(uploader_id, "Alice")]
+    assert [(item.id, item.label) for item in result.groups] == [(group_id, "Family")]
     uploader_sql = str(
         session.execute.call_args_list[0]
         .args[0]

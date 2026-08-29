@@ -151,7 +151,9 @@
 }
 
 .app-navigation__label--management {
-  margin-top: 1.5rem;
+  padding-top: 0.9rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--color-border-default);
 }
 
 .app-navigation__item {
@@ -202,6 +204,7 @@
   gap: 0.45rem;
   align-items: center;
   min-height: 38px;
+  margin-top: 0.55rem;
   padding: 0.45rem 0.8rem;
   color: var(--color-text-primary);
   font-size: 0.78rem;
@@ -213,7 +216,14 @@
 }
 
 .app-navigation__item--nested {
+  min-height: 36px;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
   padding-left: 1.2rem;
+}
+
+.app-navigation__section + .app-navigation__item--nested {
+  margin-top: -0.2rem;
 }
 
 .app-navigation__item--nested::before {

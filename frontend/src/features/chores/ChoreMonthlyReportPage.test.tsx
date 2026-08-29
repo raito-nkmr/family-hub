@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
-import { ChoreReportPage } from './ChoreReportPage'
+import { ChoreMonthlyReportPage } from './ChoreMonthlyReportPage'
 
-const useChoreReport = vi.fn()
+const useChoreMonthlyReport = vi.fn()
 
-vi.mock('./useChoreReport', () => ({
-  useChoreReport: () => useChoreReport(),
+vi.mock('./useChoreMonthlyReport', () => ({
+  useChoreMonthlyReport: () => useChoreMonthlyReport(),
 }))
 
 const report = {
@@ -24,7 +24,7 @@ const report = {
   tasks: [
     {
       task_id: 'task-1',
-      name: 'お風呂',
+      task_name: 'お風呂',
       category_id: 'category-1',
       category_name: '浴室',
       completion_count: 3,
@@ -34,7 +34,7 @@ const report = {
   ],
 }
 
-describe('ChoreReportPage', () => {
+describe('ChoreMonthlyReportPage', () => {
   const makeState = (currentReport = report) => ({
     groups: [
       {
@@ -64,11 +64,11 @@ describe('ChoreReportPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useChoreReport.mockReturnValue(makeState())
+    useChoreMonthlyReport.mockReturnValue(makeState())
   })
 
   it('shows the monthly summary, category breakdown, ranking, and task breakdown', () => {
-    render(<ChoreReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/reports') })
+    render(<ChoreMonthlyReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/monthly') })
 
     expect(screen.getByRole('heading', { name: '家事タスクの月次レポート' })).toBeInTheDocument()
     expect(screen.getAllByText('完了回数').length).toBeGreaterThan(0)
@@ -83,17 +83,19 @@ describe('ChoreReportPage', () => {
 
   it('moves to the previous month and keeps task details collapsible', async () => {
     const user = userEvent.setup()
-    render(<ChoreReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/reports') })
+    render(<ChoreMonthlyReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/monthly') })
 
     await user.click(screen.getByRole('button', { name: '前月' }))
 
-    expect(useChoreReport.mock.results[0].value.setMonth).toHaveBeenCalledWith('2026-06')
+    expect(useChoreMonthlyReport.mock.results[0].value.setMonth).toHaveBeenCalledWith('2026-06')
     expect(screen.getAllByText('お風呂').some((element) => element.closest('details') !== null)).toBe(true)
   })
 
   it('shows the empty state when a month has no completions', () => {
-    useChoreReport.mockReturnValueOnce(makeState({ ...report, summary: { ...report.summary, completion_count: 0 } }))
-    render(<ChoreReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/reports') })
+    useChoreMonthlyReport.mockReturnValueOnce(
+      makeState({ ...report, summary: { ...report.summary, completion_count: 0 } }),
+    )
+    render(<ChoreMonthlyReportPage onUnauthorized={vi.fn()} />, { wrapper: createAppWrapper('/chores/monthly') })
 
     expect(screen.getByText('この月の家事タスクの記録はありません')).toBeInTheDocument()
   })

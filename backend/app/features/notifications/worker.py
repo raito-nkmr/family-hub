@@ -181,7 +181,7 @@ class NotificationWorker:
                     User.is_active.is_(True),
                     UserSession.revoked_at.is_(None),
                     UserSession.expires_at > now,
-                    UserSession.last_seen_at > idle_cutoff,
+                    UserSession.last_used_at > idle_cutoff,
                     UserSession.created_at >= User.password_changed_at,
                 )
             ).all()

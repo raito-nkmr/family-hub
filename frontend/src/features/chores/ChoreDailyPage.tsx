@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { TaskAltIcon } from '../../shared/ui/icons'
 import { EmptyState } from '../../shared/ui/EmptyState'
-import { ChoreReportFrame, type ChoreReportData } from './ChoreReportFrame'
-import { useChoreReport } from './useChoreReport'
+import { ChoreMonthlyReportFrame, type ChoreMonthlyReportData } from './ChoreMonthlyReportFrame'
+import { useChoreMonthlyReport } from './useChoreMonthlyReport'
 
 type DailyView = 'calendar' | 'chart'
 
@@ -13,7 +13,7 @@ interface ChoreDailyPageProps {
 
 export function ChoreDailyPage({ onUnauthorized }: ChoreDailyPageProps) {
   const { t, i18n } = useTranslation()
-  const state = useChoreReport({ onUnauthorized })
+  const state = useChoreMonthlyReport({ onUnauthorized })
   const [searchParams, setSearchParams] = useSearchParams()
   const view: DailyView = searchParams.get('view') === 'chart' ? 'chart' : 'calendar'
 
@@ -29,7 +29,7 @@ export function ChoreDailyPage({ onUnauthorized }: ChoreDailyPageProps) {
   }
 
   return (
-    <ChoreReportFrame
+    <ChoreMonthlyReportFrame
       state={state}
       eyebrow={t('chores.dailyEyebrow')}
       title={t('chores.dailyTitle')}
@@ -38,19 +38,22 @@ export function ChoreDailyPage({ onUnauthorized }: ChoreDailyPageProps) {
       {(report) =>
         report.summary.completion_count === 0 ? (
           <EmptyState
-            className="chore-empty-state chore-report-empty"
+            className="chore-empty-state chore-monthly-report-empty"
             icon={<TaskAltIcon />}
             title={t('chores.reportEmpty')}
             description={t('chores.reportEmptyHelp')}
           />
         ) : (
-          <section className="chore-report-section chore-report-daily-page" aria-labelledby="daily-view-heading">
-            <div className="chore-report-section__heading chore-report-daily-page__heading">
+          <section
+            className="chore-monthly-report-section chore-monthly-report-daily-page"
+            aria-labelledby="daily-view-heading"
+          >
+            <div className="chore-monthly-report-section__heading chore-monthly-report-daily-page__heading">
               <div>
                 <h2 id="daily-view-heading">{t('chores.reportDaily')}</h2>
                 <span>{t('chores.reportCompletionCount')}</span>
               </div>
-              <div className="chore-report-view-switcher" role="group" aria-label={t('chores.dailyViewLabel')}>
+              <div className="chore-monthly-report-view-switcher" role="group" aria-label={t('chores.dailyViewLabel')}>
                 <button
                   className={view === 'calendar' ? 'secondary-button is-active' : 'secondary-button'}
                   type="button"
@@ -77,11 +80,11 @@ export function ChoreDailyPage({ onUnauthorized }: ChoreDailyPageProps) {
           </section>
         )
       }
-    </ChoreReportFrame>
+    </ChoreMonthlyReportFrame>
   )
 }
 
-function DailyCalendar({ report, locale, t }: { report: ChoreReportData; locale: string; t: Translator }) {
+function DailyCalendar({ report, locale, t }: { report: ChoreMonthlyReportData; locale: string; t: Translator }) {
   const firstDay = report.daily[0]?.day
   const leadingDays = firstDay ? getWeekday(firstDay) : 0
   const maxCount = Math.max(1, ...report.daily.map((day) => day.completion_count))
@@ -92,15 +95,15 @@ function DailyCalendar({ report, locale, t }: { report: ChoreReportData; locale:
   )
 
   return (
-    <div className="chore-report-calendar" role="grid" aria-label={t('chores.dailyCalendarLabel')}>
+    <div className="chore-monthly-report-calendar" role="grid" aria-label={t('chores.dailyCalendarLabel')}>
       {weekdayLabels.map((label) => (
-        <div className="chore-report-calendar__weekday" role="columnheader" key={label}>
+        <div className="chore-monthly-report-calendar__weekday" role="columnheader" key={label}>
           {label}
         </div>
       ))}
       {Array.from({ length: leadingDays }, (_, index) => (
         <div
-          className="chore-report-calendar__cell chore-report-calendar__cell--empty"
+          className="chore-monthly-report-calendar__cell chore-monthly-report-calendar__cell--empty"
           role="gridcell"
           key={`empty-${index}`}
         />
@@ -110,7 +113,7 @@ function DailyCalendar({ report, locale, t }: { report: ChoreReportData; locale:
         const level = count === 0 ? 0 : Math.max(1, Math.ceil((count / maxCount) * 4))
         return (
           <div
-            className={`chore-report-calendar__cell chore-report-calendar__cell--level-${level}`}
+            className={`chore-monthly-report-calendar__cell chore-monthly-report-calendar__cell--level-${level}`}
             role="gridcell"
             aria-label={t('chores.dailyDateAria', {
               day: formatDate(day.day, locale),
@@ -127,18 +130,18 @@ function DailyCalendar({ report, locale, t }: { report: ChoreReportData; locale:
   )
 }
 
-function DailyChart({ report, t }: { report: ChoreReportData; t: Translator }) {
+function DailyChart({ report, t }: { report: ChoreMonthlyReportData; t: Translator }) {
   const maxCount = Math.max(1, ...report.daily.map((day) => day.completion_count))
   return (
-    <div className="chore-report-daily" role="list">
+    <div className="chore-monthly-report-daily" role="list">
       {report.daily.map((day) => (
-        <div className="chore-report-daily__item" role="listitem" key={day.day}>
-          <div className="chore-report-daily__label">
+        <div className="chore-monthly-report-daily__item" role="listitem" key={day.day}>
+          <div className="chore-monthly-report-daily__label">
             <span>{formatDay(day.day)}</span>
             <strong>{day.completion_count}</strong>
           </div>
           <div
-            className="chore-report-bar"
+            className="chore-monthly-report-bar"
             role="img"
             aria-label={t('chores.reportDailyAria', { day: formatDay(day.day), count: day.completion_count })}
           >

@@ -122,7 +122,7 @@ export function HomePage({
                     <li key={task.id}>
                       <CheckCircleIcon />
                       <span>
-                        <strong>{task.name}</strong>
+                        <strong>{task.task_name}</strong>
                         <small>
                           {group.name} · {due.label}
                         </small>

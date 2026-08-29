@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.features.auth.models import SystemRole, User
 from app.features.auth.passwords import hash_password
 from app.features.photos.models import UploadBatch, UploadBatchStatus, UploadItem, UploadItemStatus
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.uploads import UploadBatchService
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")

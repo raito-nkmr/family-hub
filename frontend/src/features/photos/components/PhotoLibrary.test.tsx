@@ -13,8 +13,10 @@ const photo: PhotoListItem = {
   content_type: 'image/jpeg',
   width: 100,
   height: 100,
-  captured_at: '2025-07-15T00:00:00Z',
+  captured_at_original: '2025-07-15T00:00:00Z',
+  captured_at_override: null,
   uploaded_at: '2025-07-15T00:00:00Z',
+  effective_captured_at: '2025-07-15T00:00:00Z',
   is_favorite: false,
 }
 

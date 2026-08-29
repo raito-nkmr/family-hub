@@ -8,7 +8,7 @@ from errno import EDQUOT, ENOSPC
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
-from app.features.photos.storage_types import (
+from app.features.photos.storage.types import (
     PhotoStorageError,
     StagedUpload,
     StorageStatusCode,
@@ -62,6 +62,49 @@ class ResumableUploadOperations:
             expected_offset,
             next_offset,
             len(data),
+            (time.perf_counter() - persist_started) * 1000,
+        )
+        return next_offset
+
+    def append_resumable_file(self, item_id: UUID, expected_offset: int, source_path: Path, total_size: int) -> int:
+        actual_offset = self.get_resumable_offset(item_id)
+        if actual_offset != expected_offset:
+            raise UploadOffsetMismatchError(actual_offset)
+        try:
+            source_size = source_path.stat().st_size
+        except OSError as error:
+            raise PhotoStorageError("Could not inspect upload chunk") from error
+        if source_size == 0:
+            return actual_offset
+        self._require_upload_ready(source_size)
+        if self._maximum_upload_bytes is None or total_size > self._maximum_upload_bytes:
+            raise UploadTooLargeError("Uploaded file exceeds the configured size limit")
+        if actual_offset + source_size > total_size:
+            raise UploadTooLargeError("Chunk exceeds the declared file size")
+        path = self._resumable_path(item_id, create_directory=True)
+        persist_started = time.perf_counter()
+        bytes_written = 0
+        try:
+            with source_path.open("rb") as source, path.open("ab") as destination:
+                read_size = self._upload_chunk_bytes or 1024 * 1024
+                while chunk := source.read(read_size):
+                    destination.write(chunk)
+                    bytes_written += len(chunk)
+                destination.flush()
+                os.fsync(destination.fileno())
+        except OSError as error:
+            if error.errno in {ENOSPC, EDQUOT}:
+                raise StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE) from error
+            raise PhotoStorageError("Could not append resumable upload") from error
+        if bytes_written != source_size:
+            raise PhotoStorageError("Upload chunk changed while it was being read")
+        next_offset = actual_offset + bytes_written
+        logger.info(
+            "Resumable upload chunk synced item_id=%s expected_offset=%d next_offset=%d bytes=%d duration_ms=%.1f",
+            item_id,
+            expected_offset,
+            next_offset,
+            bytes_written,
             (time.perf_counter() - persist_started) * 1000,
         )
         return next_offset

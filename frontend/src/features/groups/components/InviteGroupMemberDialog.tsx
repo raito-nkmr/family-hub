@@ -5,52 +5,52 @@ import { DialogActions } from '../../../shared/ui/DialogActions'
 import { GroupAddIcon } from '../../../shared/ui/icons'
 import type { GroupMemberCandidate, GroupRole } from '../api'
 
-interface AddGroupMemberDialogProps {
+interface InviteGroupMemberDialogProps {
   submitting: boolean
   loadingCandidates: boolean
   candidates: GroupMemberCandidate[]
   error: string | null
-  onSubmit: (userId: string, role: GroupRole) => Promise<void>
+  onSubmit: (inviteeUserId: string, role: GroupRole) => Promise<void>
   onClose: () => void
 }
 
-export function AddGroupMemberDialog({
+export function InviteGroupMemberDialog({
   submitting,
   loadingCandidates,
   candidates,
   error,
   onSubmit,
   onClose,
-}: AddGroupMemberDialogProps) {
+}: InviteGroupMemberDialogProps) {
   const { t } = useTranslation()
   const headingId = useId()
-  const userId = useId()
+  const userSelectId = useId()
   const roleId = useId()
-  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedInviteeUserId, setSelectedInviteeUserId] = useState('')
   const [role, setRole] = useState<GroupRole>('member')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (submitting || !selectedUserId) return
-    await onSubmit(selectedUserId, role)
+    if (submitting || !selectedInviteeUserId) return
+    await onSubmit(selectedInviteeUserId, role)
   }
 
   return (
     <Dialog titleId={headingId} className="group-form-dialog" busy={submitting} onClose={onClose}>
       <div className="dialog__heading">
-        <h2 id={headingId}>{t('groups.addMember')}</h2>
+        <h2 id={headingId}>{t('groups.inviteMember')}</h2>
         <p>{t('groups.candidateHelp')}</p>
       </div>
       <form className="group-form" onSubmit={(event) => void handleSubmit(event)}>
-        <label htmlFor={userId}>{t('groups.user')}</label>
+        <label htmlFor={userSelectId}>{t('groups.user')}</label>
         <select
           className="form-control form-control--subtle"
-          id={userId}
-          value={selectedUserId}
+          id={userSelectId}
+          value={selectedInviteeUserId}
           required
           autoFocus
           disabled={loadingCandidates || candidates.length === 0}
-          onChange={(event) => setSelectedUserId(event.target.value)}
+          onChange={(event) => setSelectedInviteeUserId(event.target.value)}
         >
           <option value="">{loadingCandidates ? t('common.loading') : t('groups.selectUser')}</option>
           {candidates.map((candidate) => (
@@ -78,9 +78,9 @@ export function AddGroupMemberDialog({
           </p>
         )}
         <DialogActions disabled={submitting} onCancel={onClose}>
-          <button className="primary-button icon-button" type="submit" disabled={submitting || !selectedUserId}>
+          <button className="primary-button icon-button" type="submit" disabled={submitting || !selectedInviteeUserId}>
             <GroupAddIcon />
-            {submitting ? t('groups.adding') : t('groups.add')}
+            {submitting ? t('groups.inviting') : t('groups.invite')}
           </button>
         </DialogActions>
       </form>

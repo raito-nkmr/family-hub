@@ -23,12 +23,15 @@ users 1 ───── 0..1 photo_activity_states
 users 1 ───── 0..N family_group_members N..1 ───── 1 family_groups
 family_groups 1 ───── 0..N chore_tasks 1 ───── 0..N chore_completions
 family_groups 1 ───── 0..N shopping_items
+family_groups 1 ───── 0..N shopping_categories
+shopping_items 1 ───── 0..N shopping_purchases N..1 ───── 1 shopping_trips
 users 1 ───── 0..N upload_batches 1 ───── 1..N upload_items N..0 ───── 0..1 photos
 upload_batches 1 ───── 0..N upload_batch_group_shares N..1 ───── 1 family_groups
 users 1 ───── 0..N push_subscriptions N..1 ───── 1 user_sessions
 users 1 ───── 0..N notification_preferences
 users 1 ───── 0..N notification_outbox 1 ───── 0..N notification_deliveries
 push_subscriptions 1 ───── 0..N notification_deliveries
+login_rate_limits (shared PostgreSQL login-attempt windows; hashed keys only)
 maintenance_runs
 administrative_audit_events
 ```
@@ -42,9 +45,10 @@ current relational contract.
 - Generate UUID v4 in Python before writing temporary files, originals, or database rows.
 - Store timestamps as `TIMESTAMPTZ` in UTC; keep the PostgreSQL session time zone at UTC.
 - FastAPI returns UTC ISO 8601 timestamps and never converts them to JST at the DB/API boundary.
-- React explicitly converts display values to `Asia/Tokyo`; JST date boundaries are used for date search and grouping.
-- Store the denormalized `effective_captured_at` sort value as owner override, EXIF `captured_at`, then `uploaded_at`; keep
-  the source capture fields separate so upload time is never presented as a known capture time.
+- React passes an explicit IANA time zone for date formatting and boundaries. Photo date search uses `Asia/Tokyo`, while
+  group-scoped shopping statistics use the selected group's time zone.
+- Store the denormalized `effective_captured_at` sort value as owner override, original `captured_at_original`, then
+  `uploaded_at`; keep the source and override fields separate so upload time is never presented as a known capture time.
 - Do not store image data, absolute HDD paths, or environment-specific mount points in PostgreSQL.
 - Give constraints and indexes stable names managed by Alembic.
 - Avoid PostgreSQL-specific ENUMs for now; use strings with `CHECK` constraints so values remain easier to change.
@@ -63,7 +67,8 @@ React       July 14, 2026 12:00 JST
 ```
 
 The server generates `uploaded_at`. EXIF capture times with an offset are converted using that offset. EXIF values without
-an offset are interpreted as JST and then converted to UTC. Missing or invalid EXIF values produce a null `captured_at`.
+an offset are interpreted as JST and then converted to UTC. Missing or invalid EXIF values produce a null
+`captured_at_original`.
 React must pass `Asia/Tokyo` explicitly to `Intl.DateTimeFormat` or equivalent. JST date ranges are converted to UTC before
 being sent to PostgreSQL so the late-night JST interval is included correctly.
 
@@ -99,9 +104,17 @@ in the same transaction before inserting the replacement.
 ### `user_sessions`
 
 Stores server-side sessions. The raw cookie token is not stored; only its lowercase SHA-256 hash is stored in the unique
-`token_hash` column. The table also stores a session-bound CSRF token, creation time, last-use time, absolute expiry, and
+`token_hash` column. The table also stores a session-bound CSRF token, creation time, `last_used_at`, absolute expiry, and
 optional revocation time. `expires_at` must be later than `created_at`. Index `user_id` as `ix_user_sessions_user_id` to
 revoke all sessions efficiently.
+
+### `login_rate_limits`
+
+Stores only the lowercase SHA-256 hash of the trusted client-IP and normalized-username rate-limit key, the start of its
+current window, the attempt count, and the last update time. The hash is the primary key and the update-time index supports
+opportunistic removal of expired rows. Login attempts acquire a PostgreSQL transaction advisory lock derived from the hash,
+then consume a window slot atomically across processes; successful logins delete the row. This table contains no seed or
+backfill data.
 
 ### `family_groups`
 
@@ -116,15 +129,16 @@ group during membership and role changes and reject demotion or removal of the l
 
 ### `family_group_membership_invitations`
 
-Stores group-admin invitations to existing active users, including group, invitee, inviter, proposed role, `pending`,
-`accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and user is allowed.
+Stores group-admin invitations to existing active users, including `invitee_user_id`, `invited_by_user_id`, group, proposed
+role, `pending`, `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and
+invitee is allowed. Invitation constraints and indexes use the `family_group_membership_invitations` prefix.
 Acceptance creates membership in the same transaction; group deletion cascades.
 
 ## Chore and shopping tables
 
 ### `chore_tasks`
 
-Stores group-scoped chore locations, a required reference to a group-owned chore category, and day intervals.
+Stores group-scoped chore tasks, with a required `task_name`, a reference to a group-owned chore category, and day intervals.
 `interval_days` is 1–3650, `is_active` defaults to true, and creator and timestamps are retained. Index `(group_id,
 is_active)` as `ix_chore_tasks_group_id_is_active` and `category_id` as `ix_chore_tasks_category_id`. Do not store a
 countdown or `next_due_at`; calculate it from the latest completion or `created_at` plus the interval. Pausing is a logical
@@ -160,10 +174,36 @@ category counts, member rankings, and task/member counts. Empty months return th
 
 ### `shopping_items`
 
-Stores a group item, creator, optional purchaser, creation and update times, and optional purchase time. The purchaser and
-purchase time must both be null or both be set. Index `(group_id, purchased_at, created_at)` as
-`ix_shopping_items_group_id_purchase_state`; list unpurchased items by `created_at ASC, id ASC` and purchased items by
-`purchased_at DESC, id DESC`. Lock rows while changing purchase state and clear purchaser and time when restoring an item.
+Stores the current active request, creator, optional informational assignee, optional shared category, legacy purchaser state,
+and timestamps. The purchaser and purchase time must both be null or both be set. Index `(group_id, purchased_at, created_at)`
+as `ix_shopping_items_group_id_purchase_state`; in-store mode lists unpurchased items by `created_at ASC, id ASC`. Lock the
+group and item while completing or restoring a request. Deleting an active request is allowed, while purchased history remains
+in `shopping_purchases`.
+
+### `shopping_categories`
+
+Stores group-shared optional category names and non-negative display order. Names are trimmed, limited to 40 characters, and
+unique within a group without regard to case. The `(group_id, sort_order, id)` index supports management ordering. Deleting a
+category nulls current and historical references but leaves category name snapshots on purchase events.
+
+### `shopping_trips`
+
+Stores one shopping session per explicit or automatically created trip: group, starter, UTC start time, optional finalization,
+discard timestamp and discarding user, nullable non-negative total amount in Japanese yen, recording user, and update time.
+Discard state requires both discard fields and cannot coexist with finalization. History pages order by `(started_at DESC, id
+DESC)` and use that pair for opaque cursor pagination. A null amount means “金額未記録” and is omitted from spending totals.
+Discarded trips are retained for audit history, hidden from the history list by default, and excluded from statistics. An in-progress
+trip with no purchase events may be hard-deleted, including through the confirmed empty-trip finish flow. A finalized trip may also be hard-deleted after confirmation;
+its purchase events are removed and affected planned-item purchase state is synchronized with any remaining purchase events.
+
+### `shopping_purchases`
+
+Purchase events are append-only during normal corrections and reversals and reference a trip and optionally the current
+`shopping_items` row. They store item name, assignee, and category snapshots, actual purchaser, purchase time, and nullable
+reversal actor/time. The optional item reference uses `ON DELETE SET NULL`; trip/group references cascade only with their owning
+group/trip. Reversal changes state and never deletes an event, preserving repeated purchases, corrections, planned-vs-unplanned
+counts, and time-series statistics. Explicit finalized-trip deletion removes all events belonging to that trip as one destructive
+operation.
 
 ## Photo tables
 
@@ -185,9 +225,9 @@ includes JPEG, primary-image MPO selected as JPEG, PNG, HEIF/HEIC, MP4, QuickTim
 
 Separates user-editable information from original metadata. It is keyed by `photo_id` and stores a memo of at most 2,000
 characters, an optional owner-entered `captured_at_override`, memo attribution, last-edit time, optimistic-lock `version`, and
-timestamps. `photos.effective_captured_at` is synchronized from `captured_at_override`, the original EXIF `photos.captured_at`,
-or `photos.uploaded_at` when the override is cleared. The API continues to expose only the source/override capture values as
-known capture times.
+timestamps. `photos.effective_captured_at` is synchronized from `captured_at_override`, the original EXIF
+`photos.captured_at_original`, or `photos.uploaded_at` when the override is cleared. The API exposes
+`captured_at_original`, `captured_at_override`, and `effective_captured_at`; only the first two are known capture times.
 Viewers can edit the shared memo; only the owner can edit sharing or the capture-time override. Every metadata update
 increments the version and synchronizes `metadata_version` in the JSON sidecar.
 
@@ -208,8 +248,9 @@ Stores a user/photo pair with a creation time. Favorites are independent of shar
 
 ### Activity tables
 
-`photo_activity_events` records `uploaded` or `shared`, the photo, an operation ID, and occurrence time. Batch uploads and
-bulk shares use one operation ID so New can group them; individual operations also receive an ID. `photo_activity_event_groups`
+`photo_activity_events` records `uploaded` or `shared`, the photo, an `activity_operation_id`, and occurrence time. Batch uploads
+and bulk shares use one activity operation ID so New can group them; individual operations also receive an ID.
+`photo_activity_event_groups`
 records groups that gained access at the event. Retrieval verifies current membership, membership start before the event, and
 an active current share, excluding pre-membership and later-unshared events.
 
@@ -240,7 +281,7 @@ CREATE INDEX ix_photo_metadata_memo_trgm
 ```
 
 Convert `effective_captured_at` to `Asia/Tokyo` for month and date boundaries while keeping stored timestamps UTC. The
-`captured_at` and `captured_at_override` columns remain separate so the API can distinguish known capture time from the
+`captured_at_original`, `captured_at_override`, and `effective_captured_at` columns remain separate so the API can distinguish known capture time from the
 upload-time fallback.
 Do not duplicate indexes already supplied by unique constraints.
 
@@ -253,13 +294,16 @@ Recheck owner group membership when each file completes.
 
 `upload_batch_group_shares` stores the unique `(batch_id, group_id)` share set applied to every finalized photo.
 
-`upload_items` stores the browser `client_id`, original filename, declared content type, expected and received byte counts,
-status (`queued`, `uploading`, `processing`, `succeeded`, `duplicate`, or `failed`), stable error code, optional photo ID, and
+`upload_items` stores the browser `client_id`, `original_filename`, `declared_content_type`, expected and received byte
+counts, status (`queued`, `uploading`, `processing`, `succeeded`, `duplicate`, or `failed`), stable error code, optional photo ID, and
 timestamps. `(batch_id, client_id)` is unique and received bytes must be between zero and size. Files complete independently;
 one failure does not roll back successful photos.
 
-After each chunk, commit `received_bytes` so the `.part` size can be reconciled after interruption. After receipt, commit the
-item as `processing`, finalize original, sidecar, and WebP thumbnail, then insert `photos`, `photo_metadata`,
+After each chunk, commit `received_bytes` so the `.part` size can be reconciled after interruption. Request bodies are first
+streamed through a bounded temporary file and then appended to the durable `.part` file in bounded reads. Cancel and expiry
+commit the database state before attempting `.part` deletion; a failed commit leaves the `.part` for offset reconciliation,
+and failed cleanup is recovered by orphan maintenance. After receipt, commit the item as `processing`, finalize original,
+sidecar, and WebP thumbnail, then insert `photos`, `photo_metadata`,
 `photo_derivatives`, required shares, and activity rows in one transaction. Use `UploadItem.id` as `Photo.id` to make retries
 idempotent.
 
@@ -306,7 +350,7 @@ optimization are not part of this implementation.
 ## JSON sidecars
 
 Store one same-UUID JSON file beside every original. The sidecar is recovery information, not the source for ordinary lists or
-search. Schema version 7 separates the original and derivative asset data, editable metadata, sharing, and lifecycle state:
+search. Schema version 8 separates the original and derivative asset data, editable metadata, sharing, and lifecycle state:
 
 | Field | Purpose |
 | --- | --- |
@@ -315,14 +359,16 @@ search. Schema version 7 separates the original and derivative asset data, edita
 | `metadata_version` | Matches `photo_metadata.version` |
 | `asset` | Uploader, original details, dimensions, timestamps, and derivatives |
 | `metadata` | Shared memo and its last editor and timestamp |
-| `sharing` | Sharing audiences, currently family-group IDs with their audience type |
+| `sharing` | `group_ids` for the family groups that can access the photo |
 | `lifecycle` | Current trash and permanent-deletion state |
 
 The current integrity command uses PostgreSQL as the reference and is read-only. It verifies UUID/path correspondence,
 original size, optional hashes, sidecar contents, and derivative files. `sync_photo_sidecars` rewrites sidecars from current
-database records. Automatic repair and sidecar-to-database rebuilding are not implemented; restore the database from a backup
-if PostgreSQL is lost. Thumbnail locations are recorded for integrity checks, but not other regenerable derived data such as
-person-analysis results.
+database records when existing data is retained. `cleanup_orphaned_photo_files` removes only old files not referenced by
+PostgreSQL, defaults to a dry run, and refuses an empty database unless an intentional reset explicitly passes
+`--allow-empty-database`. Restore the database from a backup if PostgreSQL is lost; sidecar-to-database rebuilding and
+automatic thumbnail repair are not implemented. Thumbnail locations are recorded for integrity checks, but not other
+regenerable derived data such as person-analysis results.
 
 ## Maintenance and notification tables
 
@@ -343,16 +389,23 @@ attempt count, status, completion time, and a non-secret error code.
 Do not add tables for person detection, tags, face recognition, or scene classification until their requirements are approved.
 The provisional person-detection model is in [`proposals/person-detection.md`](./proposals/person-detection.md).
 
-The development and pre-production history is reset and rebuilt as the following immutable baseline chain:
+The development and pre-production history is reset and rebuilt as the following four-revision immutable domain baseline
+chain. The current names are defined directly in these baseline revisions; naming-only revisions are not retained when
+the resettable databases are rebuilt:
 
-- `20260821_01_core` — extensions, identity, and family groups
-- `20260821_02_media` — photos, activity, uploads, and albums
-- `20260821_03_household` — complete chore, shopping, notifications, maintenance, and audit schema
+- `20260829_01_core` — extensions, identity, family groups, and shared login-rate-limit state
+- `20260829_02_media` — photos, activity, uploads, and albums
+- `20260829_03_household` — chores, notifications, maintenance, and audit schema
+- `20260829_04_shopping` — shopping items, categories, assignments, trips, purchase history, and discarded-trip state
+
+This is a history rebuild, not a forward-compatible upgrade path from the retired revisions. Disposable databases still
+stamped with a retired revision ID must be reset before applying this chain; real-data environments require a reviewed
+transition or restoration plan.
 
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
 and category ordering, are included directly in the current chain.
-Never rewrite these revisions after the rebuild; future approved schema changes must be added as new migrations.
+After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
 update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate

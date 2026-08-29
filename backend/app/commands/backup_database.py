@@ -12,7 +12,7 @@ from app.core.config import get_management_settings
 from app.database.session import create_database_engine
 from app.features.maintenance.models import MaintenanceJobType, MaintenanceRunStatus
 from app.features.maintenance.service import MaintenanceService
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 
 
 def _sha256(path: Path) -> str:

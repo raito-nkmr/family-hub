@@ -53,7 +53,7 @@ export function useShopping({ onUnauthorized }: UseShoppingOptions) {
   useUnauthorizedError(itemsQuery.error, onUnauthorized)
 
   const createMutation = useMutation({
-    mutationFn: ({ groupId, name }: { groupId: string; name: string }) => createShoppingItem(groupId, name),
+    mutationFn: ({ groupId, itemName }: { groupId: string; itemName: string }) => createShoppingItem(groupId, itemName),
     onSuccess: (created, { groupId }) => {
       queryClient.setQueryData<ShoppingItem[]>(queryKeys.shoppingItems(groupId), (current = []) =>
         sortItems([...current, created]),
@@ -67,11 +67,11 @@ export function useShopping({ onUnauthorized }: UseShoppingOptions) {
     await selectGroupInUrl(groupId)
   }
 
-  const addItem = async (name: string): Promise<boolean> => {
+  const addItem = async (itemName: string): Promise<boolean> => {
     if (!selectedGroupId) return false
     setFormError(null)
     try {
-      await createMutation.mutateAsync({ groupId: selectedGroupId, name })
+      await createMutation.mutateAsync({ groupId: selectedGroupId, itemName })
       return true
     } catch (error) {
       if (isUnauthorizedError(error)) onUnauthorized()

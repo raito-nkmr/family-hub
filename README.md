@@ -20,7 +20,7 @@ layout.
 - **Household coordination**
   - Categorized chore tasks with configurable intervals, completion history, pause, and resume
   - Chore task, daily completion calendar/chart, and monthly report pages with category, member, and task statistics
-  - Shared shopping lists with purchased and unpurchased states
+  - Three-page shopping workflow with in-store one-tap mode, assignees, trip history, totals, and statistics
   - Home dashboard aggregating recent photos, due chore tasks, and shopping items
 - **Family and account management**
   - Invitation-based account creation

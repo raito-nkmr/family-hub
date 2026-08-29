@@ -53,8 +53,8 @@ describe('PhotoSearchPanel', () => {
         filters={{}}
         timeline={null}
         searchOptions={{
-          uploaders: [{ id: 'user-1', name: 'owner' }],
-          groups: [{ id: 'group-1', name: 'Family' }],
+          uploaders: [{ id: 'user-1', label: 'owner' }],
+          groups: [{ id: 'group-1', label: 'Family' }],
         }}
         disabled={false}
         onSearch={onSearch}
@@ -62,7 +62,7 @@ describe('PhotoSearchPanel', () => {
     )
 
     await user.click(screen.getByRole('button', { name: '検索条件を表示' }))
-    await user.selectOptions(screen.getByLabelText('投稿者'), 'user-1')
+    await user.selectOptions(screen.getByLabelText('アップロードしたユーザー'), 'user-1')
     await user.selectOptions(screen.getByLabelText('共有グループ'), 'group-1')
     await user.click(screen.getByRole('button', { name: '絞り込む' }))
 
@@ -70,7 +70,7 @@ describe('PhotoSearchPanel', () => {
   })
 
   it('synchronizes local fields when URL-backed filters change', async () => {
-    const searchOptions = { uploaders: [{ id: 'user-1', name: 'owner' }], groups: [] }
+    const searchOptions = { uploaders: [{ id: 'user-1', label: 'owner' }], groups: [] }
     const { rerender } = render(
       <PhotoSearchPanel
         filters={{ q: '旅行' }}
@@ -93,7 +93,7 @@ describe('PhotoSearchPanel', () => {
     )
 
     await screen.findByDisplayValue('新着')
-    expect(screen.getByLabelText('投稿者')).toHaveValue('user-1')
+    expect(screen.getByLabelText('アップロードしたユーザー')).toHaveValue('user-1')
   })
 
   it('does not count fixed album picker filters as user-applied conditions', () => {

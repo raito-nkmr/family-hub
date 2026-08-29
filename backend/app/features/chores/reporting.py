@@ -12,15 +12,15 @@ from app.features.chores.models import ChoreCompletion, ChoreTask
 from app.features.groups.public import FamilyGroup, FamilyGroupMember
 
 
-class ChoreReportNotFoundError(Exception):
+class ChoreMonthlyReportNotFoundError(Exception):
     pass
 
 
-class ChoreReportInvalidMonthError(Exception):
+class ChoreMonthlyReportInvalidMonthError(Exception):
     pass
 
 
-class ChoreReportInvalidTimezoneError(Exception):
+class ChoreMonthlyReportInvalidTimezoneError(Exception):
     pass
 
 
@@ -66,7 +66,7 @@ class ChoreMonthlyTaskMember:
 @dataclass(frozen=True, slots=True)
 class ChoreMonthlyTask:
     task_id: UUID
-    name: str
+    task_name: str
     category_id: UUID | None
     category_name: str
     completion_count: int
@@ -86,7 +86,7 @@ class ChoreMonthlyReport:
     tasks: list[ChoreMonthlyTask]
 
 
-class ChoreReportService:
+class ChoreMonthlyReportService:
     def __init__(self, session: Session) -> None:
         self._session = session
 
@@ -96,7 +96,7 @@ class ChoreReportService:
         try:
             timezone = ZoneInfo(group.timezone)
         except ZoneInfoNotFoundError as error:
-            raise ChoreReportInvalidTimezoneError from error
+            raise ChoreMonthlyReportInvalidTimezoneError from error
 
         next_month = date(month_start.year + (month_start.month == 12), month_start.month % 12 + 1, 1)
         start_at = datetime.combine(month_start, time.min, tzinfo=timezone).astimezone(UTC)
@@ -139,7 +139,7 @@ class ChoreReportService:
             .where(FamilyGroup.id == group_id, FamilyGroupMember.user_id == user_id)
         )
         if group is None:
-            raise ChoreReportNotFoundError
+            raise ChoreMonthlyReportNotFoundError
         return group
 
     @staticmethod
@@ -147,9 +147,9 @@ class ChoreReportService:
         try:
             parsed = datetime.strptime(month, "%Y-%m").date()
         except ValueError as error:
-            raise ChoreReportInvalidMonthError from error
+            raise ChoreMonthlyReportInvalidMonthError from error
         if parsed.strftime("%Y-%m") != month:
-            raise ChoreReportInvalidMonthError
+            raise ChoreMonthlyReportInvalidMonthError
         return parsed
 
     @staticmethod
@@ -327,7 +327,7 @@ class ChoreReportService:
         return [
             ChoreMonthlyTask(
                 task_id=row.task_id,
-                name=row.task_name_snapshot,
+                task_name=row.task_name_snapshot,
                 category_id=row.category_id,
                 category_name=row.category_name_snapshot,
                 completion_count=int(row.completion_count),

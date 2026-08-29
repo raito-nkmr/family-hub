@@ -21,7 +21,7 @@ from app.features.photos.errors import (
 from app.features.photos.metadata_persistence import PhotoMetadataPersistence
 from app.features.photos.models import Photo, PhotoActivityEventType, PhotoLifecycleState, PhotoShare
 from app.features.photos.registration import build_sidecar_metadata, create_photo_activity_event
-from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError, SidecarMetadata
 from app.features.photos.types import BulkPhotoSharingResult
 
 
@@ -80,7 +80,7 @@ class PhotoMetadataService:
                 raise PhotoUpdatePersistenceError("Capture time override must be timezone-aware")
             normalized_override = captured_at_override.astimezone(UTC) if captured_at_override is not None else None
             photo.metadata_record.captured_at_override = normalized_override
-            photo.effective_captured_at = normalized_override or photo.captured_at or photo.uploaded_at
+            photo.effective_captured_at = normalized_override or photo.captured_at_original or photo.uploaded_at
         if sharing_group_ids is not None:
             visible_existing_group_ids = set(
                 self._session.scalars(
@@ -111,8 +111,8 @@ class PhotoMetadataService:
                     self._session,
                     next_group_ids - previous_group_ids,
                     NotificationType.PHOTO_SHARED,
-                    f"photo:{activity_event.operation_id}",
-                    {"url": "/photos/new", "operation_id": str(activity_event.operation_id)},
+                    f"photo:{activity_event.activity_operation_id}",
+                    {"url": "/photos/new", "activity_operation_id": str(activity_event.activity_operation_id)},
                     exclude_user_id=acting_user_id,
                 )
             remove_photo_from_group_albums(self._session, photo.id, previous_group_ids - next_group_ids)
@@ -173,11 +173,11 @@ class PhotoMetadataService:
     def bulk_add_sharing(
         self,
         photo_ids: list[UUID],
-        add_group_ids: set[UUID],
+        group_ids_to_add: set[UUID],
         acting_user_id: UUID,
         acting_username: str,
     ) -> BulkPhotoSharingResult:
-        if lock_user_group_ids(self._session, acting_user_id, add_group_ids) != add_group_ids:
+        if lock_user_group_ids(self._session, acting_user_id, group_ids_to_add) != group_ids_to_add:
             raise InvalidPhotoSharingError
         photos = list(
             self._session.scalars(
@@ -194,13 +194,13 @@ class PhotoMetadataService:
         if {photo.id for photo in photos} != set(photo_ids):
             self._session.rollback()
             raise PhotoBulkSelectionError
-        operation_id = uuid4()
+        activity_operation_id = uuid4()
         shared_at = datetime.now(UTC)
         previous_metadata: list[SidecarMetadata] = []
         changed_photos: list[Photo] = []
         for photo in photos:
             current_group_ids = {share.group_id for share in photo.shares}
-            new_group_ids = add_group_ids - current_group_ids
+            new_group_ids = group_ids_to_add - current_group_ids
             if not new_group_ids:
                 continue
             previous_metadata.append(build_sidecar_metadata(photo))
@@ -217,7 +217,7 @@ class PhotoMetadataService:
                 PhotoActivityEventType.SHARED,
                 new_group_ids,
                 shared_at,
-                operation_id=operation_id,
+                activity_operation_id=activity_operation_id,
             )
             if activity_event is not None:
                 self._session.add(activity_event)
@@ -225,8 +225,8 @@ class PhotoMetadataService:
                     self._session,
                     new_group_ids,
                     NotificationType.PHOTO_SHARED,
-                    f"photo:{operation_id}",
-                    {"url": "/photos/new", "operation_id": str(operation_id)},
+                    f"photo:{activity_operation_id}",
+                    {"url": "/photos/new", "activity_operation_id": str(activity_operation_id)},
                     exclude_user_id=acting_user_id,
                 )
             changed_photos.append(photo)
@@ -245,7 +245,11 @@ class PhotoMetadataService:
             self._session.rollback()
             self._persistence.restore_sidecars(previous_metadata)
             raise PhotoUpdatePersistenceError("Could not update photo sharing") from error
-        return BulkPhotoSharingResult(operation_id, len(changed_photos), len(photos) - len(changed_photos))
+        return BulkPhotoSharingResult(
+            activity_operation_id,
+            len(changed_photos),
+            len(photos) - len(changed_photos),
+        )
 
 
 def _photo_is_in_library(viewer_user_id: UUID):

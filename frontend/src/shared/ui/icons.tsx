@@ -24,6 +24,8 @@ import FilterSymbol from './icons/material-symbols/filter.svg?react'
 import GroupAddSymbol from './icons/material-symbols/group-add.svg?react'
 import GroupsSymbol from './icons/material-symbols/groups.svg?react'
 import GridViewSymbol from './icons/material-symbols/grid-view.svg?react'
+import HouseholdSuppliesSymbol from './icons/material-symbols/household-supplies.svg?react'
+import ListSymbol from './icons/material-symbols/list.svg?react'
 import NotificationsSymbol from './icons/material-symbols/notifications.svg?react'
 import NotificationsActiveSymbol from './icons/material-symbols/notifications-active.svg?react'
 import PersonAddSymbol from './icons/material-symbols/person-add.svg?react'
@@ -36,6 +38,8 @@ import SaveSymbol from './icons/material-symbols/save.svg?react'
 import SelectSymbol from './icons/material-symbols/select.svg?react'
 import ShareSymbol from './icons/material-symbols/share.svg?react'
 import ShoppingCartSymbol from './icons/material-symbols/shopping-cart.svg?react'
+import StoreSymbol from './icons/material-symbols/store.svg?react'
+import StartSymbol from './icons/material-symbols/start.svg?react'
 import SunnySymbol from './icons/material-symbols/sunny.svg?react'
 import TaskAltSymbol from './icons/material-symbols/task-alt.svg?react'
 import UndoSymbol from './icons/material-symbols/undo.svg?react'
@@ -223,8 +227,24 @@ export function ChoreIcon() {
   return <ChoreSymbol className="material-symbol-icon" />
 }
 
+export function HouseholdSuppliesIcon() {
+  return <HouseholdSuppliesSymbol className="material-symbol-icon" />
+}
+
+export function ListIcon() {
+  return <ListSymbol className="material-symbol-icon" />
+}
+
 export function ShoppingCartIcon() {
   return <ShoppingCartSymbol className="material-symbol-icon" />
+}
+
+export function StoreIcon() {
+  return <StoreSymbol className="material-symbol-icon" />
+}
+
+export function StartIcon() {
+  return <StartSymbol className="material-symbol-icon" />
 }
 
 export function CheckIcon() {

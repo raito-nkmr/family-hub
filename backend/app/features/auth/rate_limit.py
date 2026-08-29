@@ -1,47 +1,68 @@
-from collections import OrderedDict, deque
-from threading import Lock
-from time import monotonic
+import hashlib
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.features.auth.models import LoginRateLimit
 
 
 class LoginRateLimiter:
-    def __init__(self, maximum_attempts: int, window_seconds: int, maximum_keys: int = 10_000) -> None:
+    def __init__(self, maximum_attempts: int, window_seconds: int) -> None:
         self._maximum_attempts = maximum_attempts
-        self._window_seconds = window_seconds
-        self._maximum_keys = maximum_keys
-        self._attempts: OrderedDict[str, deque[float]] = OrderedDict()
-        self._lock = Lock()
+        self._window = timedelta(seconds=window_seconds)
 
-    def retry_after(self, key: str) -> int | None:
-        now = monotonic()
-        with self._lock:
-            attempts = self._active_attempts(key, now)
-            if len(attempts) < self._maximum_attempts:
+    def try_acquire(self, session: Session, key: str) -> int | None:
+        """Atomically reserve one login attempt across all application processes."""
+        now = datetime.now(UTC)
+        key_hash = self._hash_key(key)
+        try:
+            session.execute(delete(LoginRateLimit).where(LoginRateLimit.updated_at < now - self._window))
+            session.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(key_hash, 0))))
+            row = session.scalar(select(LoginRateLimit).where(LoginRateLimit.key_hash == key_hash).with_for_update())
+            if row is None:
+                session.add(
+                    LoginRateLimit(
+                        key_hash=key_hash,
+                        window_started_at=now,
+                        attempt_count=1,
+                        updated_at=now,
+                    )
+                )
+                session.commit()
                 return None
-            return max(1, int(self._window_seconds - (now - attempts[0])) + 1)
 
-    def record_failure(self, key: str) -> None:
-        now = monotonic()
-        with self._lock:
-            attempts = self._active_attempts(key, now, create=True)
-            attempts.append(now)
-            self._attempts.move_to_end(key)
-            while len(self._attempts) > self._maximum_keys:
-                self._attempts.popitem(last=False)
+            if now - row.window_started_at >= self._window:
+                row.window_started_at = now
+                row.attempt_count = 1
+                row.updated_at = now
+                session.commit()
+                return None
 
-    def reset(self, key: str) -> None:
-        with self._lock:
-            self._attempts.pop(key, None)
+            if row.attempt_count >= self._maximum_attempts:
+                retry_after = max(1, int((self._window - (now - row.window_started_at)).total_seconds()) + 1)
+                session.commit()
+                return retry_after
 
-    def _active_attempts(self, key: str, now: float, *, create: bool = False) -> deque[float]:
-        attempts = self._attempts.get(key)
-        if attempts is None:
-            if not create:
-                return deque()
-            attempts = deque()
-            self._attempts[key] = attempts
-        cutoff = now - self._window_seconds
-        while attempts and attempts[0] <= cutoff:
-            attempts.popleft()
-        if not attempts and not create:
-            self._attempts.pop(key, None)
-        return attempts
+            row.attempt_count += 1
+            row.updated_at = now
+            session.commit()
+            return None
+        except SQLAlchemyError:
+            session.rollback()
+            raise
+
+    def reset(self, session: Session, key: str) -> None:
+        key_hash = self._hash_key(key)
+        try:
+            session.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(key_hash, 0))))
+            session.execute(delete(LoginRateLimit).where(LoginRateLimit.key_hash == key_hash))
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            raise
+
+    @staticmethod
+    def _hash_key(key: str) -> str:
+        return hashlib.sha256(key.encode("utf-8")).hexdigest()

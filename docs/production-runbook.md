@@ -160,11 +160,33 @@ sudo systemd-run --wait --pipe --collect \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
 
-The current resettable schema chain has three revisions, ending at `20260821_03_household`. The household revision
-contains the complete current chore schema. The upgrade contains schema DDL only; it does not create users, groups,
-categories, tasks, or completion history. Run `create_user` and any other bootstrap commands separately. Development
-reset and production-like reset are independent procedures: never run the development `docker compose down --volumes`
-command against the production-like service or volume.
+When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
+read-only integrity check before starting the Backend. An intentional empty-environment reset uses the guarded orphan-file
+cleanup command in the reset procedure below instead.
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.sync_photo_sidecars
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.check_photo_integrity
+```
+
+The current resettable schema chain has four readable domain revisions, ending at `20260829_04_shopping`. The upgrade contains
+schema DDL only; it does not create users, groups, categories, tasks, completion history, or other application data. Run
+`create_user` and any other bootstrap commands separately. Development reset and production-like reset are independent
+procedures: never run the development `docker compose down --volumes` command against the production-like service or volume.
+These revisions replace the disposable pre-production history; a database stamped with a retired revision ID must be rebuilt
+using the reset procedure below, not upgraded in place. Never apply that reset to a real-data environment.
 
 Create the initial administrator with a PTY so password input is hidden:
 
@@ -179,6 +201,20 @@ sudo systemd-run --wait --pty --collect \
 ```
 
 Replace the username with the operator's value. Never put the password in an argument, environment variable, or log.
+
+Convert legacy shopping purchase state after the migration and before using history/statistics:
+
+```bash
+cd /opt/family-hub/current/backend
+uv run --locked python -m app.commands.migrate_shopping_history --apply
+```
+
+Without `--apply`, the command reports the number of rows that would be converted and rolls back. It creates one finalized,
+amount-unrecorded trip and one purchase event per legacy purchased item, and is safe to run again.
+
+Existing in-progress trips are not automatically merged or removed. Empty in-progress trips can be permanently deleted from the
+history page or by confirming the finish action in the store. In-progress trips with purchase events should be discarded instead;
+discard preserves the trip and reverses its purchase events while restoring planned items to the active list.
 
 ## Initial cutover from the public test environment
 
@@ -310,6 +346,26 @@ Findings return status 1. Investigate and classify any findings before enabling 
 sudo systemctl enable --now family-hub-integrity.timer
 ```
 
+When findings are limited to old orphaned photo files, preview and then explicitly apply the guarded cleanup. It leaves
+files newer than 24 hours and refuses to delete when the database has no photos:
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.cleanup_orphaned_photo_files
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.cleanup_orphaned_photo_files --apply
+```
+
 ### Trash purge
 
 Trash purge permanently deletes photos past retention. Run it only after database backup and integrity succeed and the trash
@@ -359,11 +415,23 @@ docker compose down --volumes
 docker compose up --detach --wait db
 ```
 
+Because the development PostgreSQL volume also contains disposable integration-test databases, recreate them after every
+volume reset:
+
+```bash
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_test"'
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_migration_test"'
+```
+
 Apply the latest schema and create development bootstrap data:
 
 ```bash
 cd backend
 uv run --locked alembic upgrade head
+uv run --locked python -m app.commands.cleanup_orphaned_photo_files \
+  --apply --allow-empty-database --min-age-hours 0
 uv run --locked python -m app.commands.create_user --username owner --system-role admin
 ```
 
@@ -378,24 +446,40 @@ sudo docker volume create family-hub-production-postgres-data
 sudo systemctl start family-hub-database.service
 ```
 
+After applying the production schema with the production environment file, run the same guarded cleanup against the
+production-like database and photo-storage root:
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.cleanup_orphaned_photo_files \
+  --apply --allow-empty-database --min-age-hours 0
+```
+
 The production-like database and storage reset is a separate operation. Do not continue with its database, photo-storage,
 derivative, or backup deletion commands as part of the development reset above. When that operation is approved, repeat the
-schema, bootstrap, and storage steps against the production-like service and its explicitly verified paths.
+schema, guarded orphan-file cleanup, bootstrap, and storage steps against the production-like service and its explicitly
+verified paths.
 
-For the development storage reset only, remove the contents of each development primary photo root's `originals/`,
-`incoming/`, and `database-backups/`. For each development derivative root, remove only the contents of `thumbnails/` and
-`incoming/`. For the separate development backup root, remove only its snapshot and database-backup contents. Preserve each
-root directory, storage marker, and backup marker. Resolve and review the absolute paths before deletion; never use an unset
-or broad environment variable as a deletion target.
+For the development storage reset, use the guarded cleanup command for `originals/`, sidecars, primary `incoming/`,
+derivative `thumbnails/`, and derivative `incoming/`; it preserves each root directory and storage marker. It intentionally
+does not delete `database-backups/` or the separate development backup root. Remove those backup contents only as a separate,
+explicitly reviewed operation when they are no longer needed. Never use an unset or broad environment variable as a deletion
+target.
 
-Recreate only the development directories that are intentionally part of the local reset, apply the new migrations to the
-development database, and recreate its initial administrator. Run the photo-integrity command against the empty development
-primary storage and verify that the first test upload creates one original, one sidecar, and one thumbnail. After a real-data
-rebuild, use backup restoration instead of this reset procedure.
+The guarded cleanup command clears old originals, sidecars, thumbnails, and upload parts while preserving storage markers and
+database-backup files. Recreate only the development directories that are intentionally part of the local reset, apply the
+new migrations to the development database, and recreate its initial administrator. The cleanup command performs a final
+integrity check; verify separately that the first test upload creates one original, one sidecar, and one thumbnail. After a
+real-data rebuild, use backup restoration instead of this reset procedure.
 
 ## Release update
 
-For a release without a database schema change:
+For a release with or without a database schema change:
 
 1. Run all backend and frontend checks.
 2. Create a timestamped release.

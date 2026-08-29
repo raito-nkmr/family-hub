@@ -151,8 +151,10 @@ Cloudflare sends the client IP to the origin in `CF-Connecting-IP`. Caddy explic
 `client_ip_headers`, limiting trust to `127.0.0.1/8` and `::1` while `cloudflared` runs on the same host. Do not trust the
 whole LAN or `private_ranges`. Keeping Caddy on loopback limits header-spoofing paths.
 
-After configuration, verify the client IP recorded by Caddy and FastAPI, the login-rate-limit key, and behavior when
-spoofed forwarding headers are sent from a real device.
+After configuration, verify the client IP recorded by Caddy and FastAPI, the login-rate-limit behavior across two backend
+processes, and behavior when spoofed forwarding headers are sent from a real device. Login attempt windows are stored in the
+shared PostgreSQL `login_rate_limits` table, keyed only by a SHA-256 hash of client IP and username; do not reintroduce an
+in-memory limiter because it would allow each worker to spend a separate attempt budget.
 
 ## Authentication and origin
 
@@ -199,6 +201,11 @@ Cloudflare-proxied requests have plan-specific body-size limits; Free and Pro pl
 
 Treat `PHOTO_MAX_UPLOAD_BYTES` as the whole-file application limit and `PHOTO_UPLOAD_CHUNK_BYTES` as the per-request
 chunk limit.
+
+FastAPI streams each upload request into a bounded temporary file and rejects an oversized `Content-Length` before reading
+the body when possible. The durable `.part` file is updated in bounded reads. Cancellation and expiration commit their
+database state before deleting `.part`; if a commit fails, the file remains for the next offset reconciliation, and the
+orphan-file cleanup job can recover a later deletion failure.
 
 The backend host must provide `ffprobe` and `ffmpeg` on `PATH` for MP4, QuickTime MOV, and M4V validation and thumbnail
 generation. Video originals are stored without conversion; playback uses the browser's native support for the returned MIME

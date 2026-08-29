@@ -6,10 +6,10 @@ from secrets import compare_digest
 from uuid import UUID
 
 from app.core.config import Settings
-from app.features.photos import storage_paths
-from app.features.photos.storage_files import PhotoFileOperations
-from app.features.photos.storage_files import logger as storage_files_logger
-from app.features.photos.storage_paths import (
+from app.features.photos.storage import paths as storage_paths
+from app.features.photos.storage.files import PhotoFileOperations
+from app.features.photos.storage.files import logger as storage_files_logger
+from app.features.photos.storage.paths import (
     get_free_bytes,
     is_mount_point,
     is_read_only,
@@ -18,7 +18,7 @@ from app.features.photos.storage_paths import (
     validate_original_key,
     validate_path_components,
 )
-from app.features.photos.storage_types import (
+from app.features.photos.storage.types import (
     DerivativeNotFoundError,
     FinalizedUpload,
     InvalidStorageKeyError,
@@ -33,7 +33,7 @@ from app.features.photos.storage_types import (
     UploadOffsetMismatchError,
     UploadTooLargeError,
 )
-from app.features.photos.storage_uploads import ResumableUploadOperations
+from app.features.photos.storage.uploads import ResumableUploadOperations
 
 logger = storage_files_logger
 
