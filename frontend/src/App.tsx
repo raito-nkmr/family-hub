@@ -8,6 +8,7 @@ import { LoginScreen } from './features/auth/components/LoginScreen'
 import { InvitationAcceptanceScreen } from './features/invitations/InvitationAcceptanceScreen'
 import { PrivacyPage } from './features/privacy/PrivacyPage'
 import { isAbortError, isUnauthorizedError } from './shared/api/errors'
+import { queryClient } from './shared/api/queryClient'
 import type { Theme } from './shared/types/theme'
 import { AppFooter } from './shared/ui/AppFooter'
 
@@ -64,12 +65,17 @@ function App() {
   }, [theme])
 
   const handleLogin = async (username: string, password: string) => {
-    setCurrentUser(await login(username, password))
+    const user = await login(username, password)
+    queryClient.clear()
+    setCurrentUser(user)
     setAuthError(null)
   }
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
-  const handleSessionEnded = useCallback(() => setCurrentUser(null), [])
+  const handleSessionEnded = useCallback(() => {
+    queryClient.clear()
+    setCurrentUser(null)
+  }, [])
 
   const continueToLogin = () => {
     navigate(`${location.pathname}${location.search}`, { replace: true })
