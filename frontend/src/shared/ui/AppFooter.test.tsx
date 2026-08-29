@@ -11,7 +11,7 @@ describe('AppFooter', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Family Hub · v0.1.0')).toBeInTheDocument()
+    expect(screen.getByText('Family Hub · v1.0.0')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'プライバシー' })
     expect(link).toHaveAttribute('href', '/privacy')
   })
