@@ -237,6 +237,7 @@ def test_add_photos_only_registers_new_memberships() -> None:
     session.scalar.side_effect = [album, album, album, 2, "同居家族", existing_id]
     session.scalars.return_value.all.side_effect = [
         [album.group_id],
+        [album.group_id],
         [existing_id],
     ]
     session.execute.return_value.all.return_value = [

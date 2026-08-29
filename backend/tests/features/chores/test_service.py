@@ -70,6 +70,7 @@ def test_member_can_reorder_chore_categories() -> None:
     session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
     session.scalars.side_effect = [
         MagicMock(all=MagicMock(return_value=[group_id])),
+        MagicMock(all=MagicMock(return_value=[group_id])),
         MagicMock(all=MagicMock(return_value=[first, second])),
     ]
     service, _ = make_service(session)
@@ -89,6 +90,7 @@ def test_reorder_rejects_category_from_another_group() -> None:
     category = make_chore_category(group_id=group_id)
     session.get.return_value = make_membership(group_id, user_id, role=GroupRole.MEMBER)
     session.scalars.side_effect = [
+        MagicMock(all=MagicMock(return_value=[group_id])),
         MagicMock(all=MagicMock(return_value=[group_id])),
         MagicMock(all=MagicMock(return_value=[category])),
     ]

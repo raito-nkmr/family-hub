@@ -77,7 +77,7 @@ def test_create_batch_reserves_capacity_and_creates_one_item_per_file() -> None:
     service, session, storage = make_service()
     owner_id = uuid4()
     group_id = uuid4()
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.scalar.return_value = 7
     files = [
         UploadFileCreate(

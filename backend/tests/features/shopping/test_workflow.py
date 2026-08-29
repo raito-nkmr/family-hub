@@ -33,7 +33,7 @@ def test_create_item_accepts_another_group_member_as_assignee() -> None:
     assignee_id = uuid4()
     creator_membership = make_member(group_id, creator_id)
     assignee_membership = make_member(group_id, assignee_id)
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.get.side_effect = [creator_membership, assignee_membership]
     directory = MagicMock(spec=UserDirectory)
     directory.list_by_ids.return_value = {
@@ -146,7 +146,7 @@ def test_start_trip_reuses_latest_in_progress_trip() -> None:
         updated_at=datetime.now(UTC),
     )
     session.scalar.return_value = trip
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.get.return_value = make_member(group_id, user_id)
     service, directory = make_service(session)
     directory.list_by_ids.return_value = {
@@ -201,7 +201,7 @@ def test_discard_trip_reverses_purchases_and_restores_items() -> None:
         updated_at=datetime.now(UTC),
     )
     session.scalar.side_effect = [group_id, trip, item, None]
-    session.scalars.return_value.all.side_effect = [[group_id], [purchase]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], [purchase]]
     session.get.return_value = make_member(group_id, user_id)
     service, directory = make_service(session)
     directory.list_by_ids.return_value = {
@@ -256,7 +256,7 @@ def test_delete_empty_in_progress_trip_is_allowed() -> None:
         updated_at=datetime.now(UTC),
     )
     session.scalar.side_effect = [group_id, trip]
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.get.return_value = make_member(group_id, user_id)
     service, _ = make_service(session)
 
@@ -292,7 +292,7 @@ def test_delete_finalized_trip_removes_purchases_and_restores_list_items() -> No
         updated_at=datetime.now(UTC),
     )
     session.scalar.side_effect = [group_id, trip, item, None]
-    session.scalars.return_value.all.side_effect = [[group_id], [purchase]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], [purchase]]
     session.get.return_value = make_member(group_id, user_id)
     service, _ = make_service(session)
 
@@ -316,7 +316,7 @@ def test_finishing_empty_trip_deletes_it_atomically() -> None:
         updated_at=datetime.now(UTC),
     )
     session.scalar.side_effect = [group_id, trip]
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.get.return_value = make_member(group_id, user_id)
     service, _ = make_service(session)
 
@@ -340,7 +340,7 @@ def test_updating_trip_without_amount_preserves_existing_amount() -> None:
         total_amount_yen=1250,
     )
     session.scalar.side_effect = [group_id, trip]
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.get.return_value = make_member(group_id, user_id)
     service, directory = make_service(session)
     directory.list_by_ids.return_value = {

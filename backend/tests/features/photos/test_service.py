@@ -407,7 +407,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
 
     result = service.bulk_add_sharing(
@@ -437,7 +437,7 @@ def test_bulk_add_sharing_skips_existing_groups() -> None:
         visibility=PhotoVisibility.SHARED,
         group_id=group_id,
     )
-    session.scalars.return_value.all.side_effect = [[group_id], [photo]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], [photo]]
     service, storage = make_metadata_service(session)
 
     result = service.bulk_add_sharing([photo.id], {group_id}, owner_id, "owner")
@@ -456,6 +456,7 @@ def test_bulk_add_sharing_rejects_photos_not_owned_by_user() -> None:
     requested_ids = [uuid4(), uuid4()]
     session.scalars.return_value.all.side_effect = [
         [group_id],
+        [group_id],
         [make_photo(requested_ids[0], uploaded_by_user_id=owner_id)],
     ]
     service, storage = make_metadata_service(session)
@@ -472,7 +473,7 @@ def test_bulk_add_sharing_restores_updated_sidecars_on_storage_failure() -> None
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
     update_count = 0
 
