@@ -27,7 +27,7 @@ def make_chore_task(
     task_id: UUID | None = None,
     group_id: UUID | None = None,
     created_by_user_id: UUID | None = None,
-    name: str = "お風呂",
+    task_name: str = "お風呂",
     category_id: UUID | None = None,
     interval_days: int = 1,
     is_active: bool = True,
@@ -36,7 +36,7 @@ def make_chore_task(
     return ChoreTask(
         id=task_id or uuid4(),
         group_id=group_id or uuid4(),
-        name=name,
+        task_name=task_name,
         category_id=category_id or uuid4(),
         interval_days=interval_days,
         is_active=is_active,

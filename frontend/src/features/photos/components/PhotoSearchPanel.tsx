@@ -172,7 +172,7 @@ export function PhotoSearchPanel({
               <option value="">{t('photoSearch.all')}</option>
               {searchOptions?.uploaders.map((uploader) => (
                 <option key={uploader.id} value={uploader.id}>
-                  {uploader.name}
+                  {uploader.label}
                 </option>
               ))}
             </select>
@@ -189,7 +189,7 @@ export function PhotoSearchPanel({
                 <option value="">{t('photoSearch.all')}</option>
                 {searchOptions?.groups.map((group) => (
                   <option key={group.id} value={group.id}>
-                    {group.name}
+                    {group.label}
                   </option>
                 ))}
               </select>
@@ -214,7 +214,7 @@ export function PhotoSearchPanel({
             >
               <option value="">{t('photoSearch.all')}</option>
               <option value="private">{t('photoSearch.private')}</option>
-              <option value="shared">{t('photoSearch.family')}</option>
+              <option value="shared">{t('photoSearch.shared')}</option>
             </select>
           </label>
           <label>

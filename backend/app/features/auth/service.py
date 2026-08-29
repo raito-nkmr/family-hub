@@ -66,7 +66,7 @@ class AuthService:
             token_hash=hash_session_token(token),
             csrf_token=csrf_token,
             created_at=now,
-            last_seen_at=now,
+            last_used_at=now,
             expires_at=now + timedelta(seconds=self._settings.auth_session_absolute_seconds),
             revoked_at=None,
         )
@@ -85,7 +85,7 @@ class AuthService:
             return None
 
         now = datetime.now(UTC)
-        idle_deadline = user_session.last_seen_at + timedelta(seconds=self._settings.auth_session_idle_seconds)
+        idle_deadline = user_session.last_used_at + timedelta(seconds=self._settings.auth_session_idle_seconds)
         if (
             user_session.revoked_at is not None
             or not user_session.user.is_active
@@ -95,8 +95,8 @@ class AuthService:
         ):
             return None
 
-        if user_session.last_seen_at + timedelta(seconds=self._settings.auth_session_touch_seconds) <= now:
-            user_session.last_seen_at = now
+        if user_session.last_used_at + timedelta(seconds=self._settings.auth_session_touch_seconds) <= now:
+            user_session.last_used_at = now
             self._session.commit()
         return AuthContext(user=user_session.user, user_session=user_session)
 
@@ -129,10 +129,10 @@ class AuthService:
                 UserSession.user_id == context.user.id,
                 UserSession.revoked_at.is_(None),
                 UserSession.expires_at > now,
-                UserSession.last_seen_at > idle_deadline,
+                UserSession.last_used_at > idle_deadline,
                 UserSession.created_at >= context.user.password_changed_at,
             )
-            .order_by(UserSession.last_seen_at.desc(), UserSession.id)
+            .order_by(UserSession.last_used_at.desc(), UserSession.id)
         )
         return list(self._session.scalars(statement).all())
 

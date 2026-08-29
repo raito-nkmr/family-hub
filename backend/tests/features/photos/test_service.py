@@ -32,7 +32,7 @@ from app.features.photos.models import (
     PhotoVisibility,
 )
 from app.features.photos.registration import PhotoUploadStorageError, register_staged_photo
-from app.features.photos.storage import (
+from app.features.photos.storage.facade import (
     OriginalNotFoundError,
     PhotoStorage,
     PhotoStorageError,
@@ -327,7 +327,7 @@ def test_update_photo_updates_memo_sharing_sidecar_and_database() -> None:
     assert result.metadata_version == 2
     sidecar = storage.update_sidecar.call_args.args[0]
     assert sidecar.memo == "北海道旅行"
-    assert sidecar.sharing_audiences == ({"type": "group", "id": str(group_id)},)
+    assert sidecar.group_ids == (group_id,)
     event = session.add.call_args.args[0]
     assert event.event_type is PhotoActivityEventType.SHARED
     assert [group.group_id for group in event.groups] == [group_id]
@@ -372,9 +372,7 @@ def test_update_photo_preserves_share_from_group_the_owner_can_no_longer_see() -
     )
 
     assert {share.group_id for share in result.shares} == {hidden_group_id}
-    assert storage.update_sidecar.call_args.args[0].sharing_audiences == (
-        {"type": "group", "id": str(hidden_group_id)},
-    )
+    assert storage.update_sidecar.call_args.args[0].group_ids == (hidden_group_id,)
 
     session.add.assert_not_called()
 
@@ -409,7 +407,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
 
     result = service.bulk_add_sharing(
@@ -426,7 +424,7 @@ def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
     assert all({share.group_id for share in photo.shares} == {group_id} for photo in photos)
     events = [call.args[0] for call in session.add.call_args_list]
     assert len(events) == 2
-    assert {event.operation_id for event in events} == {result.operation_id}
+    assert {event.activity_operation_id for event in events} == {result.activity_operation_id}
     session.commit.assert_called_once_with()
 
 
@@ -439,7 +437,7 @@ def test_bulk_add_sharing_skips_existing_groups() -> None:
         visibility=PhotoVisibility.SHARED,
         group_id=group_id,
     )
-    session.scalars.return_value.all.side_effect = [[group_id], [photo]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], [photo]]
     service, storage = make_metadata_service(session)
 
     result = service.bulk_add_sharing([photo.id], {group_id}, owner_id, "owner")
@@ -458,6 +456,7 @@ def test_bulk_add_sharing_rejects_photos_not_owned_by_user() -> None:
     requested_ids = [uuid4(), uuid4()]
     session.scalars.return_value.all.side_effect = [
         [group_id],
+        [group_id],
         [make_photo(requested_ids[0], uploaded_by_user_id=owner_id)],
     ]
     service, storage = make_metadata_service(session)
@@ -474,7 +473,7 @@ def test_bulk_add_sharing_restores_updated_sidecars_on_storage_failure() -> None
     owner_id = uuid4()
     group_id = uuid4()
     photos = [make_photo(uploaded_by_user_id=owner_id), make_photo(uploaded_by_user_id=owner_id)]
-    session.scalars.return_value.all.side_effect = [[group_id], photos, [group_id], [group_id]]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], photos, [group_id], [group_id]]
     service, storage = make_metadata_service(session)
     update_count = 0
 
@@ -564,7 +563,7 @@ def test_update_photo_clearing_capture_override_restores_exif_sort_time() -> Non
     )
 
     assert result.metadata_record.captured_at_override is None
-    assert result.effective_captured_at == photo.captured_at
+    assert result.effective_captured_at == photo.captured_at_original
     storage.update_sidecar.assert_called_once()
 
 
@@ -638,11 +637,11 @@ def configure_staged_upload(tmp_path: Path) -> StagedUpload:
     return staged
 
 
-@pytest.mark.parametrize("captured_at", [None, datetime(2026, 7, 14, 3, tzinfo=UTC)])
+@pytest.mark.parametrize("captured_at_original", [None, datetime(2026, 7, 14, 3, tzinfo=UTC)])
 def test_register_staged_photo_sets_effective_capture_time_without_committing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    captured_at: datetime | None,
+    captured_at_original: datetime | None,
 ) -> None:
     session = MagicMock(spec=Session)
     session.scalar.return_value = None
@@ -650,7 +649,7 @@ def test_register_staged_photo_sets_effective_capture_time_without_committing(
     staged = configure_staged_upload(tmp_path)
     monkeypatch.setattr(
         "app.features.photos.registration.inspect_image",
-        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, captured_at),
+        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, captured_at_original),
     )
 
     registered = register_staged_photo(
@@ -665,7 +664,7 @@ def test_register_staged_photo_sets_effective_capture_time_without_committing(
     )
 
     assert registered.photo.id == staged.photo_id
-    assert registered.photo.effective_captured_at == (captured_at or registered.photo.uploaded_at)
+    assert registered.photo.effective_captured_at == (captured_at_original or registered.photo.uploaded_at)
     session.add.assert_not_called()
     session.flush.assert_not_called()
     session.commit.assert_not_called()

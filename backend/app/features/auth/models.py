@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     PrimaryKeyConstraint,
     String,
     Text,
@@ -68,7 +69,7 @@ class UserSession(Base):
     token_hash: Mapped[str] = mapped_column(String(64))
     csrf_token: Mapped[str] = mapped_column(String(43))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -99,8 +100,23 @@ class UserInvitation(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class LoginRateLimit(Base):
+    __tablename__ = "login_rate_limits"
+    __table_args__ = (
+        PrimaryKeyConstraint("key_hash", name="pk_login_rate_limits"),
+        CheckConstraint("key_hash ~ '^[0-9a-f]{64}$'", name="ck_login_rate_limits_key_hash_lower_hex"),
+        CheckConstraint("attempt_count >= 0", name="ck_login_rate_limits_attempt_count_nonnegative"),
+    )
+
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempt_count: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+
 Index("ix_user_sessions_user_id", UserSession.user_id)
 Index("ix_user_invitations_created_at", UserInvitation.created_at.desc(), UserInvitation.id.desc())
+Index("ix_login_rate_limits_updated_at", LoginRateLimit.updated_at)
 Index(
     "uq_user_invitations_pending_username",
     UserInvitation.username,

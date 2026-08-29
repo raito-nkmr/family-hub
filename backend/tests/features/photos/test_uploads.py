@@ -17,7 +17,8 @@ from app.features.photos.models import (
 )
 from app.features.photos.registration import DuplicatePhotoError, RegisteredPhoto
 from app.features.photos.schemas import UploadFileCreate
-from app.features.photos.storage import FinalizedUpload, PhotoStorage, StorageStatusCode, StorageUnavailableError
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import FinalizedUpload, StorageStatusCode, StorageUnavailableError
 from app.features.photos.uploads import (
     DUPLICATE_PHOTO_CONSTRAINT,
     UPLOAD_CAPACITY_LOCK_ID,
@@ -76,11 +77,21 @@ def test_create_batch_reserves_capacity_and_creates_one_item_per_file() -> None:
     service, session, storage = make_service()
     owner_id = uuid4()
     group_id = uuid4()
-    session.scalars.return_value.all.side_effect = [[group_id], []]
+    session.scalars.return_value.all.side_effect = [[group_id], [group_id], []]
     session.scalar.return_value = 7
     files = [
-        UploadFileCreate(client_id="first", filename="first.jpg", content_type="image/jpeg", size_bytes=5),
-        UploadFileCreate(client_id="second", filename="second.png", content_type="image/png", size_bytes=6),
+        UploadFileCreate(
+            client_id="first",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
+        UploadFileCreate(
+            client_id="second",
+            original_filename="second.png",
+            declared_content_type="image/png",
+            size_bytes=6,
+        ),
     ]
 
     batch, items = service.create_batch(owner_id, files, {group_id})
@@ -101,8 +112,18 @@ def test_create_batch_reserves_capacity_and_creates_one_item_per_file() -> None:
 def test_create_batch_rejects_duplicate_client_identifiers() -> None:
     service, session, storage = make_service()
     files = [
-        UploadFileCreate(client_id="same", filename="first.jpg", content_type="image/jpeg", size_bytes=5),
-        UploadFileCreate(client_id="same", filename="second.jpg", content_type="image/jpeg", size_bytes=5),
+        UploadFileCreate(
+            client_id="same",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
+        UploadFileCreate(
+            client_id="same",
+            original_filename="second.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        ),
     ]
 
     with pytest.raises(UploadBatchInvalidError):
@@ -117,7 +138,14 @@ def test_create_batch_preserves_insufficient_storage_status() -> None:
     session.scalars.return_value.all.return_value = []
     session.scalar.return_value = 0
     storage.require_capacity.side_effect = StorageUnavailableError(StorageStatusCode.INSUFFICIENT_SPACE)
-    files = [UploadFileCreate(client_id="first", filename="first.jpg", content_type="image/jpeg", size_bytes=5)]
+    files = [
+        UploadFileCreate(
+            client_id="first",
+            original_filename="first.jpg",
+            declared_content_type="image/jpeg",
+            size_bytes=5,
+        )
+    ]
 
     with pytest.raises(UploadBatchStorageError) as caught:
         service.create_batch(uuid4(), files)
@@ -195,7 +223,7 @@ def test_complete_item_enqueues_one_notification_for_the_upload_batch(monkeypatc
     photo = MagicMock()
     photo.id = item.id
     activity = MagicMock(spec=PhotoActivityEvent)
-    activity.operation_id = batch.id
+    activity.activity_operation_id = batch.id
     finalized = MagicMock(spec=FinalizedUpload)
     monkeypatch.setattr(
         "app.features.photos.uploads.register_staged_photo",
@@ -303,7 +331,7 @@ def test_complete_item_treats_an_unrelated_integrity_error_as_persistence_failur
 
     session.rollback.assert_called_once_with()
     storage.cleanup_finalized.assert_called_once_with(finalized)
-    storage.cleanup_resumable.assert_called_once_with(item.id)
+    storage.cleanup_resumable.assert_not_called()
 
 
 def test_get_offset_rejects_terminal_item_without_changing_progress() -> None:
@@ -340,21 +368,50 @@ def test_cancel_batch_locks_batch_and_items_before_changing_status() -> None:
     session.commit.assert_called_once_with()
 
 
+def test_cancel_batch_keeps_resumable_file_when_commit_fails() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item()
+    item.status = UploadItemStatus.PROCESSING
+    session.scalar.return_value = batch
+    session.scalars.return_value.all.return_value = [item]
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+
+    with pytest.raises(UploadBatchPersistenceError):
+        service.cancel_batch(batch.id, batch.owner_user_id)
+
+    storage.cleanup_resumable.assert_not_called()
+    session.rollback.assert_called_once_with()
+
+
 def test_expire_stale_batches_locks_batches_and_items_before_cleanup() -> None:
     service, session, storage = make_service()
     batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
     item.status = UploadItemStatus.UPLOADING
     session.scalars.return_value.all.side_effect = [[batch], [item]]
 
-    service._expire_stale_batches(commit=False)
+    cleanup_ids = service._expire_stale_batches(commit=False)
 
     batch_statement = session.scalars.call_args_list[0].args[0]
     items_statement = session.scalars.call_args_list[1].args[0]
     assert "FOR UPDATE" in str(batch_statement)
     assert "FOR UPDATE" in str(items_statement)
-    storage.cleanup_resumable.assert_called_once_with(item.id)
+    assert cleanup_ids == [item.id]
+    storage.cleanup_resumable.assert_not_called()
     assert batch.status is UploadBatchStatus.CANCELED
     assert item.status is UploadItemStatus.FAILED
+
+
+def test_expire_batch_keeps_resumable_file_when_commit_fails() -> None:
+    service, session, storage = make_service()
+    batch, item = make_batch_and_item(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+    item.status = UploadItemStatus.UPLOADING
+    session.commit.side_effect = OperationalError("commit", {}, RuntimeError("database unavailable"))
+
+    with pytest.raises(UploadBatchPersistenceError):
+        service._expire_batch(batch, [item])
+
+    storage.cleanup_resumable.assert_not_called()
+    session.rollback.assert_called_once_with()
 
 
 def test_expired_item_path_locks_all_items_before_cleanup() -> None:

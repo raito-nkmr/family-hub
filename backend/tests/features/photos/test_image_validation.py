@@ -21,7 +21,7 @@ def test_inspect_jpeg_extracts_dimensions_and_utc_capture_time(tmp_path: Path) -
     assert result.content_type == "image/jpeg"
     assert result.extension == ".jpg"
     assert (result.width, result.height) == (8, 6)
-    assert result.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
+    assert result.captured_at_original == datetime(2026, 7, 14, 3, tzinfo=UTC)
 
 
 def test_inspect_jpeg_uses_exif_orientation_for_display_dimensions(tmp_path: Path) -> None:
@@ -56,7 +56,7 @@ def test_inspect_png_uses_default_timezone_for_naive_exif(tmp_path: Path) -> Non
 
     result = inspect_image(path, "image/png", "Asia/Tokyo")
 
-    assert result.captured_at == datetime(2026, 7, 14, 3, tzinfo=UTC)
+    assert result.captured_at_original == datetime(2026, 7, 14, 3, tzinfo=UTC)
 
 
 def test_inspect_heif_decodes_content(tmp_path: Path) -> None:

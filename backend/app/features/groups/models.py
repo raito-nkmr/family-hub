@@ -69,15 +69,15 @@ class FamilyGroupMember(Base):
 class FamilyGroupMembershipInvitation(Base):
     __tablename__ = "family_group_membership_invitations"
     __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_group_membership_invitations"),
-        CheckConstraint("role IN ('admin', 'member')", name="ck_group_membership_invitations_role"),
+        PrimaryKeyConstraint("id", name="pk_family_group_membership_invitations"),
+        CheckConstraint("role IN ('admin', 'member')", name="ck_family_group_membership_invitations_role"),
         CheckConstraint(
             "status IN ('pending', 'accepted', 'rejected', 'canceled')",
-            name="ck_group_membership_invitations_status",
+            name="ck_family_group_membership_invitations_status",
         ),
         CheckConstraint(
             "(status = 'pending' AND responded_at IS NULL) OR (status <> 'pending' AND responded_at IS NOT NULL)",
-            name="ck_group_membership_invitations_responded_at",
+            name="ck_family_group_membership_invitations_responded_at",
         ),
     )
 
@@ -87,19 +87,19 @@ class FamilyGroupMembershipInvitation(Base):
         ForeignKey(
             "family_groups.id",
             ondelete="CASCADE",
-            name="fk_group_membership_invitations_group_id",
+            name="fk_family_group_membership_invitations_group_id_family_groups",
         ),
     )
-    user_id: Mapped[UUID] = mapped_column(
+    invitee_user_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE", name="fk_group_membership_invitations_user_id"),
+        ForeignKey("users.id", ondelete="CASCADE", name="fk_family_group_membership_invitations_invitee_user_id_users"),
     )
-    requested_by_user_id: Mapped[UUID] = mapped_column(
+    invited_by_user_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey(
             "users.id",
             ondelete="CASCADE",
-            name="fk_group_membership_invitations_requested_by_user_id",
+            name="fk_family_group_membership_invitations_invited_by_user_id_users",
         ),
     )
     role: Mapped[str] = mapped_column(String(16))
@@ -111,16 +111,19 @@ class FamilyGroupMembershipInvitation(Base):
 Index("ix_family_groups_created_by_user_id", FamilyGroup.created_by_user_id)
 Index("ix_family_group_members_user_id", FamilyGroupMember.user_id)
 Index(
-    "uq_group_membership_invitations_pending",
+    "uq_family_group_membership_invitations_pending",
     FamilyGroupMembershipInvitation.group_id,
-    FamilyGroupMembershipInvitation.user_id,
+    FamilyGroupMembershipInvitation.invitee_user_id,
     unique=True,
     postgresql_where=FamilyGroupMembershipInvitation.status == "pending",
 )
-Index("ix_group_membership_invitations_group_id", FamilyGroupMembershipInvitation.group_id)
-Index("ix_group_membership_invitations_requested_by_user_id", FamilyGroupMembershipInvitation.requested_by_user_id)
+Index("ix_family_group_membership_invitations_group_id", FamilyGroupMembershipInvitation.group_id)
 Index(
-    "ix_group_membership_invitations_user_status",
-    FamilyGroupMembershipInvitation.user_id,
+    "ix_family_group_membership_invitations_invited_by_user_id",
+    FamilyGroupMembershipInvitation.invited_by_user_id,
+)
+Index(
+    "ix_family_group_membership_invitations_invitee_status",
+    FamilyGroupMembershipInvitation.invitee_user_id,
     FamilyGroupMembershipInvitation.status,
 )

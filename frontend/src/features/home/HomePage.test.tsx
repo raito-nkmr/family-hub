@@ -21,7 +21,7 @@ const group: FamilyGroup = {
 const task: ChoreTask = {
   id: 'task-id',
   group_id: group.id,
-  name: 'お風呂',
+  task_name: 'お風呂',
   category_id: 'chore-id',
   interval_days: 1,
   is_active: true,

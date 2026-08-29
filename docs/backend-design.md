@@ -47,9 +47,10 @@ backend/
 ```
 
 Commands include user and dummy-user creation, password reset, database and secondary-storage backup, photo-integrity
-checking, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and delivery, monitoring reporting,
-and role management. User creation permits regular users only after an active system administrator exists; initial setup
-must explicitly create the administrator. Role management uses the same transaction advisory lock as web administration.
+checking, old orphaned-photo cleanup, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and
+delivery, monitoring reporting, and role management. User creation permits regular users only after an active system
+administrator exists; initial setup must explicitly create the administrator. Role management uses the same transaction
+advisory lock as web administration.
 Do not create empty packages or placeholder tests before they are needed.
 
 ## Responsibilities
@@ -64,10 +65,11 @@ for feature logic.
 
 `base.py` defines SQLAlchemy Declarative Base and Alembic metadata. `session.py` defines the engine, session factory, and
 request-scoped session dependency. Model discovery must not rely on import side effects; provide an explicit model-loading
-function or registry for Alembic. The current Alembic chain consists of three explicit schema-only baseline revisions
-(`core`, `media`, and `household`). The `household` baseline contains the complete current chore schema, including
-categories, completion snapshots, report settings, and category ordering. Migrations must not write application data,
-seed rows, or perform backfills.
+function or registry for Alembic. The current Alembic chain consists of four explicit schema-only domain baseline revisions
+(`core`, `media`, `household`, and `shopping`). The `household` baseline contains the complete current chore schema,
+including categories, completion snapshots, report settings, and category ordering. The `shopping` baseline contains the
+complete current shopping schema, including categories, assignments, trips, purchase history, and discarded-trip state.
+Migrations must not write application data, seed rows, or perform backfills.
 
 ### `features.health`
 
@@ -78,8 +80,9 @@ the exact readiness path with `404` on the public route. Detailed authenticated 
 ### `features.auth`
 
 Owns family login, server-side sessions, system roles, invitation-based account creation, CSRF validation, and login-rate
-limiting. It contains routers, service logic, `User`, `UserSession`, and `UserInvitation` models, Argon2id password helpers,
-rate limiting, authentication dependencies, invitation handling, and a deliberately small `public.py` boundary.
+limiting. It contains routers, service logic, `User`, `UserSession`, `UserInvitation`, and `LoginRateLimit` models,
+Argon2id password helpers, rate limiting, authentication dependencies, invitation handling, and a deliberately small
+`public.py` boundary.
 
 Login, password changes, and current-password reauthentication lock the target `User` row with `FOR UPDATE` before
 verifying the current hash. This prevents an old-password login or protected mutation from passing concurrently with a
@@ -93,6 +96,11 @@ acceptance, and those accounts do not receive the forced-change flag.
 Other features may use only `features.auth.public`, `require_authenticated_user`, `require_password_change_complete`, and
 `require_csrf_token`; they must not import auth internals directly.
 
+Login rate limiting is shared by all application processes through PostgreSQL. The request key combines the trusted client IP
+and normalized username, but only its SHA-256 hash is stored. A PostgreSQL transaction advisory lock serializes attempts for
+the hash; the attempt row is created or updated atomically, successful authentication removes it, and stale rows are removed
+opportunistically. A database outage is surfaced rather than silently falling back to a per-process limiter.
+
 ### `features.groups`
 
 Owns group creation, membership, group-local roles, invitations, administration summaries, audit access, and member changes.
@@ -102,7 +110,8 @@ must be active and not already members. A database unique constraint and pre-che
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items,
+aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items and
+shopping workflow rows,
 photo shares, activity-group relations, and upload-batch shares. Photos remain; affected sidecars are synchronized after commit.
 
 Membership removal and photo, upload, album, chore, and shopping operations that depend on membership are serialized by
@@ -129,9 +138,21 @@ defaults to `Asia/Tokyo`.
 
 ### `features.shopping`
 
-Owns group items, purchase state, purchaser, and purchase time. All members may perform the operations. Mutations lock the
-group, recheck membership, then lock the item, serializing membership removal and concurrent state changes. Purchase time is
-server-generated UTC time. Non-members receive `404`.
+Owns active shopping requests, shared categories, shopping trips, purchase events that are append-only during normal correction
+flows, assignment snapshots, trip-level amounts, and statistics. All group members may perform the operations; an assignee is informational and never a purchase
+permission. In-store writes lock the group, recheck membership, then lock the item and trip, so concurrent completion of the
+same request produces one success and one `409`. Starting a trip locks the group and resumes the latest in-progress,
+non-discarded trip instead of creating a duplicate. Purchase events retain item, assignee, and category snapshots and are never
+deleted by undo, correction, or discard. Trip amounts are nullable non-negative yen integers and are excluded from totals when
+null. Trips can be finished immediately, discarded only while in progress, or permanently deleted when in progress with zero
+purchase events or when finished. Deleting a finished trip removes its purchase events in the same locked transaction and
+synchronizes affected planned-item state; deleting an empty trip uses the same locked transaction to remove it after confirmation.
+Discarded trips and events are excluded from statistics. The history endpoint hides discarded trips by default and accepts
+`include_discarded=true` for audit viewing; it uses an opaque `(started_at, id)` cursor, and statistics convert date boundaries
+through the group's IANA time zone. Shopping trip PATCH requests preserve omitted fields; an explicit
+`total_amount_yen: null` clears the amount. Purchase PATCH requests preserve omitted category and purchaser fields, allow an
+explicit null category, and reject an explicit null purchaser with `422`. Existing legacy purchase state is converted by
+`app.commands.migrate_shopping_history`, never by Alembic.
 
 ### `features.photos`
 
@@ -139,10 +160,11 @@ Owns upload, storage, metadata, authorization, sharing, favorites, activity, tra
 photo, trash, export, and chunked-upload HTTP boundaries. Services coordinate storage and database work; `access.py` defines
 owner and group-share visibility; `activity.py` handles New and read positions; `queries.py` handles search, cursors, and
 month aggregation; `registration.py` prepares finalized photos, sidecars, and shares; `uploads.py` manages batch state;
-`errors.py` owns photo-domain exceptions and `types.py` owns photo DTO/result types. `storage_paths.py` owns storage-key and
-path safety validation, while `storage_types.py` owns storage status, error, and staged/finalized-file types.
-`storage_uploads.py` and `storage_files.py` implement resumable upload, sidecar, finalization, and deletion operations;
-`storage.py` remains the compatibility `PhotoStorage` facade for those operations and storage state;
+`errors.py` owns photo-domain exceptions and `types.py` owns photo DTO/result types. The `storage/` package groups the
+filesystem implementation: `storage/paths.py` owns storage-key and path safety validation, while `storage/types.py` owns
+storage status, error, and staged/finalized-file types. `storage/uploads.py` and `storage/files.py` implement resumable
+upload, sidecar, finalization, and deletion operations; `storage/facade.py` exposes the `PhotoStorage` facade for those
+operations and storage state;
 `thumbnails.py` creates WebP thumbnails from images or the first video frame, and `video_validation.py` validates supported
 video containers with `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
@@ -279,12 +301,13 @@ At finalization, create a WebP thumbnail with a longest edge of at most 480 px, 
 Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
 API. Originals, downloads, thumbnails, and ZIP exports return `private, no-store`.
 
-Sidecars use schema version 7 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
-capture-time overrides, and shares. The database stores `effective_captured_at` as the denormalized sort value
-`captured_at_override`, then EXIF `captured_at`, then `uploaded_at`. It is synchronized at registration and override updates;
-the original EXIF capture time remains separate from this fallback value so the API does not present upload time as a known
-capture time. `ix_photos_sort_date_id` covers `(effective_captured_at DESC, id DESC)`.
-After a sharing migration, run `python -m app.commands.sync_photo_sidecars` to regenerate every sidecar from the database.
+Sidecars use schema version 8 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
+capture-time overrides, and `group_ids`. The database stores `effective_captured_at` as the denormalized sort value
+`captured_at_override`, then original EXIF `captured_at_original`, then `uploaded_at`. It is synchronized at registration and
+override updates; `captured_at_original` and `captured_at_override` remain separate so the API does not present upload time as
+a known capture time. `ix_photos_sort_date_id` covers `(effective_captured_at DESC, id DESC)`.
+After a sharing or sidecar-schema migration, run `python -m app.commands.sync_photo_sidecars` to regenerate every sidecar
+from the database.
 
 ## Upload processing
 
@@ -316,7 +339,11 @@ The response-stream abort is a workaround for development uploads sent directly 
 FastAPI on port `18000`. Production uploads use the public same-origin `/api` path through Cloudflare, Caddy, and FastAPI;
 the production response stream is not aborted by the browser.
 
-The production React client always uses chunked upload. The Cloudflare request limit and whole-file
+The upload router streams each request body into a bounded temporary file and checks `Content-Length` before reading when it
+is available. The service then streams that file into the durable `.part` file, so a request does not retain all received
+chunks in memory. Upload state is committed before a cancel or expiration removes `.part`; if the database commit fails,
+the `.part` remains available for offset reconciliation. Cleanup is best effort and the orphan-file maintenance command
+recovers failed deletions. The production React client always uses chunked upload. The Cloudflare request limit and whole-file
 `PHOTO_MAX_UPLOAD_BYTES` are separate constraints. The frontend sends at most two files concurrently and shows success,
 duplicate, and failure independently; retry failed files without rolling back successful ones.
 
@@ -354,7 +381,9 @@ thumbnail → database order and compensate on failure. Keep stable path rules a
 rebuild photo metadata. The integrity command is read-only: it reports missing files, size mismatches, sidecar mismatches,
 orphaned files, and unmatched `.part` files; `--verify-hashes` additionally reads originals to compare SHA-256. It returns
 0 with no findings and 1 with findings and never changes files or the database. Automatic repair and sidecar-to-database
-rebuild are not implemented.
+rebuild are not implemented. `python -m app.commands.cleanup_orphaned_photo_files` can remove orphaned originals, sidecars,
+derivatives, and stale upload parts after a 24-hour grace period. It defaults to a dry run, requires `--apply` to delete,
+and refuses an empty database unless `--allow-empty-database` is explicitly provided for an intentional full reset.
 
 ## Storage availability
 
@@ -390,9 +419,18 @@ PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` is set. The 
 requires `MIGRATION_TEST_DATABASE_URL`.
 
 For local testing, use two disposable databases on the development PostgreSQL instance at `127.0.0.1:15432`. Reuse the
-existing local PostgreSQL role, but use database names such as `family_hub_test` and `family_hub_migration_test`; the role
-must exist, while the databases must be created before running the tests. Never use the production PostgreSQL endpoint at
-`127.0.0.1:5433` or a production database for tests.
+existing local PostgreSQL role and use `family_hub_test` and `family_hub_migration_test`. A development volume reset also
+deletes these databases, so recreate them immediately after `docker compose up --detach --wait db`:
+
+```bash
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_test"'
+docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE DATABASE family_hub_migration_test"'
+```
+
+The role must exist, while the databases must be created before running the tests. Never use the production PostgreSQL
+endpoint at `127.0.0.1:5433` or a production database for tests.
 
 Set the URLs in the current shell rather than committing credentials or adding them to repository files:
 
@@ -412,6 +450,9 @@ uses its separate empty database and applies and rolls back the full Alembic his
 DATABASE_URL="$TEST_DATABASE_URL" uv run --locked alembic upgrade head
 uv run --locked pytest
 ```
+
+The ordinary integration-test database receives the latest schema before the suite runs. Keep
+`family_hub_migration_test` empty; the migration round-trip test applies and rolls back the full Alembic history itself.
 
 Unset the variables when finished if the shell will be reused for another database:
 
@@ -442,8 +483,9 @@ recovery, deduplication, per-device retries, and maintenance terminal states.
 ### Routers and migrations
 
 Replace FastAPI dependencies with test Session and Storage implementations. Test resumable chunk upload, response schemas, and
-domain-exception-to-HTTP conversion. CI must apply the latest migrations to an empty PostgreSQL database, while integration
-and unit tests remain separately runnable.
+domain-exception-to-HTTP conversion. Shopping tests cover assignment membership, purchaser/assignee differences, unplanned
+purchases, nullable trip totals, reversal retention, cursor history, statistics, and the idempotent legacy conversion command.
+CI must apply the latest migrations to an empty PostgreSQL database, while integration and unit tests remain separately runnable.
 
 ## Future design candidates and open decisions
 
@@ -460,7 +502,7 @@ Photos move between `active`, `trashed`, and `purge_pending` without moving orig
 authorization, lists, New, albums, and exports. Only the owner can view or restore it; shares, album relationships, memo, and
 favorite data remain for restoration. Album counts, pages, and covers consider active photos only, while the `AlbumPhoto`
 relationship remains so restoration returns the photo to its existing album memberships. The lifecycle is also stored in
-sidecar schema 7.
+sidecar schema 8.
 
 Permanent deletion requests for `trashed` photos are accepted only after `purge_after`; an early request is rejected with `409`.
 The request first commits `purge_pending`, then clears album covers for the photo in the same database transaction, idempotently

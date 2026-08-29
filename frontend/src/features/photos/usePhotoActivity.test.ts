@@ -14,7 +14,7 @@ describe('usePhotoActivity', () => {
     vi.clearAllMocks()
   })
 
-  it('marks the latest event seen when the recent tab becomes active', async () => {
+  it('marks the latest event seen when the new tab becomes active', async () => {
     vi.mocked(getPhotoActivity).mockResolvedValue({
       items: [
         {
@@ -22,7 +22,7 @@ describe('usePhotoActivity', () => {
           event_type: 'uploaded',
           actor_user_id: 'user-2',
           actor_username: 'family',
-          operation_id: 'operation-1',
+          activity_operation_id: 'operation-1',
           occurred_at: '2026-07-16T03:00:00Z',
           photo: {
             id: 'photo-1',
@@ -33,8 +33,10 @@ describe('usePhotoActivity', () => {
             content_type: 'image/jpeg',
             width: 640,
             height: 480,
-            captured_at: null,
+            captured_at_original: null,
+            captured_at_override: null,
             uploaded_at: '2026-07-16T03:00:00Z',
+            effective_captured_at: '2026-07-16T03:00:00Z',
             is_favorite: false,
           },
         },
@@ -86,7 +88,7 @@ describe('usePhotoActivity', () => {
           event_type: 'uploaded',
           actor_user_id: 'user-2',
           actor_username: 'family',
-          operation_id: 'operation-1',
+          activity_operation_id: 'operation-1',
           occurred_at: '2026-07-16T03:00:00Z',
           photo: {
             id: 'photo-1',
@@ -97,8 +99,10 @@ describe('usePhotoActivity', () => {
             content_type: 'image/jpeg',
             width: 640,
             height: 480,
-            captured_at: null,
+            captured_at_original: null,
+            captured_at_override: null,
             uploaded_at: '2026-07-16T03:00:00Z',
+            effective_captured_at: '2026-07-16T03:00:00Z',
             is_favorite: false,
           },
         },

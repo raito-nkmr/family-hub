@@ -34,7 +34,7 @@ interface ActivityGroup {
 function groupActivity(items: PhotoActivityItem[]): ActivityGroup[] {
   const groups = new Map<string, ActivityGroup>()
   for (const item of items) {
-    const key = item.operation_id
+    const key = item.activity_operation_id
     const current = groups.get(key)
     if (current) current.photos.push(item.photo)
     else {

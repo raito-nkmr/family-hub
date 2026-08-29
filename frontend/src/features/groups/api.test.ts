@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { client } from '../../shared/api/generated/client.gen'
-import { addGroupMember, getGroups } from './api'
+import { getGroups, inviteGroupMember } from './api'
 
 describe('generated groups API', () => {
   const fetchMock = vi.fn<typeof fetch>()
@@ -38,8 +38,8 @@ describe('generated groups API', () => {
           id: 'invitation-1',
           group_id: 'group-1',
           group_name: 'Family',
-          user_id: 'user-2',
-          username: 'member',
+          invitee_user_id: 'user-2',
+          invitee_username: 'member',
           role: 'member',
           status: 'pending',
           created_at: '2026-07-15T00:00:00Z',
@@ -48,7 +48,7 @@ describe('generated groups API', () => {
       ),
     )
 
-    await expect(addGroupMember('group-1', 'user-2', 'member')).resolves.toMatchObject({
+    await expect(inviteGroupMember('group-1', 'user-2', 'member')).resolves.toMatchObject({
       id: 'invitation-1',
       group_id: 'group-1',
     })

@@ -200,8 +200,8 @@ def test_accept_membership_invitation_locks_group_before_invitation_and_adds_mem
     invitation = FamilyGroupMembershipInvitation(
         id=uuid4(),
         group_id=group.id,
-        user_id=user_id,
-        requested_by_user_id=uuid4(),
+        invitee_user_id=user_id,
+        invited_by_user_id=uuid4(),
         role=GroupRole.MEMBER,
         status="pending",
         created_at=group.created_at,
@@ -232,8 +232,8 @@ def test_accept_membership_invitation_does_not_insert_existing_member() -> None:
     invitation = FamilyGroupMembershipInvitation(
         id=uuid4(),
         group_id=group.id,
-        user_id=user_id,
-        requested_by_user_id=uuid4(),
+        invitee_user_id=user_id,
+        invited_by_user_id=uuid4(),
         role=GroupRole.MEMBER,
         status="pending",
         created_at=group.created_at,

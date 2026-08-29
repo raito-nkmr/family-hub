@@ -28,7 +28,7 @@ function makeTask(groupId: string): ChoreTask {
   return {
     id: `task-${groupId}`,
     group_id: groupId,
-    name: groupId,
+    task_name: groupId,
     category_id: 'chore-id',
     interval_days: 1,
     is_active: true,

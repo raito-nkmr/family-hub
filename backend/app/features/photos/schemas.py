@@ -11,7 +11,7 @@ from app.features.photos.models import (
     UploadBatchStatus,
     UploadItemStatus,
 )
-from app.features.photos.storage import StorageStatusCode
+from app.features.photos.storage.types import StorageStatusCode
 
 
 class StorageStatusResponse(BaseModel):
@@ -25,7 +25,7 @@ class StorageStatusResponse(BaseModel):
 
 class PhotoSearchOptionResponse(BaseModel):
     id: UUID
-    name: str
+    label: str
 
 
 class PhotoSearchOptionsResponse(BaseModel):
@@ -34,7 +34,7 @@ class PhotoSearchOptionsResponse(BaseModel):
 
 
 class PhotoSharing(BaseModel):
-    type: PhotoVisibility
+    visibility: PhotoVisibility
     group_ids: list[UUID] = Field(default_factory=list, max_length=100)
 
     @field_validator("group_ids")
@@ -46,15 +46,14 @@ class PhotoSharing(BaseModel):
 
     @model_validator(mode="after")
     def validate_shape(self) -> "PhotoSharing":
-        if self.type is PhotoVisibility.PRIVATE and self.group_ids:
+        if self.visibility is PhotoVisibility.PRIVATE and self.group_ids:
             raise ValueError("private sharing must not include groups")
-        if self.type is PhotoVisibility.SHARED and not self.group_ids:
+        if self.visibility is PhotoVisibility.SHARED and not self.group_ids:
             raise ValueError("shared photos require at least one group")
         return self
 
 
 class PhotoResponseSharing(BaseModel):
-    type: PhotoVisibility
     group_ids: list[UUID] = Field(default_factory=list, max_length=100)
 
     @field_validator("group_ids")
@@ -63,12 +62,6 @@ class PhotoResponseSharing(BaseModel):
         if len(set(value)) != len(value):
             raise ValueError("group_ids must not contain duplicates")
         return value
-
-    @model_validator(mode="after")
-    def validate_shape(self) -> "PhotoResponseSharing":
-        if self.type is PhotoVisibility.PRIVATE and self.group_ids:
-            raise ValueError("private sharing must not include groups")
-        return self
 
 
 class PhotoResponse(BaseModel):
@@ -92,19 +85,19 @@ class PhotoResponse(BaseModel):
     sha256: str
     width: PositiveInt
     height: PositiveInt
-    captured_at: datetime | None
+    captured_at_original: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     lifecycle_state: PhotoLifecycleState
     trashed_at: datetime | None
     purge_after: datetime | None
     purge_requested_at: datetime | None
-    captured_at_original: datetime | None = None
-    captured_at_override: datetime | None = None
+    captured_at_override: datetime | None
 
     @field_validator(
-        "captured_at",
         "captured_at_original",
         "captured_at_override",
+        "effective_captured_at",
         "uploaded_at",
         "memo_updated_at",
         "trashed_at",
@@ -128,7 +121,6 @@ def photo_response_from_model(photo, *, visible_group_ids: Collection[UUID], is_
         uploaded_by_username=photo.uploaded_by_username,
         visibility=photo.visibility,
         sharing=PhotoResponseSharing(
-            type=photo.visibility,
             group_ids=sorted(visible_group_ids, key=str),
         ),
         memo=metadata.memo,
@@ -144,13 +136,13 @@ def photo_response_from_model(photo, *, visible_group_ids: Collection[UUID], is_
         sha256=photo.sha256,
         width=photo.width,
         height=photo.height,
-        captured_at=metadata.captured_at_override or photo.captured_at,
+        captured_at_original=photo.captured_at_original,
         uploaded_at=photo.uploaded_at,
+        effective_captured_at=photo.effective_captured_at,
         lifecycle_state=photo.lifecycle_state,
         trashed_at=photo.trashed_at,
         purge_after=photo.purge_after,
         purge_requested_at=photo.purge_requested_at,
-        captured_at_original=photo.captured_at,
         captured_at_override=metadata.captured_at_override,
     )
 
@@ -172,11 +164,13 @@ class PhotoListItemResponse(BaseModel):
     content_type: str
     width: PositiveInt
     height: PositiveInt
-    captured_at: datetime | None
+    captured_at_original: datetime | None
+    captured_at_override: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     is_favorite: bool
 
-    @field_validator("captured_at", "uploaded_at")
+    @field_validator("captured_at_original", "captured_at_override", "uploaded_at", "effective_captured_at")
     @classmethod
     def normalize_datetime_to_utc(cls, value: datetime | None) -> datetime | None:
         if value is None:
@@ -197,7 +191,7 @@ class PhotoActivityItemResponse(BaseModel):
     event_type: PhotoActivityEventType
     actor_user_id: UUID
     actor_username: str
-    operation_id: UUID
+    activity_operation_id: UUID
     occurred_at: datetime
     photo: PhotoListItemResponse
 
@@ -300,9 +294,9 @@ class GroupPhotoModerationRequest(BaseModel):
 
 class BulkPhotoSharingAdd(BaseModel):
     photo_ids: list[UUID] = Field(min_length=1, max_length=100)
-    add_group_ids: list[UUID] = Field(min_length=1, max_length=100)
+    group_ids_to_add: list[UUID] = Field(min_length=1, max_length=100)
 
-    @field_validator("photo_ids", "add_group_ids")
+    @field_validator("photo_ids", "group_ids_to_add")
     @classmethod
     def require_unique_ids(cls, value: list[UUID]) -> list[UUID]:
         if len(set(value)) != len(value):
@@ -322,28 +316,28 @@ class PhotoExportRequest(BaseModel):
 
 
 class BulkPhotoSharingResponse(BaseModel):
-    operation_id: UUID
+    activity_operation_id: UUID
     updated_count: int = Field(ge=0)
     unchanged_count: int = Field(ge=0)
 
 
 class UploadFileCreate(BaseModel):
     client_id: str = Field(min_length=1, max_length=64)
-    filename: str = Field(min_length=1, max_length=1024)
-    content_type: str = Field(min_length=1, max_length=64)
+    original_filename: str = Field(min_length=1, max_length=1024)
+    declared_content_type: str = Field(min_length=1, max_length=64)
     size_bytes: int = Field(gt=0)
 
 
 class UploadBatchCreate(BaseModel):
-    sharing: PhotoSharing = Field(default_factory=lambda: PhotoSharing(type=PhotoVisibility.PRIVATE))
+    sharing: PhotoSharing = Field(default_factory=lambda: PhotoSharing(visibility=PhotoVisibility.PRIVATE))
     files: list[UploadFileCreate] = Field(min_length=1, max_length=100)
 
 
 class UploadItemResponse(BaseModel):
     id: UUID
     client_id: str
-    filename: str
-    content_type: str
+    original_filename: str
+    declared_content_type: str
     size_bytes: int
     received_bytes: int
     status: UploadItemStatus

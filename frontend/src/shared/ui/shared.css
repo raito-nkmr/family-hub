@@ -17,6 +17,233 @@
   letter-spacing: 0.08em;
 }
 
+.page-hero {
+  max-width: 760px;
+  padding: clamp(3rem, 8vw, 6.5rem) 0 clamp(2rem, 5vw, 4rem);
+}
+
+.page-hero--with-action {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  max-width: none;
+}
+
+.page-hero__content {
+  max-width: 760px;
+}
+
+.page-hero__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.page-hero h1 {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: clamp(2.5rem, 4.4vw, 4rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 1.03;
+}
+
+.page-hero__description {
+  max-width: 580px;
+  margin: 1.5rem 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+.category-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: -1.5rem 0 2.25rem;
+}
+
+.category-filter {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  overflow-x: auto;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+}
+
+.category-filter__button {
+  min-width: 5rem;
+  height: var(--control-height-compact);
+  padding: 0 0.85rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.category-filter__button:hover:not(.category-filter__button--active) {
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+}
+
+.category-filter__button--active {
+  color: var(--color-text-on-emphasis);
+  background: var(--color-action-filled-bg);
+}
+
+.category-manager-dialog {
+  max-height: min(44rem, calc(100dvh - 2rem));
+  overflow: auto;
+}
+
+.category-manager-form {
+  margin-top: 1.5rem;
+}
+
+.category-manager-form > label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.category-manager-form__input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.category-manager-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-manager-list__item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.25rem;
+  padding: 1rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+}
+
+.category-manager-list__item strong {
+  overflow-wrap: anywhere;
+}
+
+.category-manager-list__actions,
+.category-manager-list__edit {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.category-manager-list__edit {
+  width: 100%;
+}
+
+.category-manager-list__edit .form-control {
+  min-width: 0;
+  flex: 1;
+}
+
+.category-manager-list__move-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.category-manager-list__move {
+  min-width: 2.5rem;
+}
+
+.category-manager-list__empty {
+  margin: 1.5rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .page-hero {
+    padding: 2.5rem 0 3.5rem;
+  }
+
+  .page-hero--with-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-hero--with-action .page-hero__actions,
+  .page-hero--with-action .page-hero__actions button {
+    width: 100%;
+  }
+
+  .page-hero h1 {
+    font-size: clamp(2.15rem, 10vw, 2.9rem);
+  }
+
+  .category-toolbar {
+    align-items: stretch;
+    margin: -1.25rem 0 1.5rem;
+    flex-direction: column;
+  }
+
+  .category-toolbar > .secondary-button {
+    width: 100%;
+  }
+
+  .category-filter {
+    width: 100%;
+  }
+
+  .category-filter__button {
+    flex: 1 0 auto;
+  }
+
+  .category-manager-form__input,
+  .category-manager-list__edit {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .category-manager-form__input button,
+  .category-manager-list__edit button {
+    width: 100%;
+  }
+
+  .category-manager-list__item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-manager-list__actions {
+    width: 100%;
+  }
+
+  .category-manager-list__actions > button {
+    flex: 1;
+  }
+}
+
 .upload-card__heading h2,
 .section-heading h2,
 .modal__details h2 {

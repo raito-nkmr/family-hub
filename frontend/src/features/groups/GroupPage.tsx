@@ -16,7 +16,7 @@ import {
   getMyGroupMembershipInvitations,
   type GroupRole,
 } from './api'
-import { AddGroupMemberDialog } from './components/AddGroupMemberDialog'
+import { InviteGroupMemberDialog } from './components/InviteGroupMemberDialog'
 import { GroupFormDialog } from './components/GroupFormDialog'
 import { useGroups } from './useGroups'
 
@@ -164,9 +164,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 <h2 id="group-members-heading">{t('groups.members')}</h2>
               </div>
               {selectedGroup.current_user_role === 'admin' && (
-                <button className="primary-button icon-button" type="button" onClick={() => state.openDialog('member')}>
+                <button className="primary-button icon-button" type="button" onClick={() => state.openDialog('invite')}>
                   <GroupAddIcon />
-                  {t('groups.addMember')}
+                  {t('groups.inviteMember')}
                 </button>
               )}
             </div>
@@ -223,14 +223,14 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             </div>
           </section>
         </main>
-        {state.showAddMemberDialog && (
-          <AddGroupMemberDialog
+        {state.showInviteMemberDialog && (
+          <InviteGroupMemberDialog
             submitting={state.submitting}
             loadingCandidates={state.loadingMemberCandidates}
             candidates={state.memberCandidates}
             error={state.dialogError}
-            onSubmit={state.addMember}
-            onClose={state.closeAddMemberDialog}
+            onSubmit={state.inviteMember}
+            onClose={state.closeInviteMemberDialog}
           />
         )}
       </>

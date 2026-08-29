@@ -57,8 +57,8 @@ export function PhotoCard({
           />
         )}
         {photo.visibility === 'shared' && (
-          <PhotoBadge variant="shared" position="bottom-right" label={t('photos.family')} icon={<ShareIcon />}>
-            {t('photos.family')}
+          <PhotoBadge variant="shared" position="bottom-right" label={t('photos.shared')} icon={<ShareIcon />}>
+            {t('photos.shared')}
           </PhotoBadge>
         )}
         {photo.is_favorite && (

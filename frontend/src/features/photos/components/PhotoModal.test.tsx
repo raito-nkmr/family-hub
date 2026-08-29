@@ -8,7 +8,7 @@ const photo: Photo = {
   uploaded_by_user_id: 'owner-1',
   uploaded_by_username: 'owner',
   visibility: 'shared',
-  sharing: { type: 'shared', group_ids: ['group-1'] },
+  sharing: { group_ids: ['group-1'] },
   is_favorite: false,
   memo: '旅行のメモ',
   memo_updated_by_user_id: 'viewer-1',
@@ -22,8 +22,10 @@ const photo: Photo = {
   sha256: 'a'.repeat(64),
   width: 100,
   height: 100,
-  captured_at: null,
+  captured_at_original: null,
+  captured_at_override: null,
   uploaded_at: '2026-07-15T00:00:00Z',
+  effective_captured_at: '2026-07-15T00:00:00Z',
   lifecycle_state: 'active',
   trashed_at: null,
   purge_after: null,
@@ -40,8 +42,10 @@ const photoSummary: PhotoListItem = {
   content_type: photo.content_type,
   width: photo.width,
   height: photo.height,
-  captured_at: photo.captured_at,
+  captured_at_original: photo.captured_at_original,
+  captured_at_override: photo.captured_at_override,
   uploaded_at: photo.uploaded_at,
+  effective_captured_at: photo.effective_captured_at,
 }
 
 describe('PhotoModal', () => {
@@ -338,7 +342,7 @@ describe('PhotoModal', () => {
     const onCaptureDateSave = vi.fn()
     const overriddenPhoto = {
       ...photo,
-      captured_at: '2026-07-14T00:00:00Z',
+      captured_at_original: '2026-07-14T00:00:00Z',
       captured_at_override: '2026-07-15T03:04:00Z',
     }
     const { rerender } = render(

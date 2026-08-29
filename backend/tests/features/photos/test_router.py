@@ -15,12 +15,12 @@ from app.features.photos.queries import PhotoListFilters, PhotoListItem, PhotoLi
 from app.features.photos.router import (
     bulk_add_photo_sharing,
     download_photo_original,
+    get_photo,
     get_photo_content,
-    get_photo_metadata,
     get_photo_thumbnail,
     get_photo_timeline,
     list_photo_activity,
-    list_photo_metadata,
+    list_photos,
     mark_photo_activity_seen,
     update_photo_metadata,
 )
@@ -31,7 +31,8 @@ from app.features.photos.schemas import (
     PhotoSharing,
     PhotoUpdate,
 )
-from app.features.photos.storage import PhotoStorage, StorageStatus, StorageStatusCode
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import StorageStatus, StorageStatusCode
 from app.features.photos.types import BulkPhotoSharingResult, PhotoContent, TrashedPhotoPage
 from app.main import create_app
 from tests.features.photos.factories import make_photo
@@ -150,8 +151,10 @@ class PhotoRouterStub:
                     content_type=photo.content_type,
                     width=photo.width,
                     height=photo.height,
-                    captured_at=photo.captured_at,
+                    captured_at_original=photo.captured_at_original,
+                    captured_at_override=photo.metadata_record.captured_at_override,
                     uploaded_at=photo.uploaded_at,
+                    effective_captured_at=photo.effective_captured_at,
                     is_favorite=False,
                 )
                 for photo in self.photos
@@ -183,7 +186,7 @@ class PhotoRouterStub:
                     event_type=PhotoActivityEventType.UPLOADED,
                     actor_user_id=photo.uploaded_by_user_id,
                     actor_username=photo.uploaded_by_username,
-                    operation_id=uuid4(),
+                    activity_operation_id=uuid4(),
                     occurred_at=photo.uploaded_at,
                     photo=PhotoListItem(
                         id=photo.id,
@@ -194,8 +197,10 @@ class PhotoRouterStub:
                         content_type=photo.content_type,
                         width=photo.width,
                         height=photo.height,
-                        captured_at=photo.captured_at,
+                        captured_at_original=photo.captured_at_original,
+                        captured_at_override=photo.metadata_record.captured_at_override,
                         uploaded_at=photo.uploaded_at,
+                        effective_captured_at=photo.effective_captured_at,
                         is_favorite=False,
                     ),
                 )
@@ -211,7 +216,7 @@ class PhotoRouterStub:
     def bulk_add_sharing(
         self,
         photo_ids: list[UUID],
-        add_group_ids: set[UUID],
+        group_ids_to_add: set[UUID],
         acting_user_id: UUID,
         acting_username: str,
     ) -> BulkPhotoSharingResult:
@@ -220,7 +225,7 @@ class PhotoRouterStub:
         assert acting_user_id == TEST_USER.id
         assert acting_username == TEST_USER.username
         return BulkPhotoSharingResult(
-            operation_id=uuid4(),
+            activity_operation_id=uuid4(),
             updated_count=len(photo_ids),
             unchanged_count=0,
         )
@@ -277,10 +282,10 @@ class PhotoRouterStub:
         return photo
 
 
-def test_list_photo_metadata_returns_items() -> None:
+def test_list_photos_returns_items() -> None:
     photo = make_photo()
 
-    response = list_photo_metadata(PhotoListQuery(), authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
+    response = list_photos(PhotoListQuery(), authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
 
     assert [item.id for item in response.items] == [photo.id]
     assert response.items[0].uploaded_at == datetime(2026, 7, 14, 4, tzinfo=UTC)
@@ -322,7 +327,7 @@ def test_bulk_add_photo_sharing_returns_updated_count() -> None:
     group_id = uuid4()
 
     response = bulk_add_photo_sharing(
-        BulkPhotoSharingAdd(photo_ids=photo_ids, add_group_ids=[group_id]),
+        BulkPhotoSharingAdd(photo_ids=photo_ids, group_ids_to_add=[group_id]),
         TEST_USER,
         PhotoRouterStub([]),
     )
@@ -331,19 +336,19 @@ def test_bulk_add_photo_sharing_returns_updated_count() -> None:
     assert response.unchanged_count == 0
 
 
-def test_get_photo_metadata_returns_photo() -> None:
+def test_get_photo_returns_photo() -> None:
     photo = make_photo()
 
-    response = get_photo_metadata(photo.id, authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
+    response = get_photo(photo.id, authenticated_user=TEST_USER, service=PhotoRouterStub([photo]))
 
     assert response.id == photo.id
 
 
-def test_get_photo_metadata_returns_404_when_missing() -> None:
+def test_get_photo_returns_404_when_missing() -> None:
     photo_id = uuid4()
 
     with pytest.raises(HTTPException) as error:
-        get_photo_metadata(photo_id, authenticated_user=TEST_USER, service=PhotoRouterStub([]))
+        get_photo(photo_id, authenticated_user=TEST_USER, service=PhotoRouterStub([]))
 
     assert error.value.status_code == 404
     assert error.value.detail == "Photo not found"
@@ -436,7 +441,7 @@ def test_update_photo_metadata_returns_updated_photo() -> None:
         photo.id,
         PhotoUpdate(
             memo="旅行のメモ",
-            sharing=PhotoSharing(type=PhotoVisibility.SHARED, group_ids=[group_id]),
+            sharing=PhotoSharing(visibility=PhotoVisibility.SHARED, group_ids=[group_id]),
             version=1,
         ),
         TEST_USER,
@@ -456,7 +461,7 @@ def test_update_photo_metadata_rejects_non_owner_sharing_change() -> None:
     with pytest.raises(HTTPException) as error:
         update_photo_metadata(
             photo.id,
-            PhotoUpdate(sharing=PhotoSharing(type=PhotoVisibility.SHARED, group_ids=[group_id]), version=1),
+            PhotoUpdate(sharing=PhotoSharing(visibility=PhotoVisibility.SHARED, group_ids=[group_id]), version=1),
             TEST_USER,
             PhotoRouterStub([photo], upload_error=PhotoUpdateForbiddenError()),
             PhotoRouterStub([photo], upload_error=PhotoUpdateForbiddenError()),

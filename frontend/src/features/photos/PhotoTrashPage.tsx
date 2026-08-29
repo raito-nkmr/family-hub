@@ -148,8 +148,8 @@ export function PhotoTrashPage({ onUnauthorized, onLibraryChanged }: PhotoTrashP
           <div className="trash-photo-dialog__body">
             <p className="eyebrow">{t('photoTrash.detailEyebrow')}</p>
             <h2 id="trash-photo-dialog-title">{selectedPhoto.original_filename}</h2>
-            <p>{t('photoTrash.deletedAt', { date: formatDateTime(selectedPhoto.trashed_at!) })}</p>
-            <p>{t('photoTrash.purgeAfter', { date: formatDateTime(selectedPhoto.purge_after!) })}</p>
+            <p>{t('photoTrash.trashedAt', { date: formatDateTime(selectedPhoto.trashed_at!) })}</p>
+            <p>{t('photoTrash.purgeEligibleAt', { date: formatDateTime(selectedPhoto.purge_after!) })}</p>
             {selectedPhoto.lifecycle_state === 'purge_pending' ? (
               <PageMessage variant="neutral">{t('photoTrash.purgePending')}</PageMessage>
             ) : (

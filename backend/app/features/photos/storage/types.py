@@ -80,7 +80,7 @@ class SidecarMetadata:
     memo_updated_by_username: str
     memo_updated_at: datetime
     metadata_version: int
-    sharing_audiences: tuple[dict[str, str | None], ...]
+    group_ids: tuple[UUID, ...]
     original_filename: str
     storage_key: str
     content_type: str
@@ -88,8 +88,9 @@ class SidecarMetadata:
     sha256: str
     width: int
     height: int
-    captured_at: datetime | None
+    captured_at_original: datetime | None
     uploaded_at: datetime
+    effective_captured_at: datetime
     derivatives: tuple[dict[str, object], ...]
     captured_at_override: datetime | None = None
     lifecycle_state: str = "active"
@@ -100,7 +101,7 @@ class SidecarMetadata:
 
     def as_json(self) -> dict[str, object]:
         return {
-            "schema_version": 7,
+            "schema_version": 8,
             "id": str(self.photo_id),
             "metadata_version": self.metadata_version,
             "asset": {
@@ -113,8 +114,9 @@ class SidecarMetadata:
                 "sha256": self.sha256,
                 "width": self.width,
                 "height": self.height,
-                "captured_at": _isoformat_utc(self.captured_at),
+                "captured_at_original": _isoformat_utc(self.captured_at_original),
                 "captured_at_override": _isoformat_utc(self.captured_at_override),
+                "effective_captured_at": _isoformat_utc(self.effective_captured_at),
                 "uploaded_at": _isoformat_utc(self.uploaded_at),
                 "derivatives": list(self.derivatives),
             },
@@ -124,7 +126,7 @@ class SidecarMetadata:
                 "updated_by_username": self.memo_updated_by_username,
                 "updated_at": _isoformat_utc(self.memo_updated_at),
             },
-            "sharing": {"audiences": list(self.sharing_audiences)},
+            "sharing": {"group_ids": [str(group_id) for group_id in self.group_ids]},
             "lifecycle": {
                 "state": self.lifecycle_state,
                 "trashed_at": _isoformat_utc(self.trashed_at),

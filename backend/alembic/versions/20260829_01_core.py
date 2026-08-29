@@ -1,8 +1,8 @@
-"""Create the core identity and family-group schema.
+"""Create the core identity, family-group, and login-rate-limit schema.
 
-Revision ID: 20260821_01_core
+Revision ID: 20260829_01_core
 Revises:
-Create Date: 2026-08-21
+Create Date: 2026-08-29
 
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260821_01_core"
+revision: str = "20260829_01_core"
 down_revision: str | None = None
 branch_labels: str | None = None
 depends_on: str | None = None
@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column(
             "created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
-        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint("csrf_token ~ '^[A-Za-z0-9_-]{43}$'", name="ck_user_sessions_csrf_token"),
@@ -129,47 +129,48 @@ def upgrade() -> None:
         "family_group_membership_invitations",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("group_id", sa.UUID(), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("requested_by_user_id", sa.UUID(), nullable=False),
+        sa.Column("invitee_user_id", sa.UUID(), nullable=False),
+        sa.Column("invited_by_user_id", sa.UUID(), nullable=False),
         sa.Column("role", sa.String(length=16), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
         sa.Column("responded_at", sa.DateTime(timezone=True), nullable=True),
-        sa.CheckConstraint("role IN ('admin', 'member')", name="ck_group_membership_invitations_role"),
+        sa.CheckConstraint("role IN ('admin', 'member')", name="ck_family_group_membership_invitations_role"),
         sa.CheckConstraint(
-            "status IN ('pending', 'accepted', 'rejected', 'canceled')", name="ck_group_membership_invitations_status"
+            "status IN ('pending', 'accepted', 'rejected', 'canceled')",
+            name="ck_family_group_membership_invitations_status",
         ),
         sa.CheckConstraint(
             "(status = 'pending' AND responded_at IS NULL) OR (status <> 'pending' AND responded_at IS NOT NULL)",
-            name="ck_group_membership_invitations_responded_at",
+            name="ck_family_group_membership_invitations_responded_at",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_group_membership_invitations"),
+        sa.PrimaryKeyConstraint("id", name="pk_family_group_membership_invitations"),
     )
     op.create_index(
-        "ix_group_membership_invitations_user_status",
+        "ix_family_group_membership_invitations_invitee_status",
         "family_group_membership_invitations",
-        ["user_id", "status"],
+        ["invitee_user_id", "status"],
         unique=False,
     )
     op.create_index(
-        "uq_group_membership_invitations_pending",
+        "uq_family_group_membership_invitations_pending",
         "family_group_membership_invitations",
-        ["group_id", "user_id"],
+        ["group_id", "invitee_user_id"],
         unique=True,
         postgresql_where=sa.text("status = 'pending'"),
     )
     op.create_index(
-        "ix_group_membership_invitations_group_id",
+        "ix_family_group_membership_invitations_group_id",
         "family_group_membership_invitations",
         ["group_id"],
         unique=False,
     )
     op.create_index(
-        "ix_group_membership_invitations_requested_by_user_id",
+        "ix_family_group_membership_invitations_invited_by_user_id",
         "family_group_membership_invitations",
-        ["requested_by_user_id"],
+        ["invited_by_user_id"],
         unique=False,
     )
     op.create_foreign_key(
@@ -208,7 +209,7 @@ def upgrade() -> None:
         ondelete="RESTRICT",
     )
     op.create_foreign_key(
-        "fk_group_membership_invitations_group_id",
+        "fk_family_group_membership_invitations_group_id_family_groups",
         "family_group_membership_invitations",
         "family_groups",
         ["group_id"],
@@ -216,34 +217,59 @@ def upgrade() -> None:
         ondelete="CASCADE",
     )
     op.create_foreign_key(
-        "fk_group_membership_invitations_requested_by_user_id",
+        "fk_family_group_membership_invitations_invited_by_user_id_users",
         "family_group_membership_invitations",
         "users",
-        ["requested_by_user_id"],
+        ["invited_by_user_id"],
         ["id"],
         ondelete="CASCADE",
     )
     op.create_foreign_key(
-        "fk_group_membership_invitations_user_id",
+        "fk_family_group_membership_invitations_invitee_user_id_users",
         "family_group_membership_invitations",
         "users",
-        ["user_id"],
+        ["invitee_user_id"],
         ["id"],
         ondelete="CASCADE",
     )
+    # Shared authentication rate-limit state.
+    op.create_table(
+        "login_rate_limits",
+        sa.Column("key_hash", sa.String(length=64), nullable=False),
+        sa.Column("window_started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.current_timestamp(),
+            nullable=False,
+        ),
+        sa.CheckConstraint("key_hash ~ '^[0-9a-f]{64}$'", name="ck_login_rate_limits_key_hash_lower_hex"),
+        sa.CheckConstraint("attempt_count >= 0", name="ck_login_rate_limits_attempt_count_nonnegative"),
+        sa.PrimaryKeyConstraint("key_hash", name="pk_login_rate_limits"),
+    )
+    op.create_index("ix_login_rate_limits_updated_at", "login_rate_limits", ["updated_at"], unique=False)
 
 
 def downgrade() -> None:
+    # Shared authentication rate-limit state.
+    op.drop_index("ix_login_rate_limits_updated_at", table_name="login_rate_limits")
+    op.drop_table("login_rate_limits")
+
     op.drop_constraint(
-        "fk_group_membership_invitations_user_id", "family_group_membership_invitations", type_="foreignkey"
-    )
-    op.drop_constraint(
-        "fk_group_membership_invitations_requested_by_user_id",
+        "fk_family_group_membership_invitations_invitee_user_id_users",
         "family_group_membership_invitations",
         type_="foreignkey",
     )
     op.drop_constraint(
-        "fk_group_membership_invitations_group_id", "family_group_membership_invitations", type_="foreignkey"
+        "fk_family_group_membership_invitations_invited_by_user_id_users",
+        "family_group_membership_invitations",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_family_group_membership_invitations_group_id_family_groups",
+        "family_group_membership_invitations",
+        type_="foreignkey",
     )
     op.drop_constraint("fk_family_group_members_user_id_users", "family_group_members", type_="foreignkey")
     op.drop_constraint("fk_family_group_members_group_id_family_groups", "family_group_members", type_="foreignkey")
@@ -251,15 +277,18 @@ def downgrade() -> None:
     op.drop_constraint("fk_user_invitations_created_by_user_id_users", "user_invitations", type_="foreignkey")
     op.drop_constraint("fk_family_groups_created_by_user_id_users", "family_groups", type_="foreignkey")
     op.drop_index(
-        "uq_group_membership_invitations_pending",
+        "uq_family_group_membership_invitations_pending",
         table_name="family_group_membership_invitations",
         postgresql_where=sa.text("status = 'pending'"),
     )
     op.drop_index(
-        "ix_group_membership_invitations_requested_by_user_id", table_name="family_group_membership_invitations"
+        "ix_family_group_membership_invitations_invited_by_user_id",
+        table_name="family_group_membership_invitations",
     )
-    op.drop_index("ix_group_membership_invitations_group_id", table_name="family_group_membership_invitations")
-    op.drop_index("ix_group_membership_invitations_user_status", table_name="family_group_membership_invitations")
+    op.drop_index("ix_family_group_membership_invitations_group_id", table_name="family_group_membership_invitations")
+    op.drop_index(
+        "ix_family_group_membership_invitations_invitee_status", table_name="family_group_membership_invitations"
+    )
     op.drop_table("family_group_membership_invitations")
     op.drop_index("ix_family_group_members_user_id", table_name="family_group_members")
     op.drop_table("family_group_members")

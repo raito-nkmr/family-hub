@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 from app.commands.check_photo_integrity import check_photo_integrity
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import DerivativeNotFoundError, InvalidStorageKeyError
+from app.features.photos.storage.types import DerivativeNotFoundError, InvalidStorageKeyError
 from tests.features.photos.factories import make_photo
 
 

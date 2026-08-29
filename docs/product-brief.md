@@ -16,7 +16,7 @@ starting as a full-featured photo-management service.
 The following scope is implemented: the core MVP; authentication; invitation-based account creation by a system
 administrator; private photo use and sharing with multiple family groups; per-photo shared memos editable by viewers;
 per-user favorites; group albums with cover selection; a new-photo activity view and read state; bulk sharing of up to 100
-owned photos; group membership management; group-scoped chore; and group-scoped shopping lists.
+owned photos; group membership management; group-scoped chores; and group-scoped shopping lists.
 
 Chores supports task names, day-based intervals, pause and resume, completion user and timestamp, next-due display, and
 a compact card with a color-coded progress bar showing elapsed and remaining days. On mobile, a right swipe reveals the
@@ -35,13 +35,16 @@ Original image previews are kept in a bounded in-memory cache for the current au
 photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
 cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
 
-Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping lists allow all
-group members to add items and record the purchaser and purchase time. The recent 20 purchased items can be restored to
-the unpurchased state.
+Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping is divided into
+an in-store mode, list management, and purchase history/statistics. Assignees are requests rather than permissions: every
+group member can complete a purchase, and the actual purchaser is recorded separately. Purchase events retain snapshots,
+trip totals are entered later in yen, and history uses cursor pagination without a 20-item limit.
 
 The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
 shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
-content mismatches, and orphaned files using the database as the reference. Original SHA-256 recalculation is optional.
+content mismatches, and orphaned files using the database as the reference. A separate guarded maintenance command can
+remove old orphaned photo files after an explicit apply flag; it refuses an empty database unless an intentional reset is
+explicitly confirmed. Original SHA-256 recalculation is optional.
 Photo details can download an accessible original by its original filename. The library can select up to 100 visible photos
 and stream them as one ZIP for manual backup.
 
@@ -59,9 +62,10 @@ A public bilingual privacy page is available from the shared footer before and a
 purposes, group visibility, retention, deletion, backup, external services, cookies, browser storage, and how to contact an
 administrator. The footer displays the application version from `frontend/package.json` at build time.
 
-The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chore, Shopping, and Other appear in bottom
-navigation. New, Library, Albums, and Trash are tabs inside Photos; Chore, Daily, and Monthly are tabs inside Chore;
-Groups, invitation administration, Account, and the administrator-only System screen are under Other. Screens wider than
+The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chores, Shopping, and Other appear in bottom
+navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chores;
+In store, List, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
+administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
 
@@ -286,8 +290,8 @@ removed after batch creation, unfinished items are stopped so the old permission
 
 ## Chores application
 
-Household members share chore locations and completion state for areas such as the kitchen, bathroom, and living room.
-Chore data belongs to a family group and is independent of the photo `family` visibility scope.
+Household members share chore tasks and completion state for areas such as the kitchen, bathroom, and living room.
+Chores data belongs to a family group and is independent of the photo `shared` visibility scope.
 
 - Group members manage shared category names; group administrators manage task names, category assignment, intervals of
   1–3650 days, and active or paused state.
@@ -295,7 +299,7 @@ Chore data belongs to a family group and is independent of the photo `family` vi
 - The chore screen provides an all-categories view and category filters.
 - Group members can move shared categories up or down; the saved order is used consistently across chore controls.
 - Completion records the server time and user without overwriting history.
-- Chores is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
+- The Chores app is split into a task list, a daily completion page, and a monthly report page. The daily page defaults to a
   Sunday-first calendar and can switch to the existing daily bar chart; the selected group, month, and daily view are
   retained in the URL.
 - The monthly report page shows a group-shared report with summary counts, category bars, member rankings, and task-level
@@ -313,18 +317,34 @@ each month, assignees, notifications, points, and completion undo are future fea
 
 ## Shopping list application
 
-Family members add items when they notice a need and mark them purchased from a phone while shopping or after returning home.
-The list is shared per family group.
+Shopping is shared per family group and is split into three pages: a deliberately simple in-store mode, list management,
+and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
+completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
+an immediate undo. The start control resumes the latest in-progress trip for the group, or creates one when none exists.
 
-- All group members can add an item between 1 and 120 characters.
-- Unpurchased items are shown oldest first.
-- Any member can mark an item purchased; the purchaser and server time are recorded.
-- The latest 20 purchased items are shown newest first and can be returned to unpurchased.
-- Purchase and unpurchase operations are serialized with row locks; operations against stale state are rejected as conflicts.
-- Non-members are not told that items or the group exist and receive not-found behavior.
+- All group members can add, edit, and delete unpurchased requests between 1 and 120 characters.
+- The list-management page keeps the active list as the primary view, filters it by all, a shared category, or no
+  category, and opens item forms and category management in dialogs rather than showing management forms permanently.
+- An optional assignee is either anyone or an active member of the same group; assignment never restricts purchasing.
+- Categories are optional shared master data with editable order and are used for counts/frequency, not per-item amounts.
+- Purchase events are append-only during normal correction flows and store item, assignee, category snapshots, actual purchaser,
+  and reversal state; explicit finalized-trip deletion removes all events in that trip.
+- History is grouped by shopping trip, supports cursor pagination for all time, optional total yen entered after returning home,
+  list-external purchases, purchaser/category correction, and date-based statistics.
+- Trips have in-progress, finished, and discarded states. Finishing is immediate; an empty trip is removed after confirmation,
+  while a trip with purchases leaves the nullable trip total for later entry in history. A finished trip can also be permanently
+  deleted after confirmation; this removes its purchase events and restores affected planned items unless a later purchase keeps
+  them purchased. Discarding retains the trip and reverses its purchases, restoring planned items to the active list.
+- Discarded trips and their purchase events are retained for audit history but are hidden from the history list by default; members
+  can opt in to show them. They remain excluded from spending, purchase counts, and other statistics. An in-progress trip with no
+  purchase events may be permanently deleted, and a finished trip may be permanently deleted together with all of its purchase
+  events; discarded trips cannot be deleted.
+- Unrecorded totals are shown explicitly and excluded from spending totals. Spending is recorded only at trip level.
+- Group membership, CSRF, row locking, and stale-state conflict handling apply to every write; non-members receive not-found behavior.
 
-Quantity, unit, memo, store, and category are not separate fields initially and may be included in the item name. Assignees,
-notifications, real-time sync, item edit/delete, permanent purchase-history audit display, and recurring-item re-add are future features.
+Quantity, unit, memo, store, push notifications, real-time sync, receipt OCR, budgets, recurring purchases, and store-route
+optimization remain outside the current scope. Product names and assignee snapshots are retained in purchase history even when
+the current list or category changes.
 
 ## Future person-detection policy
 
@@ -419,7 +439,7 @@ configured on the browser or server operating system.
 - A lightweight-DNN people filter
 - Scene classification after operating person detection is understood
 - Calendar chore schedules, assignees, notifications, and completion undo
-- Shopping quantity, unit, store, category, assignee, notifications, real-time sync, and recurring items
+- Shopping quantity, unit, store, notifications, real-time sync, receipt OCR, budgets, and recurring items
 
 ## Open decisions
 

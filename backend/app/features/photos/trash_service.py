@@ -20,7 +20,8 @@ from app.features.photos.errors import (
 )
 from app.features.photos.models import Photo, PhotoDerivativeKind, PhotoFavorite, PhotoLifecycleState
 from app.features.photos.registration import build_sidecar_metadata
-from app.features.photos.storage import PhotoStorage, PhotoStorageError, SidecarMetadata
+from app.features.photos.storage.facade import PhotoStorage, PhotoStorageError
+from app.features.photos.storage.types import SidecarMetadata
 from app.features.photos.types import PhotoContent, TrashedPhotoPage
 
 logger = logging.getLogger(__name__)

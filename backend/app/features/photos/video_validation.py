@@ -16,7 +16,7 @@ class VideoMetadata:
     extension: str
     width: int
     height: int
-    captured_at: datetime | None
+    captured_at_original: datetime | None
 
 
 VIDEO_CONTENT_TYPES = {
@@ -78,13 +78,13 @@ def inspect_video(path: Path, declared_content_type: str, default_timezone: str)
     if _get_rotation(stream) % 180 == 90:
         width, height = height, width
 
-    captured_at = _get_creation_time(probe, default_timezone)
+    captured_at_original = _get_captured_at_original(probe, default_timezone)
     return VideoMetadata(
         content_type=declared_content_type,
         extension=extension,
         width=width,
         height=height,
-        captured_at=captured_at,
+        captured_at_original=captured_at_original,
     )
 
 
@@ -107,7 +107,7 @@ def _get_rotation(stream: dict[str, object]) -> int:
     return 0
 
 
-def _get_creation_time(probe: dict[str, object], default_timezone: str) -> datetime | None:
+def _get_captured_at_original(probe: dict[str, object], default_timezone: str) -> datetime | None:
     format_tags = probe.get("format", {}).get("tags", {}) if isinstance(probe.get("format"), dict) else {}
     if isinstance(format_tags, dict):
         for key in ("creation_time", "com.apple.quicktime.creationdate"):

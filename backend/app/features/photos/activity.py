@@ -44,7 +44,7 @@ class PhotoActivityItem:
     event_type: PhotoActivityEventType
     actor_user_id: UUID
     actor_username: str
-    operation_id: UUID
+    activity_operation_id: UUID
     occurred_at: datetime
     photo: PhotoListItem
 
@@ -98,7 +98,7 @@ class PhotoActivityService:
                 PhotoActivityEvent.event_type,
                 PhotoActivityEvent.actor_user_id,
                 PhotoActivityEvent.actor_username,
-                PhotoActivityEvent.operation_id,
+                PhotoActivityEvent.activity_operation_id,
                 PhotoActivityEvent.occurred_at,
                 Photo.id.label("photo_id"),
                 Photo.uploaded_by_user_id,
@@ -107,8 +107,10 @@ class PhotoActivityService:
                 Photo.content_type,
                 Photo.width,
                 Photo.height,
-                func.coalesce(PhotoMetadata.captured_at_override, Photo.captured_at).label("captured_at"),
+                Photo.captured_at_original,
+                PhotoMetadata.captured_at_override,
                 Photo.uploaded_at,
+                Photo.effective_captured_at.label("effective_captured_at"),
                 favorite.label("is_favorite"),
             )
             .join(Photo, Photo.id == PhotoActivityEvent.photo_id)
@@ -126,7 +128,7 @@ class PhotoActivityService:
                 event_type=PhotoActivityEventType(row.event_type),
                 actor_user_id=row.actor_user_id,
                 actor_username=row.actor_username,
-                operation_id=row.operation_id,
+                activity_operation_id=row.activity_operation_id,
                 occurred_at=row.occurred_at,
                 photo=PhotoListItem(
                     id=row.photo_id,
@@ -137,8 +139,10 @@ class PhotoActivityService:
                     content_type=row.content_type,
                     width=row.width,
                     height=row.height,
-                    captured_at=row.captured_at,
+                    captured_at_original=row.captured_at_original,
+                    captured_at_override=row.captured_at_override,
                     uploaded_at=row.uploaded_at,
+                    effective_captured_at=row.effective_captured_at,
                     is_favorite=row.is_favorite,
                 ),
             )

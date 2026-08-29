@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.database.session import get_session
 from app.features.health.router import get_readiness_storage
-from app.features.photos.storage import PhotoStorage, StorageStatus, StorageStatusCode
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import StorageStatus, StorageStatusCode
 from app.main import create_app
 
 

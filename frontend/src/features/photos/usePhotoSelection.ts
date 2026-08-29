@@ -101,8 +101,10 @@ export function usePhotoSelection({ photos, onUnauthorized }: UsePhotoSelectionO
 
 function toPhotoListItem(photo: Photo | PhotoListItem): PhotoListItem {
   return {
-    captured_at: photo.captured_at,
+    captured_at_original: photo.captured_at_original,
+    captured_at_override: photo.captured_at_override,
     content_type: photo.content_type,
+    effective_captured_at: photo.effective_captured_at,
     height: photo.height,
     id: photo.id,
     is_favorite: photo.is_favorite,

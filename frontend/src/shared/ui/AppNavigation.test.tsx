@@ -24,7 +24,7 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     )
 
-    expect(container.querySelectorAll('.app-navigation__mobile-only')).toHaveLength(3)
+    expect(container.querySelectorAll('.app-navigation__mobile-only')).toHaveLength(4)
     expect(container.querySelector('.app-navigation__section')).toHaveTextContent('写真')
     expect(screen.getByRole('link', { name: 'ライブラリ' })).toHaveAttribute('aria-current', 'page')
     await user.click(screen.getByRole('link', { name: 'ホーム' }))
@@ -70,6 +70,7 @@ describe('AppNavigation', () => {
     )
 
     expect(screen.getAllByText('家事').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'タスク一覧' })).toHaveLength(2)
     expect(
       screen
         .getAllByRole('link', { name: '日別' })
@@ -80,8 +81,27 @@ describe('AppNavigation', () => {
       .find((link) => link.closest('.section-navigation') !== null)
     expect(monthlyLink).toBeDefined()
     await user.click(monthlyLink!)
-    expect(screen.getByLabelText('current path')).toHaveTextContent('/chores/reports')
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/chores/monthly')
     expect(screen.getByLabelText('current search')).toHaveTextContent('?group=group-1&month=2026-07&view=chart')
+  })
+
+  it('groups shopping destinations and preserves the selected family group', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/shopping/history?group=group-1']}>
+        <AppNavigation showInvitations={false} photoUnseenCount={0} />
+        <SectionNavigation showInvitations={false} photoUnseenCount={0} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+
+    const shoppingListLink = screen
+      .getAllByRole('link', { name: 'リスト' })
+      .find((link) => link.closest('.section-navigation') !== null)
+    expect(shoppingListLink).toBeDefined()
+    await user.click(shoppingListLink!)
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/shopping/list')
+    expect(screen.getByLabelText('current search')).toHaveTextContent('?group=group-1')
   })
 
   it('keeps desktop management links in the same order as mobile management tabs', () => {

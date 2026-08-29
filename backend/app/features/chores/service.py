@@ -65,7 +65,7 @@ class ChoreCompletionSummary:
 class ChoreTaskSummary:
     id: UUID
     group_id: UUID
-    name: str
+    task_name: str
     category_id: UUID
     interval_days: int
     is_active: bool
@@ -179,7 +179,10 @@ class ChoreService:
         )
         completions = self._latest_completions({task.id for task in tasks})
         summaries = [self._summary(task, membership, completions.get(task.id)) for task in tasks]
-        return sorted(summaries, key=lambda task: (not task.is_active, task.next_due_at, task.name, str(task.id)))
+        return sorted(
+            summaries,
+            key=lambda task: (not task.is_active, task.next_due_at, task.task_name, str(task.id)),
+        )
 
     def get_task(self, task_id: UUID, user_id: UUID) -> ChoreTaskSummary:
         task = self._session.get(ChoreTask, task_id)
@@ -193,7 +196,7 @@ class ChoreService:
         self,
         group_id: UUID,
         user_id: UUID,
-        name: str,
+        task_name: str,
         interval_days: int,
         category_id: UUID,
     ) -> ChoreTaskSummary:
@@ -203,7 +206,7 @@ class ChoreService:
         task = ChoreTask(
             id=uuid4(),
             group_id=group_id,
-            name=name,
+            task_name=task_name,
             category_id=category_id,
             interval_days=interval_days,
             is_active=True,
@@ -220,7 +223,7 @@ class ChoreService:
         task_id: UUID,
         user_id: UUID,
         *,
-        name: str | None,
+        task_name: str | None,
         category_id: UUID | None,
         interval_days: int | None,
         is_active: bool | None,
@@ -232,8 +235,8 @@ class ChoreService:
             raise ChoreNotFoundError
         if category_id is not None:
             self._require_category(category_id, group_id)
-        if name is not None:
-            task.name = name
+        if task_name is not None:
+            task.task_name = task_name
         if category_id is not None:
             task.category_id = category_id
         if interval_days is not None:
@@ -257,7 +260,7 @@ class ChoreService:
         completion = ChoreCompletion(
             id=uuid4(),
             task_id=task.id,
-            task_name_snapshot=task.name,
+            task_name_snapshot=task.task_name,
             category_id=category.id,
             category_name_snapshot=category.name,
             completed_by_user_id=user_id,
@@ -379,7 +382,7 @@ class ChoreService:
         return ChoreTaskSummary(
             id=task.id,
             group_id=task.group_id,
-            name=task.name,
+            task_name=task.task_name,
             category_id=task.category_id,
             interval_days=task.interval_days,
             is_active=task.is_active,

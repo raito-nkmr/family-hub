@@ -347,21 +347,21 @@ class GroupService:
         group_id: UUID,
         actor_user_id: UUID,
         actor_username: str,
-        user_id: UUID,
+        invitee_user_id: UUID,
         role: GroupRole,
     ) -> tuple[FamilyGroupMembershipInvitation, PublicUser]:
         try:
             self._get_group_for_admin(group_id, actor_user_id)
-            user = self._user_directory.list_by_ids({user_id}).get(user_id)
+            user = self._user_directory.list_by_ids({invitee_user_id}).get(invitee_user_id)
             if user is None or not user.is_active:
                 raise GroupUserNotFoundError
-            if self._session.get(FamilyGroupMember, (group_id, user_id)) is not None:
+            if self._session.get(FamilyGroupMember, (group_id, invitee_user_id)) is not None:
                 raise GroupMemberAlreadyExistsError
             invitation = FamilyGroupMembershipInvitation(
                 id=uuid4(),
                 group_id=group_id,
-                user_id=user_id,
-                requested_by_user_id=actor_user_id,
+                invitee_user_id=invitee_user_id,
+                invited_by_user_id=actor_user_id,
                 role=role,
                 status="pending",
                 created_at=datetime.now(UTC),
@@ -376,7 +376,7 @@ class GroupService:
                 actor_username=actor_username,
                 group_id=group_id,
                 target_type="user",
-                target_id=str(user_id),
+                target_id=str(invitee_user_id),
                 details={"username": user.username, "role": role.value},
             )
             self._session.commit()
@@ -394,7 +394,7 @@ class GroupService:
                 select(FamilyGroupMembershipInvitation, FamilyGroup.name)
                 .join(FamilyGroup, FamilyGroup.id == FamilyGroupMembershipInvitation.group_id)
                 .where(
-                    FamilyGroupMembershipInvitation.user_id == user_id,
+                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                     FamilyGroupMembershipInvitation.status == "pending",
                 )
                 .order_by(FamilyGroupMembershipInvitation.created_at.desc())
@@ -413,7 +413,7 @@ class GroupService:
             invitation_reference = self._session.scalar(
                 select(FamilyGroupMembershipInvitation).where(
                     FamilyGroupMembershipInvitation.id == invitation_id,
-                    FamilyGroupMembershipInvitation.user_id == user_id,
+                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                     FamilyGroupMembershipInvitation.status == "pending",
                 )
             )
@@ -428,7 +428,7 @@ class GroupService:
             select(FamilyGroupMembershipInvitation)
             .where(
                 FamilyGroupMembershipInvitation.id == invitation_id,
-                FamilyGroupMembershipInvitation.user_id == user_id,
+                FamilyGroupMembershipInvitation.invitee_user_id == user_id,
                 FamilyGroupMembershipInvitation.status == "pending",
             )
             .with_for_update()
@@ -525,8 +525,22 @@ class GroupService:
         if GroupRole(membership.role) is GroupRole.ADMIN:
             self._require_another_active_admin(group_id, target_user_id)
 
+        assigned_items = list(
+            self._session.scalars(
+                select(ShoppingItem)
+                .where(
+                    ShoppingItem.group_id == group_id,
+                    ShoppingItem.assignee_user_id == target_user_id,
+                )
+                .with_for_update()
+            ).all()
+        )
+        now = datetime.now(UTC)
+        for item in assigned_items:
+            item.assignee_user_id = None
+            item.updated_at = now
         self._session.delete(membership)
-        group.updated_at = datetime.now(UTC)
+        group.updated_at = now
         record_administrative_event(
             self._session,
             scope="group",

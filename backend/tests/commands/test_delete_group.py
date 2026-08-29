@@ -31,6 +31,9 @@ def make_impact(**overrides: object) -> GroupDeletionImpact:
         "chore_task_count": 0,
         "chore_completion_count": 0,
         "shopping_item_count": 0,
+        "shopping_category_count": 0,
+        "shopping_trip_count": 0,
+        "shopping_purchase_count": 0,
         "photo_share_count": 0,
         "photo_activity_group_count": 0,
         "upload_batch_group_share_count": 0,
@@ -43,11 +46,11 @@ def make_impact(**overrides: object) -> GroupDeletionImpact:
 def test_get_group_deletion_impact_returns_all_cascade_counts() -> None:
     session = MagicMock(spec=Session)
     group_id = uuid4()
-    session.execute.return_value.one_or_none.return_value = ("同居家族", 2, 1, 3, 4, 5, 6, 7, 8, 9, 10)
+    session.execute.return_value.one_or_none.return_value = ("同居家族", 2, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 
     impact = get_group_deletion_impact(session, group_id, lock=True)
 
-    assert impact == GroupDeletionImpact(group_id, "同居家族", 2, 1, 3, 4, 5, 6, 7, 8, 9, 10)
+    assert impact == GroupDeletionImpact(group_id, "同居家族", 2, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
     sql = str(
         session.execute.call_args.args[0].compile(
             dialect=postgresql.dialect(),
@@ -64,6 +67,14 @@ def test_memberships_alone_do_not_require_related_data_option() -> None:
     assert make_impact(album_count=1).has_related_data is True
 
 
+@pytest.mark.parametrize(
+    "field_name",
+    ["shopping_category_count", "shopping_trip_count", "shopping_purchase_count"],
+)
+def test_shopping_history_alone_requires_related_data_option(field_name: str) -> None:
+    assert make_impact(**{field_name: 1}).has_related_data is True
+
+
 def test_confirmation_requires_exact_group_name() -> None:
     impact = make_impact()
 
@@ -73,9 +84,16 @@ def test_confirmation_requires_exact_group_name() -> None:
         confirm_group_deletion(impact, read_confirmation=lambda _: "同居家族 ")
 
 
-def test_delete_group_rejects_related_data_without_explicit_option(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    "field_name",
+    ["shopping_category_count", "shopping_item_count", "shopping_trip_count", "shopping_purchase_count"],
+)
+def test_delete_group_rejects_shopping_data_without_explicit_option(
+    field_name: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     session = MagicMock(spec=Session)
-    impact = make_impact(shopping_item_count=1)
+    impact = make_impact(**{field_name: 1})
     monkeypatch.setattr("app.commands.delete_group.get_group_deletion_impact", MagicMock(return_value=impact))
 
     with pytest.raises(GroupDeletionHasRelatedDataError):
@@ -151,8 +169,18 @@ def test_sync_affected_photo_sidecars_skips_query_when_no_photos_are_shared() ->
 
 
 def test_print_deletion_impact_warns_that_photos_remain(capsys: pytest.CaptureFixture[str]) -> None:
-    print_deletion_impact(make_impact(photo_share_count=2))
+    print_deletion_impact(
+        make_impact(
+            photo_share_count=2,
+            shopping_category_count=1,
+            shopping_trip_count=2,
+            shopping_purchase_count=3,
+        )
+    )
 
     output = capsys.readouterr().out
     assert "Photo shares: 2" in output
+    assert "Shopping categories: 1" in output
+    assert "Shopping trips: 2" in output
+    assert "Shopping purchases: 3" in output
     assert "original photo files will not be deleted" in output

@@ -18,12 +18,12 @@ import type {
 import {
   addPhotoFavoriteApiV1PhotosPhotoIdFavoritePut,
   bulkAddPhotoSharingApiV1PhotosBulkSharingPost,
-  getPhotoMetadataApiV1PhotosPhotoIdGet,
+  getPhotoApiV1PhotosPhotoIdGet,
   getPhotoSearchOptionsApiV1PhotosSearchOptionsGet,
   getPhotoTimelineApiV1PhotosTimelineGet,
   getStorageStatusApiV1PhotosStorageStatusGet,
   listPhotoActivityApiV1PhotosActivityGet,
-  listPhotoMetadataApiV1PhotosGet,
+  listPhotosApiV1PhotosGet,
   listTrashedPhotosApiV1PhotosTrashGet,
   markPhotoActivitySeenApiV1PhotosActivitySeenPost,
   permanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDelete,
@@ -47,6 +47,15 @@ export type BulkSharingResult = BulkPhotoSharingResponse
 export type PhotoTimeline = PhotoTimelineResponse
 export type PhotoVisibility = ApiPhotoVisibility
 export type TrashedPhotoList = TrashedPhotoListResponse
+
+export interface PhotoCaptureTimes {
+  captured_at_original: string | null
+  captured_at_override: string | null
+}
+
+export function getPhotoCaptureTime(photo: PhotoCaptureTimes): string | null {
+  return photo.captured_at_override ?? photo.captured_at_original
+}
 
 export function getStorageStatus(signal?: AbortSignal): Promise<StorageStatus> {
   return sdkData(getStorageStatusApiV1PhotosStorageStatusGet({ signal }))
@@ -73,7 +82,7 @@ export async function getPhotos(
   limit = 50,
 ): Promise<PhotoPage> {
   return sdkData(
-    listPhotoMetadataApiV1PhotosGet({
+    listPhotosApiV1PhotosGet({
       query: {
         limit,
         cursor,
@@ -99,7 +108,7 @@ export function getPhotoSearchOptions(signal?: AbortSignal): Promise<PhotoSearch
 }
 
 export function getPhoto(photoId: string, signal?: AbortSignal): Promise<Photo> {
-  return sdkData(getPhotoMetadataApiV1PhotosPhotoIdGet({ path: { photo_id: photoId }, signal }))
+  return sdkData(getPhotoApiV1PhotosPhotoIdGet({ path: { photo_id: photoId }, signal }))
 }
 
 export function getTrashedPhotos(signal?: AbortSignal, cursor?: string): Promise<TrashedPhotoList> {
@@ -149,7 +158,7 @@ export function removePhotoGroupShareAsAdmin(
 }
 
 export function addBulkPhotoSharing(photoIds: string[], groupIds: string[]): Promise<BulkSharingResult> {
-  const body: BulkPhotoSharingAdd = { photo_ids: photoIds, add_group_ids: groupIds }
+  const body: BulkPhotoSharingAdd = { photo_ids: photoIds, group_ids_to_add: groupIds }
   return sdkData(bulkAddPhotoSharingApiV1PhotosBulkSharingPost({ body }))
 }
 

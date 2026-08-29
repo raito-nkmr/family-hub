@@ -54,8 +54,8 @@ export function usePhotoUpload({ storage, onUploaded, onUnauthorized }: PhotoUpl
         batch = await createUploadBatch(
           eligible.map((item) => ({
             client_id: item.clientId,
-            filename: item.file.name,
-            content_type: getPhotoContentType(item.file),
+            original_filename: item.file.name,
+            declared_content_type: getPhotoContentType(item.file),
             size_bytes: item.file.size,
           })),
           uploadGroupIds,

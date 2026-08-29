@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException, Request, Response
+from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.features.auth.dependencies import get_auth_context, require_trusted_origin
@@ -57,17 +58,25 @@ class AuthServiceStub:
         self.logged_out = True
 
 
+def make_rate_limiter() -> MagicMock:
+    limiter = MagicMock(spec=LoginRateLimiter)
+    limiter.try_acquire.return_value = None
+    return limiter
+
+
 def test_login_sets_http_only_session_cookie() -> None:
     request = make_request()
     response = Response()
+    session = MagicMock(spec=Session)
     service = AuthServiceStub()
 
     result = login(
         LoginRequest(username="owner", password="password"),
         request,
         response,
+        session,
         service,
-        LoginRateLimiter(maximum_attempts=5, window_seconds=300),
+        make_rate_limiter(),
     )
 
     assert result.user.username == "owner"
@@ -81,13 +90,15 @@ def test_login_sets_http_only_session_cookie() -> None:
 
 
 def test_login_returns_generic_unauthorized_error() -> None:
+    session = MagicMock(spec=Session)
     with pytest.raises(HTTPException) as error:
         login(
             LoginRequest(username="owner", password="wrong"),
             make_request(),
             Response(),
+            session,
             AuthServiceStub(invalid_credentials=True),
-            LoginRateLimiter(maximum_attempts=5, window_seconds=300),
+            make_rate_limiter(),
         )
 
     assert error.value.status_code == 401

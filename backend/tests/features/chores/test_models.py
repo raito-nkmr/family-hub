@@ -20,8 +20,8 @@ def test_chore_task_constraints_and_indexes_are_named() -> None:
     index_names = {index.name for index in ChoreTask.__table__.indexes}
 
     assert "pk_chore_tasks" in constraint_names
-    assert "ck_chore_tasks_name_trimmed" in constraint_names
-    assert "ck_chore_tasks_name_length" in constraint_names
+    assert "ck_chore_tasks_task_name_trimmed" in constraint_names
+    assert "ck_chore_tasks_task_name_length" in constraint_names
     assert "ck_chore_tasks_interval_days" in constraint_names
     assert "ix_chore_tasks_group_id_is_active" in index_names
     assert "ix_chore_tasks_category_id" in index_names

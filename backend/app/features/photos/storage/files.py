@@ -6,7 +6,7 @@ import os
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
-from app.features.photos.storage_types import (
+from app.features.photos.storage.types import (
     FinalizedUpload,
     InvalidStorageKeyError,
     PhotoStorageError,
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 def _storage_logger() -> logging.Logger:
     # Resolve the facade logger at call time so existing callers can keep patching
-    # the compatibility module's logger in tests and integrations.
-    from app.features.photos import storage as storage_module
+    # the facade module's logger in tests and integrations.
+    from app.features.photos.storage import facade as storage_module
 
     return storage_module.logger
 

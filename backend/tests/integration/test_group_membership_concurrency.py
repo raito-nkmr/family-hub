@@ -18,7 +18,7 @@ from app.features.groups.service import GroupMembershipInvitationError, GroupSer
 from app.features.notifications.models import NotificationType
 from app.features.notifications.public import enqueue_group_notification
 from app.features.photos.schemas import UploadFileCreate
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.uploads import UploadBatchInvalidError, UploadBatchService
 from app.features.shopping.models import ShoppingItem
 from app.features.shopping.service import ShoppingNotFoundError, ShoppingService
@@ -72,8 +72,8 @@ def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
                 FamilyGroupMembershipInvitation(
                     id=invitation_id,
                     group_id=group_id,
-                    user_id=target_id,
-                    requested_by_user_id=actor_id,
+                    invitee_user_id=target_id,
+                    invited_by_user_id=actor_id,
                     role=GroupRole.MEMBER,
                     status="pending",
                     created_at=now,
@@ -206,7 +206,7 @@ def test_member_action_cannot_commit_after_membership_removal(resource_kind: str
                 ChoreTask(
                     id=resource_id,
                     group_id=group_id,
-                    name="Kitchen",
+                    task_name="Kitchen",
                     category_id=category_id,
                     interval_days=1,
                     is_active=True,
@@ -325,8 +325,8 @@ def test_upload_batch_rechecks_membership_after_group_lock() -> None:
                     [
                         UploadFileCreate(
                             client_id="client-1",
-                            filename="photo.jpg",
-                            content_type="image/jpeg",
+                            original_filename="photo.jpg",
+                            declared_content_type="image/jpeg",
                             size_bytes=5,
                         )
                     ],

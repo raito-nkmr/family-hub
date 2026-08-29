@@ -17,7 +17,7 @@ from app.features.photos.models import (
     PhotoMetadata,
     PhotoShare,
 )
-from app.features.photos.storage import (
+from app.features.photos.storage.facade import (
     FinalizedUpload,
     PhotoStorage,
     PhotoStorageError,
@@ -64,7 +64,7 @@ def create_photo_activity_event(
     group_ids: set[UUID],
     occurred_at: datetime,
     *,
-    operation_id: UUID | None = None,
+    activity_operation_id: UUID | None = None,
 ) -> PhotoActivityEvent | None:
     if not group_ids:
         return None
@@ -75,7 +75,7 @@ def create_photo_activity_event(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         event_type=event_type,
-        operation_id=operation_id or uuid4(),
+        activity_operation_id=activity_operation_id or uuid4(),
         occurred_at=occurred_at,
         groups=[
             PhotoActivityEventGroup(event_id=event_id, group_id=group_id) for group_id in sorted(group_ids, key=str)
@@ -136,9 +136,9 @@ def register_staged_photo(
             sha256=staged.sha256,
             width=image.width,
             height=image.height,
-            captured_at=image.captured_at,
+            captured_at_original=image.captured_at_original,
             uploaded_at=uploaded_at,
-            effective_captured_at=image.captured_at or uploaded_at,
+            effective_captured_at=image.captured_at_original or uploaded_at,
             lifecycle_state=PhotoLifecycleState.ACTIVE,
             trashed_at=None,
             trashed_by_user_id=None,
@@ -186,7 +186,7 @@ def register_staged_photo(
             PhotoActivityEventType.UPLOADED,
             group_ids or set(),
             uploaded_at,
-            operation_id=activity_operation_id,
+            activity_operation_id=activity_operation_id,
         )
         return RegisteredPhoto(photo=photo, finalized_upload=finalized, activity_event=activity_event)
     except StorageUnavailableError as error:
@@ -207,13 +207,7 @@ def build_sidecar_metadata(photo: Photo) -> SidecarMetadata:
         memo_updated_by_username=photo.memo_updated_by_username,
         memo_updated_at=photo.memo_updated_at,
         metadata_version=photo.metadata_version,
-        sharing_audiences=tuple(
-            {
-                "type": "group",
-                "id": str(share.group_id),
-            }
-            for share in sorted(photo.shares, key=lambda share: str(share.group_id))
-        ),
+        group_ids=tuple(share.group_id for share in sorted(photo.shares, key=lambda share: str(share.group_id))),
         original_filename=photo.original_filename,
         storage_key=photo.storage_key,
         content_type=photo.content_type,
@@ -221,8 +215,9 @@ def build_sidecar_metadata(photo: Photo) -> SidecarMetadata:
         sha256=photo.sha256,
         width=photo.width,
         height=photo.height,
-        captured_at=photo.captured_at,
+        captured_at_original=photo.captured_at_original,
         captured_at_override=photo.metadata_record.captured_at_override,
+        effective_captured_at=photo.effective_captured_at,
         uploaded_at=photo.uploaded_at,
         derivatives=tuple(
             {

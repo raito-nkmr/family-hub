@@ -8,7 +8,8 @@ from app.features.groups.public import FamilyGroupMember
 from app.features.photos.access import photo_is_in_library
 from app.features.photos.models import Photo, PhotoFavorite, PhotoLifecycleState, PhotoMetadata, PhotoShare
 from app.features.photos.schemas import PhotoResponse, photo_response_from_model
-from app.features.photos.storage import PhotoStorage, StorageStatusCode
+from app.features.photos.storage.facade import PhotoStorage
+from app.features.photos.storage.types import StorageStatusCode
 
 __all__ = [
     "Photo",

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.features.auth.models import SystemRole, User
 from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.models import Photo, PhotoFavorite, PhotoLifecycleState
-from app.features.photos.storage import PhotoStorage
+from app.features.photos.storage.facade import PhotoStorage
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -52,7 +52,7 @@ def test_concurrent_favorite_registration_is_idempotent() -> None:
                     sha256="b" * 64,
                     width=1,
                     height=1,
-                    captured_at=None,
+                    captured_at_original=None,
                     uploaded_at=now,
                     effective_captured_at=now,
                     lifecycle_state=PhotoLifecycleState.ACTIVE,

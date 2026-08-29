@@ -52,17 +52,14 @@ def lock_user_group_ids(session: Session, user_id: UUID, requested_ids: Collecti
     """Lock requested groups while confirming membership for an authorization-sensitive commit."""
     if not requested_ids:
         return set()
-    statement = (
-        select(FamilyGroup.id)
-        .join(FamilyGroupMember, FamilyGroupMember.group_id == FamilyGroup.id)
-        .where(
-            FamilyGroup.id.in_(requested_ids),
-            FamilyGroupMember.user_id == user_id,
-        )
-        .order_by(FamilyGroup.id)
-        .with_for_update(of=FamilyGroup)
+    locked_group_ids = lock_group_ids(session, requested_ids)
+    if not locked_group_ids:
+        return set()
+    membership_statement = select(FamilyGroupMember.group_id).where(
+        FamilyGroupMember.group_id.in_(locked_group_ids),
+        FamilyGroupMember.user_id == user_id,
     )
-    return set(session.scalars(statement).all())
+    return set(session.scalars(membership_statement).all())
 
 
 def lock_group_admin(session: Session, group_id: UUID, user_id: UUID) -> FamilyGroup | None:
