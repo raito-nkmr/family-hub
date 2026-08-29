@@ -215,7 +215,9 @@ export function useShoppingStore(options: ShoppingWorkflowOptions) {
     activeTrip,
     lastPurchase: lastPurchase?.groupId === base.selectedGroupId ? lastPurchase : null,
     pendingItemIds: pendingIds,
-    loading: base.loadingGroups || base.loadingGroup || requestsQuery.isPending || tripsQuery.isPending,
+    loading:
+      base.loadingGroups ||
+      (base.selectedGroupId !== null && (base.loadingGroup || requestsQuery.isPending || tripsQuery.isPending)),
     pageError: mutationError ?? (requestsQuery.error || tripsQuery.error ? i18n.t('errors.shoppingLoad') : null),
     submitting:
       purchaseMutation.isPending ||
@@ -339,7 +341,9 @@ export function useShoppingList(options: ShoppingWorkflowOptions) {
     items: requestsQuery.data ?? [],
     categories: categoriesQuery.data ?? [],
     members: base.selectedGroup?.members.filter((member) => member.is_active) ?? [],
-    loading: base.loadingGroups || base.loadingGroup || requestsQuery.isPending || categoriesQuery.isPending,
+    loading:
+      base.loadingGroups ||
+      (base.selectedGroupId !== null && (base.loadingGroup || requestsQuery.isPending || categoriesQuery.isPending)),
     submitting:
       saveRequestMutation.isPending ||
       deleteRequestMutation.isPending ||

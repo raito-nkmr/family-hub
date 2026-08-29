@@ -146,6 +146,20 @@ describe('useShoppingWorkflow', () => {
     vi.mocked(reverseShoppingPurchase).mockResolvedValue(purchase)
   })
 
+  it('stops loading when the user has no shopping group', async () => {
+    vi.mocked(getGroups).mockResolvedValue([])
+
+    const { result } = renderHook(() => useShoppingStore({ onUnauthorized: vi.fn() }), {
+      wrapper: makeWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.groups).toEqual([])
+    expect(getShoppingRequests).not.toHaveBeenCalled()
+    expect(getShoppingTrips).not.toHaveBeenCalled()
+  })
+
   it('clears undo on group switch and invalidates the purchase group', async () => {
     const queryClient = createAppQueryClient()
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
