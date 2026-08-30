@@ -81,6 +81,10 @@ The repository provides two release helpers:
 - `deploy/production-release.sh` installs an archive and performs the guarded production cutover described in the release
   update section below.
 
+`scripts/create-production-release.sh` removes `VITE_UPLOAD_REQUEST_TIMEOUT_MS` while running the checks so timeout tests
+continue to use their development setting. When the variable is provided, it is applied only to the final production
+frontend build.
+
 The production host must provide `uv` at `/usr/local/bin/uv` or `/usr/bin/uv`. The installer runs it as root while preparing the
 new release and leaves the resulting runtime readable and executable by the `family-hub` service user. A user-local `uv` path
 may be supplied explicitly with `UV_BIN`, but the service user must not be expected to traverse an operator's home directory.
@@ -543,28 +547,32 @@ Replace `30000` with the measured production value before building the release.
 Transfer the resulting archive to the production host through the approved operator channel and verify the printed SHA-256
 before starting the installer. The archive path passed to the installer must be readable on that host.
 
-Install the cutover helper once on the production host. Keep `uv` in a system path, or pass an absolute `UV_BIN` path to the
-transient unit when that is not possible:
+Install the cutover helper once on the production host. Resolve `uv` to an executable absolute path and pass it explicitly
+to the transient unit. This works with both a system-wide installation and a user-local installation:
 
 ```bash
 sudo install -o root -g root -m 0755 \
   deploy/production-release.sh \
   /usr/local/sbin/family-hub-production-release
 
+uv_command="$(command -v uv)" || {
+  printf '%s\n' 'uv was not found; install it or add it to PATH.' >&2
+  exit 1
+}
+uv_bin="$(readlink -f -- "$uv_command")"
+[[ -x "$uv_bin" ]] || {
+  printf 'uv is not executable: %s\n' "$uv_bin" >&2
+  exit 1
+}
 sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
+  --setenv="UV_BIN=${uv_bin}" \
   /usr/local/sbin/family-hub-production-release \
   "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
 ```
 
-If `uv` is not installed in one of the default system paths, add a systemd environment assignment without putting secrets in
-the command:
-
-```bash
-sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
-  --setenv=UV_BIN=/absolute/path/to/uv \
-  /usr/local/sbin/family-hub-production-release \
-  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
-```
+Verify that `command -v uv` succeeds and that the resulting path is executable before starting the unit. The installer uses
+`uv` only as root to create the release virtual environment; the resulting release remains readable and executable by the
+`family-hub` service user.
 
 The transient unit continues after an SSH or terminal disconnect. Follow its output after reconnecting with:
 
