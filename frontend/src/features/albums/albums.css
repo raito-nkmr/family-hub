@@ -40,7 +40,7 @@
 
 .album-card__icon {
   width: 88px;
-  height: 72px;
+  aspect-ratio: 4 / 3;
 }
 
 .album-card__icon img,
