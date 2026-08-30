@@ -1,6 +1,6 @@
 """Remove the legacy single album group column.
 
-Revision ID: 20260830_02_remove_album_group_id
+Revision ID: 20260830_02_drop_album_group
 Revises: 20260830_01_album_groups
 Create Date: 2026-08-30
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260830_02_remove_album_group_id"
+revision: str = "20260830_02_drop_album_group"
 down_revision: str | None = "20260830_01_album_groups"
 branch_labels: str | None = None
 depends_on: str | None = None

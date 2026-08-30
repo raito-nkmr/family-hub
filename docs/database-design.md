@@ -406,7 +406,7 @@ the resettable databases are rebuilt:
 - `20260829_03_household` — chores, notifications, maintenance, and audit schema
 - `20260829_04_shopping` — shopping items, categories, assignments, trips, purchase history, and discarded-trip state
 - `20260830_01_album_groups` — album-to-family-group many-to-many sharing schema
-- `20260830_02_remove_album_group_id` — removal of the legacy single-group album column
+- `20260830_02_drop_album_group` — removal of the legacy single-group album column
 
 This is a history rebuild, not a forward-compatible upgrade path from the retired revisions. Disposable databases still
 stamped with a retired revision ID must be reset before applying this chain; real-data environments require a reviewed
@@ -418,7 +418,7 @@ and category ordering, are included directly in the current chain.
 After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations. For
 existing data, apply `20260830_01_album_groups`, run
 `python -m app.commands.migrate_album_group_shares --apply`, verify the dry-run reports zero remaining rows, and only then
-apply `20260830_02_remove_album_group_id`. The command is idempotent and is intentionally separate because Alembic
+apply `20260830_02_drop_album_group`. The command is idempotent and is intentionally separate because Alembic
 migrations must not backfill application data.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,

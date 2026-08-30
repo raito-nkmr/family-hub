@@ -15,10 +15,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260830_02_remove_album_group_id"]
+    assert scripts.get_heads() == ["20260830_02_drop_album_group"]
     assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
-        "20260830_02_remove_album_group_id",
+        "20260830_02_drop_album_group",
         "20260830_01_album_groups",
         "20260829_04_shopping",
         "20260829_03_household",
