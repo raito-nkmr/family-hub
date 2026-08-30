@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
-import { getCurrentSession } from './features/auth/api'
+import { getCurrentSession, login } from './features/auth/api'
 import App from './App'
+import { queryClient } from './shared/api/queryClient'
 
 vi.mock('./features/auth/api', () => ({
   getCurrentSession: vi.fn(),
@@ -38,7 +39,8 @@ function renderAppInStrictMode(initialEntry: string) {
 
 describe('App routes', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    queryClient.clear()
   })
 
   it('shows the privacy page without checking a login session', () => {
@@ -128,5 +130,24 @@ describe('App routes', () => {
 
     expect(await screen.findByText('Authenticated as family-member')).toBeInTheDocument()
     expect(getCurrentSession).toHaveBeenCalledOnce()
+  })
+
+  it('clears previous user data before showing a newly logged-in account', async () => {
+    const user = userEvent.setup()
+    vi.mocked(login).mockResolvedValue({
+      id: 'new-user-id',
+      username: 'new-user',
+      system_role: 'user',
+      must_change_password: false,
+    })
+    queryClient.setQueryData(['groups'], [{ id: 'previous-user-group' }])
+
+    renderApp('/')
+    await user.type(await screen.findByLabelText('ユーザー名'), 'new-user')
+    await user.type(await screen.findByLabelText('パスワード'), 'password')
+    await user.click(screen.getByRole('button', { name: 'ログイン' }))
+
+    expect(await screen.findByText('Authenticated as new-user')).toBeInTheDocument()
+    expect(queryClient.getQueryData(['groups'])).toBeUndefined()
   })
 })

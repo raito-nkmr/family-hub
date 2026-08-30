@@ -69,6 +69,12 @@
   background: var(--color-bg-subtle);
 }
 
+.maintenance-runs > li > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
 .maintenance-runs span {
   display: grid;
 }

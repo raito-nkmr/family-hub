@@ -60,6 +60,7 @@
 
 .category-toolbar {
   display: flex;
+  min-width: 0;
   gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
@@ -70,6 +71,7 @@
   display: flex;
   width: fit-content;
   max-width: 100%;
+  min-width: 0;
   gap: 0.25rem;
   padding: 0.25rem;
   overflow-x: auto;
@@ -260,6 +262,9 @@
 }
 
 .material-symbol-icon {
+  width: 1.5rem;
+  height: auto;
+  flex: 0 0 auto;
   fill: currentColor;
 }
 

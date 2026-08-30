@@ -74,12 +74,26 @@ production value during the build and deploy only `dist/`. Create the backend en
 committed `pyproject.toml` and `uv.lock` with `uv sync --locked --no-dev`. Update the lock file with `make backend-lock`
 when backend dependencies change.
 
-On the production host, install the pinned runtime environment after switching the release symlink:
+The repository provides two release helpers:
+
+- `scripts/create-production-release.sh` runs the repository checks, builds the frontend, and creates an archive without
+  `.env`, `.venv`, or `frontend/node_modules`.
+- `deploy/production-release.sh` installs an archive and performs the guarded production cutover described in the release
+  update section below.
+
+The production host must provide `uv` at `/usr/local/bin/uv` or `/usr/bin/uv`. The installer runs it as root while preparing the
+new release and leaves the resulting runtime readable and executable by the `family-hub` service user. A user-local `uv` path
+may be supplied explicitly with `UV_BIN`, but the service user must not be expected to traverse an operator's home directory.
+
+The installer creates the pinned runtime environment before switching the release symlink:
 
 ```bash
-cd /opt/family-hub/current/backend
-uv sync --locked --no-dev
+cd /opt/family-hub/releases/<new-release>/backend
+/usr/local/bin/uv sync --locked --no-dev
 ```
+
+Do not run this command against `/opt/family-hub/current` during a release update. A missing or incomplete `.venv` must never
+become the target of the production symlink.
 
 ## Pre-construction validation
 
@@ -479,18 +493,74 @@ real-data rebuild, use backup restoration instead of this reset procedure.
 
 ## Release update
 
-For a release with or without a database schema change:
+Create and install a release through the repository helpers. The archive creation step must run from a clean worktree so the
+release contains exactly the committed source and the freshly built frontend:
 
-1. Run all backend and frontend checks.
-2. Create a timestamped release.
-3. Review Alembic upgrades and irreversible changes.
-4. Stop Backend.
-5. Switch `current` to the new release.
-6. Apply Alembic.
-7. Start Backend.
-8. Validate and reload Caddy only when its configuration changed.
-9. Check loopback and custom-domain health, login, and core screens.
-10. If needed, roll back the application release; do not automatically downgrade the database.
+```bash
+release_id="$(date -u +%Y%m%dT%H%M%SZ)-$(git rev-parse --short HEAD)"
+VITE_UPLOAD_REQUEST_TIMEOUT_MS=30000 \
+  ./scripts/create-production-release.sh "$release_id"
+```
+
+Replace `30000` with the measured production value before building the release.
+
+Transfer the resulting archive to the production host through the approved operator channel and verify the printed SHA-256
+before starting the installer. The archive path passed to the installer must be readable on that host.
+
+Install the cutover helper once on the production host. Keep `uv` in a system path, or pass an absolute `UV_BIN` path to the
+transient unit when that is not possible:
+
+```bash
+sudo install -o root -g root -m 0755 \
+  deploy/production-release.sh \
+  /usr/local/sbin/family-hub-production-release
+
+sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
+  /usr/local/sbin/family-hub-production-release \
+  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
+```
+
+If `uv` is not installed in one of the default system paths, add a systemd environment assignment without putting secrets in
+the command:
+
+```bash
+sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
+  --setenv=UV_BIN=/absolute/path/to/uv \
+  /usr/local/sbin/family-hub-production-release \
+  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
+```
+
+The transient unit continues after an SSH or terminal disconnect. Follow its output after reconnecting with:
+
+```bash
+sudo journalctl -u "family-hub-release-${release_id}" --no-pager
+```
+
+The installer performs these guarded steps:
+
+1. Acquire a host-wide release lock and verify the current release and backend health.
+2. Reject unsafe archive paths, `.env`, `.venv`, and `node_modules` entries.
+3. Extract into a new timestamped release directory without touching `current`.
+4. Run the locked backend sync and verify the new Python runtime can start Uvicorn.
+5. Create a temporary symlink and atomically replace `current` with it.
+6. Restart Backend and wait up to 30 seconds for Backend, Caddy API health, and the static root to return successfully with the
+   new `index.html` content.
+7. Restore the previous release and restart Backend automatically if any post-switch check fails.
+
+The script leaves a failed release directory for inspection and never deletes an existing release automatically. It does not
+apply Alembic migrations or reload Caddy configuration. Review and run schema migrations separately when the release changes
+the backend schema; frontend-only releases such as the photo layout fix do not require a migration.
+
+For a release with a database schema change, review backward compatibility before applying Alembic. The application rollback
+protects the release symlink and service, but it must not downgrade an already-upgraded database.
+
+The normal release sequence is therefore:
+
+1. Build and verify the archive.
+2. Review any Alembic changes and apply them through the separate migration procedure when required.
+3. Start the detached release helper.
+4. Check the helper journal and loopback health.
+5. Run the public smoke, login, and core-screen acceptance checks.
 
 ## Ongoing production conditions
 

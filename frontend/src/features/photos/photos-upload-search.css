@@ -388,6 +388,12 @@
   grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(130px, 1fr));
   gap: 0.8rem;
   align-items: end;
+  min-width: 0;
+}
+
+.photo-search__form > *,
+.photo-search__body {
+  min-width: 0;
 }
 
 .photo-search__form label:not(.photo-search__mine) {

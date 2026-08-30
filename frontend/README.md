@@ -99,8 +99,8 @@ npm run check
 
 `npm run check`はOpenAPI生成物の整合性、format、lint、Vitest、およびproduction buildを順に検証します。
 テストを監視モードで実行する場合は`npm test`、1回だけ実行する場合は`npm run test:run`を使用します。
-主要クライアントであるiPhone相当のWebKitスモークテストはPlaywrightで実行します。初回だけブラウザを導入してから
-テストを実行してください。通常のE2Eは公開画面とAPI mockによる認証後主要ナビゲーションを検証する。
+主要クライアントであるiPhone相当と、タブレット操作を確認するiPad相当のWebKitスモークテストはPlaywrightで実行します。
+初回だけブラウザを導入してからテストを実行してください。通常のE2Eは公開画面とAPI mockによる認証後主要ナビゲーションを検証する。
 production PWA E2Eはbuildとpreview serverを使い、Service Worker登録とアプリシェルcacheを検証する。
 CIではブラウザとOS依存ライブラリを自動導入します。
 
