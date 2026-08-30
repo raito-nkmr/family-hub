@@ -37,10 +37,16 @@
   width: 32px;
 }
 
+.invitation-create__form,
+.invitation-result,
+.invitation-list {
+  width: 100%;
+  max-width: 960px;
+}
+
 .invitation-create__form {
   display: grid;
   gap: 0.5rem;
-  max-width: 960px;
   padding: clamp(1rem, 3vw, 1.5rem);
   margin-top: 1.5rem;
   background: var(--color-bg-emphasis);
@@ -127,6 +133,7 @@
   grid-template-columns: minmax(140px, 1fr) minmax(240px, 1.5fr) auto;
   gap: 1rem;
   align-items: center;
+  width: 100%;
   padding: 1rem;
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border-default);
