@@ -5,8 +5,7 @@ import { EmptyState } from '../../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
 import { PageMessage } from '../../../shared/ui/PageMessage'
 import { AlbumIcon, BackIcon, CheckIcon, DeleteIcon, EditIcon, PhotoIcon, PlusIcon } from '../../../shared/ui/icons'
-import { getPhotoThumbnailUrl } from '../../photos/api'
-import type { Photo } from '../../photos/public'
+import { PhotoPreview, type Photo } from '../../photos/public'
 import type { AlbumDetail } from '../api'
 import { AlbumPhotoGrid } from './AlbumPhotoGrid'
 
@@ -44,6 +43,12 @@ export function AlbumDetailView({
   onLoadMore,
 }: AlbumDetailViewProps) {
   const { t } = useTranslation()
+  const coverPhoto = album.cover_photo_id
+    ? (album.photos.find((photo) => photo.id === album.cover_photo_id) ?? {
+        id: album.cover_photo_id,
+        original_filename: '',
+      })
+    : null
   const [organizing, setOrganizing] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const selectedPhotos = useMemo(
@@ -84,7 +89,11 @@ export function AlbumDetailView({
 
       <header className="album-detail-header">
         <div className="album-detail-header__cover">
-          {album.cover_photo_id ? <img src={getPhotoThumbnailUrl(album.cover_photo_id)} alt="" /> : <AlbumIcon />}
+          {coverPhoto ? (
+            <PhotoPreview photo={coverPhoto} className="album-detail-header__cover-image" />
+          ) : (
+            <AlbumIcon />
+          )}
         </div>
         <div className="album-detail-header__copy">
           <p className="eyebrow">{t('albums.detailEyebrow')}</p>

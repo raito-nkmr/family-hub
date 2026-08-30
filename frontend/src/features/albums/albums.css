@@ -41,6 +41,7 @@
 .album-card__icon {
   width: 88px;
   aspect-ratio: 4 / 3;
+  align-self: start;
 }
 
 .album-card__icon img,

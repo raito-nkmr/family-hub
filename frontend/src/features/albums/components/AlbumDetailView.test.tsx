@@ -86,10 +86,10 @@ describe('AlbumDetailView', () => {
     expect(screen.queryByRole('button', { name: '表紙にする' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'アルバムから外す' })).not.toBeInTheDocument()
     expect(screen.getByText('表紙')).toBeInTheDocument()
-    expect(document.querySelector('.album-detail-header__cover img')).toHaveAttribute(
-      'src',
-      '/api/v1/photos/photo-1/thumbnail',
-    )
+    const coverImage = document.querySelector('.album-detail-header__cover img')
+    const firstPhotoImage = document.querySelector('.album-photo-card__image')
+    expect(coverImage).toHaveAttribute('src', '/api/v1/photos/photo-1/thumbnail')
+    expect(coverImage).toHaveAttribute('src', firstPhotoImage?.getAttribute('src'))
 
     fireEvent.click(screen.getByRole('button', { name: /second.jpg/ }))
     expect(props.onSelectPhoto).toHaveBeenCalledWith(secondPhoto)
