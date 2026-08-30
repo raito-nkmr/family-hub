@@ -191,6 +191,9 @@ printf 'Creating pinned backend environment with %s\n' "$uv_bin"
   env -u VIRTUAL_ENV -u UV_PROJECT_ENVIRONMENT "$uv_bin" sync --locked --no-dev
 )
 chown -R root:root "$release_dir"
+# The release may have been extracted or created under a restrictive root umask.
+# Keep releases immutable while allowing the service users to traverse and read them.
+chmod -R a+rX "$release_dir"
 
 backend_python="$release_dir/backend/.venv/bin/python"
 [[ -x "$backend_python" ]] || die "backend environment was not created: $backend_python"
