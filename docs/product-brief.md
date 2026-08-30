@@ -78,7 +78,8 @@ On mobile, the photo list shows thumbnails with month headings, favorite state, 
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
 in photo details. On tablet-sized screens and desktop, tapping or clicking the left or right edge of the enlarged photo view
 moves to the adjacent photo; horizontal swipes provide the same navigation on phones. Both operate on photos already loaded
-in the library. An album detail header and the grid card marked as its cover use the same centered `4:3` thumbnail crop.
+in the library. Album-list cards use a full-width cover above their metadata. An album-list cover, its detail header, and
+the grid card marked as its cover use the same centered `4:3` thumbnail crop.
 Photo details fit the complete image or video inside a bounded media stage without cropping. If the device cannot display or
 play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the

@@ -62,7 +62,7 @@ These commits are already on `dev`:
 
 ## Implemented uncommitted change
 
-The fix makes the album detail header and album photo grid use one component:
+The fix makes the album list, album detail header, and album photo grid use one component:
 
 - `frontend/src/features/albums/components/AlbumPhotoThumbnail.tsx`
   - Renders a shared `4 / 3` thumbnail frame and `PhotoPreview` image.
@@ -71,10 +71,16 @@ The fix makes the album detail header and album photo grid use one component:
   - Uses `AlbumPhotoThumbnail` for the large header cover.
 - `frontend/src/features/albums/components/AlbumPhotoGrid.tsx`
   - Uses `AlbumPhotoThumbnail` for every grid thumbnail.
+- `frontend/src/features/albums/components/AlbumCard.tsx`
+  - Uses `AlbumPhotoThumbnail` for the album-list cover instead of a separate
+    image layout path.
 - `frontend/src/features/albums/albums.css`
   - Uses the same image class for both locations:
     `width: 100%`, `height: 100%`, `object-fit: cover`,
     `object-position: center center`.
+  - Forces both shared frames to `display: block` and absolutely positions the
+    image over the complete frame. This prevents the header's legacy grid layout
+    from giving Safari a different percentage-height layout path.
   - Removed the album-grid hover `transform: scale(1.025)` so the grid image
     does not have a different visible range while hovered.
 - `frontend/src/features/albums/components/AlbumDetailView.test.tsx`
@@ -84,7 +90,9 @@ The fix makes the album detail header and album photo grid use one component:
   - Loads an album with a portrait cover through mocked API and thumbnail responses.
   - Runs in iPhone and iPad WebKit and verifies equal photo IDs, image URLs,
     natural dimensions, computed `object-fit`/`object-position`, transforms, and
-    frame aspect ratios.
+    frame aspect ratios across the album list, detail header, and cover card. It
+    also verifies that all three images use absolute positioning and fill their
+    frames edge to edge.
 
 This change has not been committed yet.
 
@@ -154,19 +162,14 @@ backend does not have a separate crop path for album covers.
 
 ## Checks already run
 
-From `frontend/`:
+From `frontend/`, the current worktree passes:
 
-- `npm run format`
 - `npm run format:check`
 - `npm run lint`
 - `npm run test:run`
-  - 83 test files passed.
-  - 328 tests passed.
+  - 83 test files and 324 tests passed.
 - `npm run build`
-  - TypeScript build and Vite production build passed.
-
-Additional checks for the current fix:
-
+  - TypeScript and the Vite production build passed.
 - `npx vitest run src/features/albums/components/AlbumDetailView.test.tsx`
   - 1 test file and 2 tests passed.
 - `npx playwright test e2e/album-cover-layout.spec.ts`
@@ -174,16 +177,6 @@ Additional checks for the current fix:
 
 The browser test compares computed layout values. A screenshot baseline was not
 added because those values no longer show separate crop paths.
-
-The current album files also pass targeted Prettier and ESLint checks, and a direct
-Vite production build succeeds. The repository-wide frontend checks were attempted,
-but concurrent group-membership work currently causes failures outside this change:
-
-- `format:check`: `src/features/groups/GroupPage.test.tsx` is not formatted.
-- `lint` and the TypeScript phase of `build`: `queryClient` is unused in
-  `src/features/groups/GroupPage.tsx`.
-- `test:run`: two `InviteGroupMemberDialog` tests still expect the previous
-  invitation wording.
 
 ## If the mismatch remains in the affected browser
 

@@ -9,9 +9,9 @@ interface AlbumPhotoThumbnailProps {
 
 export function AlbumPhotoThumbnail({ photo, className, children }: AlbumPhotoThumbnailProps) {
   return (
-    <div className={`album-photo-thumbnail ${className}`} data-photo-id={photo.id}>
+    <span className={`album-photo-thumbnail ${className}`} data-photo-id={photo.id}>
       <PhotoPreview photo={photo} className="album-photo-thumbnail__image" />
       {children}
-    </div>
+    </span>
   )
 }

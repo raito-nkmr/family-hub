@@ -1,16 +1,20 @@
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../../shared/lib/format'
 import { AlbumIcon } from '../../../shared/ui/icons'
-import { getPhotoThumbnailUrl } from '../../photos/api'
 import type { Album } from '../api'
+import { AlbumPhotoThumbnail } from './AlbumPhotoThumbnail'
 
 export function AlbumCard({ album, onSelect }: { album: Album; onSelect: (album: Album) => void }) {
   const { t } = useTranslation()
   return (
     <button className="album-card" type="button" onClick={() => onSelect(album)}>
-      <span className="album-card__icon">
-        {album.cover_photo_id ? <img src={getPhotoThumbnailUrl(album.cover_photo_id)} alt="" /> : <AlbumIcon />}
-      </span>
+      {album.cover_photo_id ? (
+        <AlbumPhotoThumbnail photo={{ id: album.cover_photo_id, original_filename: '' }} className="album-card__icon" />
+      ) : (
+        <span className="album-card__icon">
+          <AlbumIcon />
+        </span>
+      )}
       <span className="album-card__body">
         <strong>{album.title}</strong>
         <span>{album.description ?? t('albums.noDescription')}</span>

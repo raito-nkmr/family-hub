@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const coverPhoto = {
   id: 'cover-photo',
@@ -102,52 +102,89 @@ async function mockAlbumApi(page: Page) {
   })
 }
 
-test('uses the same crop for the album header and cover card', async ({ page }) => {
+async function readThumbnailLayout(frame: Locator) {
+  await expect(frame).toBeVisible()
+  await expect(frame.locator('img')).toHaveJSProperty('complete', true)
+  return frame.evaluate((element) => {
+    const frame = element as HTMLElement
+    const image = frame.querySelector<HTMLImageElement>('img')!
+    const frameRect = frame.getBoundingClientRect()
+    const imageRect = image.getBoundingClientRect()
+    const frameStyle = getComputedStyle(frame)
+    const imageStyle = getComputedStyle(image)
+    return {
+      photoId: frame.dataset.photoId,
+      source: new URL(image.currentSrc || image.src).pathname,
+      naturalSize: [image.naturalWidth, image.naturalHeight],
+      frameAspectRatio: frameRect.width / frameRect.height,
+      frameDisplay: frameStyle.display,
+      frameRect: {
+        top: frameRect.top,
+        right: frameRect.right,
+        bottom: frameRect.bottom,
+        left: frameRect.left,
+      },
+      imageRect: {
+        top: imageRect.top,
+        right: imageRect.right,
+        bottom: imageRect.bottom,
+        left: imageRect.left,
+      },
+      position: imageStyle.position,
+      objectFit: imageStyle.objectFit,
+      objectPosition: imageStyle.objectPosition,
+      transform: imageStyle.transform,
+    }
+  })
+}
+
+test('uses the same crop for the album list, header, and cover card', async ({ page }) => {
   await mockAlbumApi(page)
+
+  await page.goto('/photos/albums')
+  const listFrame = page.locator(`.album-card__icon[data-photo-id="${coverPhoto.id}"]`)
+  const listLayout = await readThumbnailLayout(listFrame)
+  const listCardWidth = await page.locator('.album-card').evaluate((card) => card.getBoundingClientRect().width)
+
   await page.goto(`/photos/albums?album=${album.id}`)
 
   const coverFrame = page.locator(`.album-detail-header__cover[data-photo-id="${coverPhoto.id}"]`)
   const cardFrame = page.locator(`.album-photo-card__image-wrap[data-photo-id="${coverPhoto.id}"]`)
-  await expect(coverFrame).toBeVisible()
-  await expect(cardFrame).toBeVisible()
-  await expect(coverFrame.locator('img')).toHaveJSProperty('complete', true)
-  await expect(cardFrame.locator('img')).toHaveJSProperty('complete', true)
+  const coverLayout = await readThumbnailLayout(coverFrame)
+  const cardLayout = await readThumbnailLayout(cardFrame)
 
-  const layout = await page.evaluate((photoId) => {
-    const readThumbnail = (selector: string) => {
-      const frame = document.querySelector<HTMLElement>(`${selector}[data-photo-id="${photoId}"]`)!
-      const image = frame.querySelector<HTMLImageElement>('img')!
-      const frameRect = frame.getBoundingClientRect()
-      const imageStyle = getComputedStyle(image)
-      return {
-        photoId: frame.dataset.photoId,
-        source: new URL(image.currentSrc || image.src).pathname,
-        naturalSize: [image.naturalWidth, image.naturalHeight],
-        frameAspectRatio: frameRect.width / frameRect.height,
-        objectFit: imageStyle.objectFit,
-        objectPosition: imageStyle.objectPosition,
-        transform: imageStyle.transform,
-      }
-    }
-
-    return {
-      cover: readThumbnail('.album-detail-header__cover'),
-      card: readThumbnail('.album-photo-card__image-wrap'),
-    }
-  }, coverPhoto.id)
-
-  expect(layout.cover.photoId).toBe(coverPhoto.id)
-  expect(layout.card.photoId).toBe(layout.cover.photoId)
-  expect(layout.cover.source).toBe(`/api/v1/photos/${coverPhoto.id}/thumbnail`)
-  expect(layout.card.source).toBe(layout.cover.source)
-  expect(layout.cover.naturalSize).toEqual([360, 640])
-  expect(layout.card.naturalSize).toEqual(layout.cover.naturalSize)
-  expect(layout.cover.objectFit).toBe('cover')
-  expect(layout.card.objectFit).toBe(layout.cover.objectFit)
-  expect(layout.cover.objectPosition).toBe('50% 50%')
-  expect(layout.card.objectPosition).toBe(layout.cover.objectPosition)
-  expect(layout.cover.transform).toBe('none')
-  expect(layout.card.transform).toBe(layout.cover.transform)
-  expect(layout.cover.frameAspectRatio).toBeCloseTo(4 / 3, 2)
-  expect(layout.card.frameAspectRatio).toBeCloseTo(layout.cover.frameAspectRatio, 2)
+  expect(listLayout.photoId).toBe(coverPhoto.id)
+  expect(coverLayout.photoId).toBe(listLayout.photoId)
+  expect(cardLayout.photoId).toBe(coverLayout.photoId)
+  expect(listLayout.source).toBe(`/api/v1/photos/${coverPhoto.id}/thumbnail`)
+  expect(coverLayout.source).toBe(listLayout.source)
+  expect(cardLayout.source).toBe(coverLayout.source)
+  expect(listLayout.naturalSize).toEqual([360, 640])
+  expect(coverLayout.naturalSize).toEqual(listLayout.naturalSize)
+  expect(cardLayout.naturalSize).toEqual(coverLayout.naturalSize)
+  expect(listLayout.frameDisplay).toBe('block')
+  expect(coverLayout.frameDisplay).toBe(listLayout.frameDisplay)
+  expect(cardLayout.frameDisplay).toBe(coverLayout.frameDisplay)
+  expect(listLayout.position).toBe('absolute')
+  expect(coverLayout.position).toBe(listLayout.position)
+  expect(cardLayout.position).toBe(coverLayout.position)
+  expect(listLayout.objectFit).toBe('cover')
+  expect(coverLayout.objectFit).toBe(listLayout.objectFit)
+  expect(cardLayout.objectFit).toBe(coverLayout.objectFit)
+  expect(listLayout.objectPosition).toBe('50% 50%')
+  expect(coverLayout.objectPosition).toBe(listLayout.objectPosition)
+  expect(cardLayout.objectPosition).toBe(coverLayout.objectPosition)
+  expect(listLayout.transform).toBe('none')
+  expect(coverLayout.transform).toBe(listLayout.transform)
+  expect(cardLayout.transform).toBe(coverLayout.transform)
+  expect(listLayout.frameAspectRatio).toBeCloseTo(4 / 3, 2)
+  expect((listLayout.frameRect.right - listLayout.frameRect.left) / listCardWidth).toBeGreaterThan(0.98)
+  expect(coverLayout.frameAspectRatio).toBeCloseTo(4 / 3, 2)
+  expect(cardLayout.frameAspectRatio).toBeCloseTo(coverLayout.frameAspectRatio, 2)
+  for (const thumbnail of [listLayout, coverLayout, cardLayout]) {
+    expect(thumbnail.imageRect.top).toBeCloseTo(thumbnail.frameRect.top, 0)
+    expect(thumbnail.imageRect.right).toBeCloseTo(thumbnail.frameRect.right, 0)
+    expect(thumbnail.imageRect.bottom).toBeCloseTo(thumbnail.frameRect.bottom, 0)
+    expect(thumbnail.imageRect.left).toBeCloseTo(thumbnail.frameRect.left, 0)
+  }
 })
