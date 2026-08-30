@@ -419,7 +419,9 @@ After the rebuild, never rewrite these revisions again; future approved schema c
 existing data, apply `20260830_01_album_groups`, run
 `python -m app.commands.migrate_album_group_shares --apply`, verify the dry-run reports zero remaining rows, and only then
 apply `20260830_02_drop_album_group`. The command is idempotent and is intentionally separate because Alembic
-migrations must not backfill application data.
+migrations must not backfill application data. The second revision locks `albums` and `album_group_shares`, verifies that
+every album has a target and that every non-null legacy target has been copied, and aborts before dropping the legacy column
+when that check fails.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
 update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate

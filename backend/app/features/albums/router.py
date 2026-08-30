@@ -143,7 +143,7 @@ def update_album(
             update_groups="group_ids" in body.model_fields_set,
             acting_username=authenticated_user.username,
         )
-    except (AlbumNotFoundError, PhotoNotInAlbumError, AlbumPersistenceError) as error:
+    except (AlbumNotFoundError, PhotoNotFoundError, PhotoNotInAlbumError, AlbumPersistenceError) as error:
         _raise_http_error(error)
     return AlbumResponse.model_validate(album)
 

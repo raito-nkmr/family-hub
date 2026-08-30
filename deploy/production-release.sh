@@ -20,14 +20,19 @@ die() {
 
 usage() {
   cat <<EOF
-Usage: $script_name <release-archive> [release-id]
+Usage:
+  $script_name <release-archive> [release-id]
+  $script_name --prepare-only <release-archive> [release-id]
+  $script_name --activate-prepared <release-id>
 
 Install a release archive, prepare its backend environment, and switch the
-production symlink only after local validation succeeds. Use a new release id
-for every attempt; partial releases are never reused.
+production symlink only after local validation succeeds. Use --prepare-only
+before a schema migration that must run from the new release, then use
+--activate-prepared after the migration succeeds. Use a new release id for every
+attempt; partial releases are never reused.
 
-Set UV_BIN to an absolute path when uv is not installed in /usr/local/bin/uv
-or /usr/bin/uv.
+While preparing a release, set UV_BIN to an absolute path when uv is not
+installed in /usr/local/bin/uv or /usr/bin/uv.
 EOF
 }
 
@@ -36,19 +41,39 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   exit 0
 fi
 
-if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
-  usage >&2
-  exit 2
-fi
+mode=install_and_activate
+case "${1:-}" in
+  --prepare-only)
+    mode=prepare_only
+    shift
+    ;;
+  --activate-prepared)
+    mode=activate_prepared
+    shift
+    ;;
+esac
 
 [[ "$EUID" -eq 0 ]] || die 'run as root'
 
-archive_path="$(readlink -f -- "$1")"
-[[ -f "$archive_path" ]] || die "release archive not found: $archive_path"
+archive_path=''
+if [[ "$mode" == activate_prepared ]]; then
+  if [[ "$#" -ne 1 ]]; then
+    usage >&2
+    exit 2
+  fi
+  release_id="$1"
+else
+  if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
+    usage >&2
+    exit 2
+  fi
+  archive_path="$(readlink -f -- "$1")"
+  [[ -f "$archive_path" ]] || die "release archive not found: $archive_path"
 
-archive_name="$(basename "$archive_path")"
-default_release_id="${archive_name%.tar.gz}"
-release_id="${2:-$default_release_id}"
+  archive_name="$(basename "$archive_path")"
+  default_release_id="${archive_name%.tar.gz}"
+  release_id="${2:-$default_release_id}"
+fi
 
 if [[ ! "$release_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
   die "release id contains unsupported characters: $release_id"
@@ -57,19 +82,25 @@ fi
 release_dir="$releases_dir/$release_id"
 
 command -v curl >/dev/null || die 'curl is required'
-command -v chown >/dev/null || die 'chown is required'
 command -v flock >/dev/null || die 'flock is required'
 command -v getent >/dev/null || die 'getent is required'
-command -v install >/dev/null || die 'install is required'
 command -v mv >/dev/null || die 'mv is required'
 command -v runuser >/dev/null || die 'runuser is required'
 command -v sha256sum >/dev/null || die 'sha256sum is required'
 command -v systemctl >/dev/null || die 'systemctl is required'
-command -v tar >/dev/null || die 'tar is required'
+if [[ "$mode" != activate_prepared ]]; then
+  command -v chown >/dev/null || die 'chown is required'
+  command -v install >/dev/null || die 'install is required'
+  command -v tar >/dev/null || die 'tar is required'
+fi
 
 [[ -d "$releases_dir" ]] || die "release directory does not exist: $releases_dir"
 [[ -L "$current_link" ]] || die "current path is not a symlink: $current_link"
-[[ -e "$release_dir" || -L "$release_dir" ]] && die "release already exists: $release_dir"
+if [[ "$mode" == activate_prepared ]]; then
+  [[ -d "$release_dir" && ! -L "$release_dir" ]] || die "prepared release does not exist: $release_dir"
+else
+  [[ ! -e "$release_dir" && ! -L "$release_dir" ]] || die "release already exists: $release_dir"
+fi
 getent passwd family-hub >/dev/null || die 'family-hub user does not exist'
 getent group family-hub >/dev/null || die 'family-hub group does not exist'
 
@@ -79,32 +110,37 @@ case "$old_release" in
   "$releases_dir"/*) ;;
   *) die "current symlink points outside the release directory: $old_release" ;;
 esac
+[[ "$old_release" != "$release_dir" ]] || die "release is already active: $release_dir"
 
-if [[ -n "${UV_BIN:-}" ]]; then
-  uv_bin="$UV_BIN"
-else
-  uv_bin=''
-  for candidate in /usr/local/bin/uv /usr/bin/uv; do
-    if [[ -x "$candidate" ]]; then
-      uv_bin="$candidate"
-      break
-    fi
-  done
+uv_bin=''
+if [[ "$mode" != activate_prepared ]]; then
+  if [[ -n "${UV_BIN:-}" ]]; then
+    uv_bin="$UV_BIN"
+  else
+    for candidate in /usr/local/bin/uv /usr/bin/uv; do
+      if [[ -x "$candidate" ]]; then
+        uv_bin="$candidate"
+        break
+      fi
+    done
+  fi
+  [[ -n "$uv_bin" && "$uv_bin" = /* && -x "$uv_bin" ]] || die \
+    'uv was not found; install it system-wide or set UV_BIN to an absolute executable path'
 fi
-[[ -n "$uv_bin" && "$uv_bin" = /* && -x "$uv_bin" ]] || die \
-  'uv was not found; install it system-wide or set UV_BIN to an absolute executable path'
 
-archive_entries() {
-  tar --list --file="$archive_path"
-}
+if [[ "$mode" != activate_prepared ]]; then
+  archive_entries() {
+    tar --list --file="$archive_path"
+  }
 
-archive_entries >/dev/null || die 'release archive is not a readable tar archive'
+  archive_entries >/dev/null || die 'release archive is not a readable tar archive'
 
-unsafe_entry="$(archive_entries | grep -E '(^/|(^|/)\.\.(/|$))' | head -n 1 || true)"
-[[ -z "$unsafe_entry" ]] || die "release archive contains an unsafe path: $unsafe_entry"
+  unsafe_entry="$(archive_entries | grep -E '(^/|(^|/)\.\.(/|$))' | head -n 1 || true)"
+  [[ -z "$unsafe_entry" ]] || die "release archive contains an unsafe path: $unsafe_entry"
 
-forbidden_entry="$(archive_entries | grep -E '(^|/)\.env$|(^|/)\.venv(/|$)|(^|/)node_modules(/|$)' | head -n 1 || true)"
-[[ -z "$forbidden_entry" ]] || die "release archive contains a forbidden path: $forbidden_entry"
+  forbidden_entry="$(archive_entries | grep -E '(^|/)\.env$|(^|/)\.venv(/|$)|(^|/)node_modules(/|$)' | head -n 1 || true)"
+  [[ -z "$forbidden_entry" ]] || die "release archive contains a forbidden path: $forbidden_entry"
+fi
 
 exec 9>"$lock_file"
 flock -n 9 || die 'another Family Hub release is already running'
@@ -171,11 +207,15 @@ rollback() {
   wait_for_http "$backend_health_url"
 }
 
-check_current_health
+if [[ "$mode" != activate_prepared ]]; then
+  check_current_health
+fi
 
-printf 'Preparing %s\n' "$release_dir"
-install -d -o root -g root -m 0755 "$release_dir"
-tar --extract --gzip --file="$archive_path" --directory="$release_dir" --no-same-owner --no-same-permissions
+if [[ "$mode" != activate_prepared ]]; then
+  printf 'Preparing %s\n' "$release_dir"
+  install -d -o root -g root -m 0755 "$release_dir"
+  tar --extract --gzip --file="$archive_path" --directory="$release_dir" --no-same-owner --no-same-permissions
+fi
 
 for required_path in \
   backend/pyproject.toml \
@@ -185,19 +225,27 @@ for required_path in \
   [[ -e "$release_dir/$required_path" ]] || die "release is missing: $required_path"
 done
 
-printf 'Creating pinned backend environment with %s\n' "$uv_bin"
-(
-  cd "$release_dir/backend"
-  env -u VIRTUAL_ENV -u UV_PROJECT_ENVIRONMENT "$uv_bin" sync --locked --no-dev
-)
-chown -R root:root "$release_dir"
-# The release may have been extracted or created under a restrictive root umask.
-# Keep releases immutable while allowing the service users to traverse and read them.
-chmod -R a+rX "$release_dir"
+if [[ "$mode" != activate_prepared ]]; then
+  printf 'Creating pinned backend environment with %s\n' "$uv_bin"
+  (
+    cd "$release_dir/backend"
+    env -u VIRTUAL_ENV -u UV_PROJECT_ENVIRONMENT "$uv_bin" sync --locked --no-dev
+  )
+  chown -R root:root "$release_dir"
+  # The release may have been extracted or created under a restrictive root umask.
+  # Keep releases immutable while allowing the service users to traverse and read them.
+  chmod -R a+rX "$release_dir"
+fi
 
 backend_python="$release_dir/backend/.venv/bin/python"
 [[ -x "$backend_python" ]] || die "backend environment was not created: $backend_python"
 runuser --user family-hub -- "$backend_python" -m uvicorn --help >/dev/null
+
+if [[ "$mode" == prepare_only ]]; then
+  printf 'Release prepared: %s\n' "$release_dir"
+  printf '%s\n' 'The production symlink and running services were not changed.'
+  exit 0
+fi
 
 next_link="${current_link}.next.$$"
 [[ ! -e "$next_link" && ! -L "$next_link" ]] || die "temporary switch link already exists: $next_link"
@@ -205,6 +253,9 @@ ln -s -- "$release_dir" "$next_link"
 mv --no-target-directory -- "$next_link" "$current_link"
 
 if ! systemctl restart "$backend_service"; then
+  if [[ "$mode" == activate_prepared ]]; then
+    die 'new backend failed; the migrated release remains selected and requires manual recovery'
+  fi
   rollback || die 'new backend failed and automatic rollback also failed'
   die 'new backend failed; application was rolled back'
 fi
@@ -212,6 +263,9 @@ fi
 if ! wait_for_http "$backend_health_url" || \
   ! wait_for_http "$caddy_health_url" || \
   ! wait_for_static_release; then
+  if [[ "$mode" == activate_prepared ]]; then
+    die 'post-switch health check failed; the migrated release remains selected and requires manual recovery'
+  fi
   rollback || die 'post-switch health check failed and automatic rollback also failed'
   die 'post-switch health check failed; application was rolled back'
 fi

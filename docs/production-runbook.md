@@ -79,7 +79,8 @@ The repository provides two release helpers:
 - `scripts/create-production-release.sh` runs the repository checks, builds the frontend, and creates an archive without
   `.env`, `.venv`, or `frontend/node_modules`.
 - `deploy/production-release.sh` installs an archive and performs the guarded production cutover described in the release
-  update section below.
+  update section below. Its `--prepare-only` and `--activate-prepared` modes separate installation from cutover when a schema
+  migration must run from the new release.
 
 `scripts/create-production-release.sh` removes `VITE_UPLOAD_REQUEST_TIMEOUT_MS` while running the checks so timeout tests
 continue to use their development setting. When the variable is provided, it is applied only to the final production
@@ -179,60 +180,83 @@ sudo systemd-run --wait --pipe --collect \
 ```
 
 For an existing database currently stamped at `20260829_04_shopping`, do not apply `upgrade head` in one step: the legacy
-`albums.group_id` column is needed by the data migration. Apply the album schema revision, copy the existing album targets,
-verify that a dry run reports zero rows, and then apply the revision that removes the legacy column:
+`albums.group_id` column is needed by the data migration. First use the release helper's `--prepare-only` mode as described
+in the release update section. The prepared release must contain the new revision and command while `current` still points
+to the running old release. Then stop Backend so no album can be written between the copy and column removal, and run every
+step from the prepared release's absolute path:
 
 ```bash
+release_id=<new-release-id>
+release_backend="/opt/family-hub/releases/${release_id}/backend"
+sudo test -x "$release_backend/.venv/bin/alembic"
+sudo systemctl stop family-hub-backend.service
+if sudo systemctl is-active --quiet family-hub-backend.service; then
+  printf '%s\n' 'Backend did not stop; aborting migration.' >&2
+  exit 1
+fi
+
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$release_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/alembic upgrade 20260830_01_album_groups
+  "$release_backend/.venv/bin/alembic" upgrade 20260830_01_album_groups
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$release_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$release_backend/.venv/bin/python" \
   -m app.commands.migrate_album_group_shares --apply
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$release_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$release_backend/.venv/bin/python" \
   -m app.commands.migrate_album_group_shares
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$release_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
+  "$release_backend/.venv/bin/alembic" upgrade head
 ```
 
-Fresh databases with no legacy albums can use `alembic upgrade head` directly. Never run the data command after the second
-revision has removed `albums.group_id`.
+The second revision locks the album tables and refuses to remove `albums.group_id` if any album target is missing. If any
+migration command fails, keep Backend stopped, correct the migration state, and retry from the same prepared release. After
+the second revision succeeds, do not start the previous release against the new schema. Fresh databases with no legacy
+albums can use `alembic upgrade head` directly. Never run the data command after the second revision has removed
+`albums.group_id`.
 
 When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
-read-only integrity check before starting the Backend. An intentional empty-environment reset uses the guarded orphan-file
-cleanup command in the reset procedure below instead.
+read-only integrity check before starting the Backend. Use the prepared release path during a schema-changing release; use
+`current` only for a fresh construction that has no previous release to preserve. An intentional empty-environment reset
+uses the guarded orphan-file cleanup command in the reset procedure below instead.
 
 ```bash
+migration_backend="${release_backend:-/opt/family-hub/current/backend}"
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$migration_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$migration_backend/.venv/bin/python" \
   -m app.commands.sync_photo_sidecars
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$migration_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$migration_backend/.venv/bin/python" \
   -m app.commands.check_photo_integrity
+```
+
+After all migration-specific data commands and integrity checks succeed, activate the prepared release. This starts Backend
+on the migrated schema:
+
+```bash
+sudo /usr/local/sbin/family-hub-production-release --activate-prepared "$release_id"
 ```
 
 The current resettable schema chain has four readable domain revisions followed by the album sharing revisions. The upgrade contains
@@ -580,7 +604,7 @@ The transient unit continues after an SSH or terminal disconnect. Follow its out
 sudo journalctl -u "family-hub-release-${release_id}" --no-pager
 ```
 
-The installer performs these guarded steps:
+In its default install-and-activate mode, the installer performs these guarded steps:
 
 1. Acquire a host-wide release lock and verify the current release and backend health.
 2. Reject unsafe archive paths, `.env`, `.venv`, and `node_modules` entries.
@@ -591,6 +615,11 @@ The installer performs these guarded steps:
    new `index.html` content.
 7. Restore the previous release and restart Backend automatically if any post-switch check fails.
 
+`--prepare-only` stops after step 4 and leaves `current` and services unchanged. After the separately reviewed migration,
+`--activate-prepared <release-id>` performs the atomic switch and health checks without recreating the environment. This
+activation mode intentionally does not roll back to the old release after a failure because the old Backend may be
+incompatible with the migrated schema; it leaves the prepared release selected for manual recovery.
+
 The script leaves a failed release directory for inspection and never deletes an existing release automatically. It does not
 apply Alembic migrations or reload Caddy configuration. Review and run schema migrations separately when the release changes
 the backend schema; frontend-only releases such as the photo layout fix do not require a migration.
@@ -598,13 +627,32 @@ the backend schema; frontend-only releases such as the photo layout fix do not r
 For a release with a database schema change, review backward compatibility before applying Alembic. The application rollback
 protects the release symlink and service, but it must not downgrade an already-upgraded database.
 
-The normal release sequence is therefore:
+For a release without a schema change, the normal sequence is therefore:
 
 1. Build and verify the archive.
-2. Review any Alembic changes and apply them through the separate migration procedure when required.
-3. Start the detached release helper.
-4. Check the helper journal and loopback health.
-5. Run the public smoke, login, and core-screen acceptance checks.
+2. Start the detached release helper in its default install-and-activate mode.
+3. Check the helper journal and loopback health.
+4. Run the public smoke, login, and core-screen acceptance checks.
+
+For a schema-changing release, prepare it before running any new revision:
+
+```bash
+sudo systemd-run --unit="family-hub-release-prepare-${release_id}" --wait --pipe --collect \
+  --setenv="UV_BIN=${uv_bin}" \
+  /usr/local/sbin/family-hub-production-release \
+  --prepare-only \
+  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
+```
+
+Review compatibility, stop Backend when required, and run Alembic, any separate data command, and required integrity checks
+from `/opt/family-hub/releases/${release_id}/backend`, following the migration-specific procedure above. After they succeed,
+activate exactly that prepared release:
+
+```bash
+sudo systemd-run --unit="family-hub-release-activate-${release_id}" --collect \
+  /usr/local/sbin/family-hub-production-release \
+  --activate-prepared "$release_id"
+```
 
 ## Ongoing production conditions
 

@@ -91,6 +91,54 @@ def test_get_album_raises_when_album_does_not_exist() -> None:
         service.get_album(uuid4(), uuid4())
 
 
+def test_album_mutation_locks_groups_before_album() -> None:
+    session = MagicMock(spec=Session)
+    service, _, _ = make_service(session)
+    album = make_album()
+    group_id = uuid4()
+    session.scalars.side_effect = [
+        SimpleNamespace(all=lambda: [group_id]),
+        SimpleNamespace(all=lambda: [group_id]),
+        SimpleNamespace(all=lambda: [group_id]),
+        SimpleNamespace(all=lambda: [group_id]),
+    ]
+    session.scalar.return_value = album
+
+    result = service._get_album_model(album.id, uuid4(), lock=True)
+
+    assert result is album
+    group_lock_sql = str(session.scalars.call_args_list[1].args[0].compile(dialect=postgresql.dialect()))
+    album_lock_sql = str(session.scalar.call_args.args[0].compile(dialect=postgresql.dialect()))
+    assert "FOR UPDATE OF family_groups" in group_lock_sql
+    assert "FOR UPDATE" in album_lock_sql
+    assert session.method_calls[-1][0] == "scalar"
+
+
+def test_album_group_update_locks_added_groups_before_album() -> None:
+    session = MagicMock(spec=Session)
+    service, _, _ = make_service(session)
+    album = make_album()
+    current_group_id = uuid4()
+    added_group_id = uuid4()
+    session.scalars.side_effect = [
+        SimpleNamespace(all=lambda: [current_group_id]),
+        SimpleNamespace(all=lambda: [current_group_id, added_group_id]),
+        SimpleNamespace(all=lambda: [current_group_id, added_group_id]),
+        SimpleNamespace(all=lambda: [current_group_id]),
+    ]
+    session.scalar.return_value = album
+
+    result = service._get_album_model(
+        album.id,
+        uuid4(),
+        lock=True,
+        requested_group_ids={current_group_id, added_group_id},
+    )
+
+    assert result is album
+    assert session.method_calls[-1][0] == "scalar"
+
+
 def test_get_album_returns_bounded_photo_page_and_cursor() -> None:
     session = MagicMock(spec=Session)
     album = make_album()
@@ -190,6 +238,7 @@ def test_update_album_changes_group_shares_and_prepares_existing_photos() -> Non
     )
 
     assert result.group_ids == [old_group_id, new_group_id]
+    assert service._get_album_model.call_args.kwargs["requested_group_ids"] == {old_group_id, new_group_id}
     service._prepare_album_photo_sharing.assert_called_once()
     photo_sharing.commit.assert_called_once()
     assert any(isinstance(item, AlbumGroupShare) for item in session.add_all.call_args.args[0])
@@ -197,29 +246,27 @@ def test_update_album_changes_group_shares_and_prepares_existing_photos() -> Non
 
 def test_update_album_rejects_an_added_group_without_membership() -> None:
     session = MagicMock(spec=Session)
-    service, _, photo_sharing = make_service(session)
+    service, _, _ = make_service(session)
     album = make_album()
     old_group_id = uuid4()
     new_group_id = uuid4()
-    service._get_album_model = MagicMock(return_value=album)
-    service._group_ids = MagicMock(return_value=[old_group_id])
-    session.scalars.return_value.all.return_value = []
+    session.scalars.side_effect = [
+        SimpleNamespace(all=lambda: [old_group_id]),
+        SimpleNamespace(all=lambda: [old_group_id, new_group_id]),
+        SimpleNamespace(all=lambda: [old_group_id]),
+        SimpleNamespace(all=lambda: [old_group_id]),
+    ]
 
     with pytest.raises(AlbumNotFoundError):
-        service.update_album(
+        service._get_album_model(
             album.id,
-            title=None,
-            description=None,
-            update_description=False,
-            acting_user_id=uuid4(),
-            cover_photo_id=None,
-            update_cover=False,
-            group_ids=[old_group_id, new_group_id],
-            update_groups=True,
-            acting_username="owner",
+            uuid4(),
+            lock=True,
+            requested_group_ids={old_group_id, new_group_id},
         )
 
-    photo_sharing.prepare_add_groups.assert_not_called()
+    session.scalar.assert_not_called()
+    session.rollback.assert_called_once_with()
     session.commit.assert_not_called()
 
 

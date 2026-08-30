@@ -26,8 +26,8 @@ def make_impact(**overrides: object) -> GroupDeletionImpact:
         "group_id": uuid4(),
         "name": "同居家族",
         "member_count": 2,
-        "album_count": 0,
-        "album_photo_count": 0,
+        "deleted_album_count": 0,
+        "removed_album_photo_count": 0,
         "chore_task_count": 0,
         "chore_completion_count": 0,
         "shopping_item_count": 0,
@@ -58,13 +58,15 @@ def test_get_group_deletion_impact_returns_all_cascade_counts() -> None:
         )
     )
     assert "FOR UPDATE OF family_groups" in sql
+    assert "albums.id IN (SELECT album_group_shares.album_id" in sql
+    assert "album_photos.photo_id IN (SELECT photo_shares.photo_id" in sql
     assert "photo_activity_event_groups" in sql
     assert "upload_batch_group_shares" in sql
 
 
 def test_memberships_alone_do_not_require_related_data_option() -> None:
     assert make_impact().has_related_data is False
-    assert make_impact(album_count=1).has_related_data is True
+    assert make_impact(deleted_album_count=1).has_related_data is True
 
 
 @pytest.mark.parametrize(
@@ -136,7 +138,7 @@ def test_delete_group_collects_affected_photos_and_commits(monkeypatch: pytest.M
 
 def test_delete_group_removes_only_orphaned_albums_before_group(monkeypatch: pytest.MonkeyPatch) -> None:
     session = MagicMock(spec=Session)
-    impact = make_impact(album_count=2, album_photo_count=3)
+    impact = make_impact(deleted_album_count=2, removed_album_photo_count=3)
     session.scalars.return_value.all.return_value = []
     monkeypatch.setattr("app.commands.delete_group.get_group_deletion_impact", MagicMock(return_value=impact))
 
@@ -198,6 +200,8 @@ def test_print_deletion_impact_warns_that_photos_remain(capsys: pytest.CaptureFi
     )
 
     output = capsys.readouterr().out
+    assert "Albums losing their final target group: 0" in output
+    assert "Album photo associations removed with photo shares: 0" in output
     assert "Photo shares: 2" in output
     assert "Shopping categories: 1" in output
     assert "Shopping trips: 2" in output

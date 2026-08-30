@@ -65,6 +65,11 @@ maintenance units must declare this service in `Requires` and `After`; they must
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
 construction and cutover procedures.
 
+For a schema-changing release, prepare the complete release directory and pinned backend environment without switching
+`/opt/family-hub/current`. Stop the old Backend before an incompatible data or schema migration, run the migration from the
+prepared release's absolute path, and activate that same prepared release only after the migration succeeds. An activation
+after an incompatible migration must not automatically restart the previous Backend against the new schema.
+
 Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
 startup requirement. The backend remains available for authentication, chore, shopping, groups, and other database-backed
 features when the photo HDD is unavailable; photo operations that need the HDD return `503` or an equivalent unavailable

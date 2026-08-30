@@ -70,6 +70,9 @@ function or registry for Alembic. The current Alembic chain consists of four exp
 including categories, completion snapshots, report settings, and category ordering. The `shopping` baseline contains the
 complete current shopping schema, including categories, assignments, trips, purchase history, and discarded-trip state.
 Migrations must not write application data, seed rows, or perform backfills.
+Before a destructive schema step removes legacy application-data columns, it may lock the affected tables and perform a
+read-only completeness check. The migration must abort without changing the schema when the separate data command has not
+finished.
 
 ### `features.health`
 
@@ -110,8 +113,9 @@ must be active and not already members. A database unique constraint and pre-che
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership and legacy membership-invitation records, the deleted group's album-share
-rows, albums that lose their
+aborts if state changed. Its preview counts only albums that lose their final target group as deleted, and counts every
+album-photo association removed when the group's photo shares disappear. Cascades remove membership and legacy
+membership-invitation records, the deleted group's album-share rows, albums that lose their
 last target group, chore history, shopping items and shopping workflow rows, photo shares, activity-group relations, and
 upload-batch shares. Albums with another target group remain. Photos remain; photos whose shares are removed are also removed
 from all albums, and affected sidecars are synchronized after commit.
@@ -183,6 +187,8 @@ Owns album creation, editing, deletion, and photo relationships. Album operation
 or more family groups and has one shared `album_photos` collection; it is not copied per group. Adding an owner's photo or a
 new target group can add missing photo shares, with sidecar, New activity, and notification updates in the same transaction.
 Photos owned by another user must already be shared with every target group; album membership never grants access by itself.
+Album mutations lock all current and newly requested groups before locking the album row. If the target-group set changes
+while those locks are being acquired, the operation rolls back that attempt and retries the group-first sequence.
 The feature uses only `features.photos.public`, not photo internals. A repository layer is intentionally deferred until
 service/database logic becomes difficult to read.
 

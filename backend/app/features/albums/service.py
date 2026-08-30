@@ -9,7 +9,7 @@ from sqlalchemy import case, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.features.albums.models import Album, AlbumGroupShare, AlbumPhoto
-from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_group_ids, lock_user_group_ids
+from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_user_group_ids
 from app.features.photos.public import (
     AlbumPhotoSharingError,
     AlbumPhotoSharingPermissionError,
@@ -230,7 +230,13 @@ class AlbumService:
         update_groups: bool = False,
         acting_username: str = "",
     ) -> AlbumSummary:
-        album = self._get_album_model(album_id, acting_user_id, lock=True)
+        requested_group_ids = set(group_ids or []) if update_groups else None
+        album = self._get_album_model(
+            album_id,
+            acting_user_id,
+            lock=True,
+            requested_group_ids=requested_group_ids,
+        )
         if update_cover and cover_photo_id is not None:
             active_cover = self._session.scalar(
                 select(Photo.id)
@@ -245,14 +251,10 @@ class AlbumService:
                 raise PhotoNotInAlbumError(album_id, cover_photo_id)
         prepared_shares = PreparedAlbumPhotoShares(())
         if update_groups:
-            requested_group_ids = set(group_ids or [])
+            assert requested_group_ids is not None
             if not requested_group_ids:
                 raise AlbumNotFoundError(album_id)
             current_group_ids = set(self._group_ids(album.id))
-            added_group_ids = requested_group_ids - current_group_ids
-            if lock_user_group_ids(self._session, acting_user_id, added_group_ids) != added_group_ids:
-                raise AlbumNotFoundError(album_id)
-            lock_group_ids(self._session, current_group_ids | requested_group_ids)
             prepared_shares = self._prepare_album_photo_sharing(
                 album.id,
                 requested_group_ids,
@@ -356,19 +358,53 @@ class AlbumService:
         album.updated_at = datetime.now(UTC)
         self._commit()
 
-    def _get_album_model(self, album_id: UUID, viewer_user_id: UUID, *, lock: bool = False) -> Album:
-        statement = select(Album).where(Album.id == album_id, self._can_access(viewer_user_id))
+    def _get_album_model(
+        self,
+        album_id: UUID,
+        viewer_user_id: UUID,
+        *,
+        lock: bool = False,
+        requested_group_ids: set[UUID] | None = None,
+    ) -> Album:
         if lock:
-            statement = statement.with_for_update()
+            return self._get_album_model_for_update(album_id, viewer_user_id, requested_group_ids or set())
+        statement = select(Album).where(Album.id == album_id, self._can_access(viewer_user_id))
         album = self._session.scalar(statement)
         if album is None:
             raise AlbumNotFoundError(album_id)
-        if lock:
-            group_ids = self._group_ids(album.id)
-            if not group_ids or not (lock_user_group_ids(self._session, viewer_user_id, group_ids) & set(group_ids)):
+        return album
+
+    def _get_album_model_for_update(
+        self,
+        album_id: UUID,
+        viewer_user_id: UUID,
+        requested_group_ids: set[UUID],
+    ) -> Album:
+        while True:
+            current_group_ids = set(self._group_ids(album_id))
+            if not current_group_ids:
                 self._session.rollback()
                 raise AlbumNotFoundError(album_id)
-        return album
+
+            member_group_ids = lock_user_group_ids(
+                self._session,
+                viewer_user_id,
+                current_group_ids | requested_group_ids,
+            )
+            if set(self._group_ids(album_id)) != current_group_ids:
+                self._session.rollback()
+                continue
+
+            added_group_ids = requested_group_ids - current_group_ids
+            if not (member_group_ids & current_group_ids) or not added_group_ids <= member_group_ids:
+                self._session.rollback()
+                raise AlbumNotFoundError(album_id)
+
+            album = self._session.scalar(select(Album).where(Album.id == album_id).with_for_update())
+            if album is None:
+                self._session.rollback()
+                raise AlbumNotFoundError(album_id)
+            return album
 
     def _commit(self, prepared_shares: PreparedAlbumPhotoShares | None = None) -> None:
         try:

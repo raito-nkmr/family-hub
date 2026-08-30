@@ -11,8 +11,9 @@ from app.features.albums.router import (
     get_album,
     list_albums,
     remove_album_photo,
+    update_album,
 )
-from app.features.albums.schemas import AlbumCreate, AlbumPhotoAdd
+from app.features.albums.schemas import AlbumCreate, AlbumPhotoAdd, AlbumUpdate
 from app.features.albums.service import AlbumDetail, AlbumNotFoundError, AlbumSummary, PhotoNotFoundError
 from app.features.auth.dependencies import AuthenticatedUser, require_authenticated_user, require_csrf_token
 from app.main import create_app
@@ -74,6 +75,11 @@ class AlbumServiceStub:
         assert acting_user_id == TEST_USER.id
         assert self.detail is not None
         return self.detail
+
+    def update_album(self, album_id: UUID, **kwargs) -> AlbumSummary:
+        self._raise_error()
+        assert self.detail is not None
+        return self.detail.album
 
     def remove_photo(self, album_id: UUID, photo_id: UUID, acting_user_id: UUID) -> None:
         self._raise_error()
@@ -139,6 +145,22 @@ def test_add_album_photos_maps_missing_photo_to_404() -> None:
         add_album_photos(
             album_id,
             AlbumPhotoAdd(photo_ids=[photo_id]),
+            TEST_USER,
+            AlbumServiceStub(error=PhotoNotFoundError({photo_id})),
+        )
+
+    assert error.value.status_code == 404
+    assert error.value.detail == "Photo not found"
+
+
+def test_update_album_maps_unavailable_existing_photo_to_404() -> None:
+    album_id = uuid4()
+    photo_id = uuid4()
+
+    with pytest.raises(HTTPException) as error:
+        update_album(
+            album_id,
+            AlbumUpdate(group_ids=[uuid4()]),
             TEST_USER,
             AlbumServiceStub(error=PhotoNotFoundError({photo_id})),
         )

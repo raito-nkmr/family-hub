@@ -278,10 +278,11 @@ Members cannot perform administrative actions. Every group must retain at least 
 administrator cannot be demoted or removed. Only accounts created by invitation acceptance or management command can be added.
 
 Group physical deletion is available only as an operator management command, not through the web API or UI. Before deletion,
-show counts for members, invitations, albums, chore history, shopping items, photo shares, activity events, and upload
-batch targets. Require an exact group-name confirmation. Delete related data only with an explicit option. Preserve albums that
-still have another target group and delete albums that would have no target groups. Preserve photo records, originals, and
-thumbnails; remove affected photos from albums and synchronize affected JSON sidecars with the remaining share state.
+show counts for members, invitations, albums that will lose their final target group, album-photo associations removed with
+the group's photo shares, chore history, shopping items, photo shares, activity events, and upload batch targets. Require an
+exact group-name confirmation. Delete related data only with an explicit option. Preserve albums that still have another
+target group and delete albums that would have no target groups. Preserve photo records, originals, and thumbnails; remove
+affected photos from albums and synchronize affected JSON sidecars with the remaining share state.
 
 Owners can share a photo with multiple groups. Albums can target multiple groups and are visible and editable by members of
 any target group; the album contains one shared photo collection rather than a copy per group. A cover is selected

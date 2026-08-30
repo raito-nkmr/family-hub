@@ -51,8 +51,8 @@ class GroupDeletionImpact:
     group_id: UUID
     name: str
     member_count: int
-    album_count: int
-    album_photo_count: int
+    deleted_album_count: int
+    removed_album_photo_count: int
     chore_task_count: int
     chore_completion_count: int
     shopping_item_count: int
@@ -68,8 +68,8 @@ class GroupDeletionImpact:
     def has_related_data(self) -> bool:
         return any(
             (
-                self.album_count,
-                self.album_photo_count,
+                self.deleted_album_count,
+                self.removed_album_photo_count,
                 self.chore_task_count,
                 self.chore_completion_count,
                 self.shopping_item_count,
@@ -91,14 +91,12 @@ def get_group_deletion_impact(session: Session, group_id: UUID, *, lock: bool = 
         .group_by(AlbumGroupShare.album_id)
         .having(func.count() == 1)
     )
+    affected_photo_ids = select(PhotoShare.photo_id).where(PhotoShare.group_id == group_id)
     statement = select(
         FamilyGroup.name,
         _count(FamilyGroupMember, FamilyGroupMember.group_id == group_id).label("member_count"),
-        select(func.count(func.distinct(AlbumGroupShare.album_id)))
-        .where(AlbumGroupShare.group_id == group_id)
-        .scalar_subquery()
-        .label("album_count"),
-        _count(AlbumPhoto, AlbumPhoto.album_id.in_(orphan_album_ids)).label("album_photo_count"),
+        _count(Album, Album.id.in_(orphan_album_ids)).label("deleted_album_count"),
+        _count(AlbumPhoto, AlbumPhoto.photo_id.in_(affected_photo_ids)).label("removed_album_photo_count"),
         _count(ChoreTask, ChoreTask.group_id == group_id).label("chore_task_count"),
         _count(
             ChoreCompletion,
@@ -221,8 +219,8 @@ def print_deletion_impact(impact: GroupDeletionImpact) -> None:
     print(f"Group: {impact.name} ({impact.group_id})")
     print("The following records will be permanently deleted:")
     print(f"  Members: {impact.member_count}")
-    print(f"  Albums: {impact.album_count}")
-    print(f"  Album photo associations: {impact.album_photo_count}")
+    print(f"  Albums losing their final target group: {impact.deleted_album_count}")
+    print(f"  Album photo associations removed with photo shares: {impact.removed_album_photo_count}")
     print(f"  Chore tasks: {impact.chore_task_count}")
     print(f"  Chore completions: {impact.chore_completion_count}")
     print(f"  Shopping categories: {impact.shopping_category_count}")
