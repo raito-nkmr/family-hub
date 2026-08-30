@@ -5,8 +5,9 @@ import { EmptyState } from '../../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
 import { PageMessage } from '../../../shared/ui/PageMessage'
 import { AlbumIcon, BackIcon, CheckIcon, DeleteIcon, EditIcon, PhotoIcon, PlusIcon } from '../../../shared/ui/icons'
-import { PhotoPreview, type Photo } from '../../photos/public'
+import type { Photo } from '../../photos/public'
 import type { AlbumDetail } from '../api'
+import { AlbumPhotoThumbnail } from './AlbumPhotoThumbnail'
 import { AlbumPhotoGrid } from './AlbumPhotoGrid'
 
 interface AlbumDetailViewProps {
@@ -88,13 +89,13 @@ export function AlbumDetailView({
       </button>
 
       <header className="album-detail-header">
-        <div className="album-detail-header__cover">
-          {coverPhoto ? (
-            <PhotoPreview photo={coverPhoto} className="album-detail-header__cover-image" />
-          ) : (
+        {coverPhoto ? (
+          <AlbumPhotoThumbnail photo={coverPhoto} className="album-detail-header__cover" />
+        ) : (
+          <div className="album-detail-header__cover">
             <AlbumIcon />
-          )}
-        </div>
+          </div>
+        )}
         <div className="album-detail-header__copy">
           <p className="eyebrow">{t('albums.detailEyebrow')}</p>
           <h1>{album.title}</h1>

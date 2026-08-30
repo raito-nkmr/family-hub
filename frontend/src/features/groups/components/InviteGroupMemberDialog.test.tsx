@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { InviteGroupMemberDialog } from './InviteGroupMemberDialog'
 
 describe('InviteGroupMemberDialog', () => {
-  it('invites a selected user without requiring their id to be typed', async () => {
+  it('adds a selected user without requiring their id to be typed', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
 
@@ -20,7 +20,7 @@ describe('InviteGroupMemberDialog', () => {
     )
 
     await user.selectOptions(screen.getByLabelText('ユーザー'), 'user-1')
-    await user.click(screen.getByRole('button', { name: '招待する' }))
+    await user.click(screen.getByRole('button', { name: '追加する' }))
 
     expect(onSubmit).toHaveBeenCalledWith('user-1', 'member')
   })
@@ -37,8 +37,8 @@ describe('InviteGroupMemberDialog', () => {
       />,
     )
 
-    expect(screen.getByText('招待できるユーザーはいません。')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '招待する' })).toBeDisabled()
+    expect(screen.getByText('追加できるユーザーはいません。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '追加する' })).toBeDisabled()
   })
 
   it('announces a submission error', () => {
@@ -47,12 +47,12 @@ describe('InviteGroupMemberDialog', () => {
         submitting={false}
         loadingCandidates={false}
         candidates={[]}
-        error="メンバーを招待できませんでした。"
+        error="メンバーを追加できませんでした。"
         onSubmit={vi.fn()}
         onClose={vi.fn()}
       />,
     )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('メンバーを招待できませんでした。')
+    expect(screen.getByRole('alert')).toHaveTextContent('メンバーを追加できませんでした。')
   })
 })

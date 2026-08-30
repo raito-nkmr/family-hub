@@ -125,15 +125,15 @@ Stores family sharing scopes with a globally unique name, creator, creation time
 ### `family_group_members`
 
 Stores the many-to-many user/group relationship and the group-local `admin` or `member` role. Use `(group_id, user_id)` as
-the composite primary key and index `user_id`. Create a group and its creator's admin membership in one transaction. Lock the
-group during membership and role changes and reject demotion or removal of the last active administrator before commit.
+the composite primary key and index `user_id`. Create a group and its creator's admin membership in one transaction. A
+group administrator adds an existing active user directly; there is no separate group-invitation acceptance step. Lock the group
+during membership and role changes and reject demotion or removal of the last active administrator before commit.
 
-### `family_group_membership_invitations`
+### `family_group_membership_invitations` (legacy)
 
-Stores group-admin invitations to existing active users, including `invitee_user_id`, `invited_by_user_id`, group, proposed
-role, `pending`, `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and
-invitee is allowed. Invitation constraints and indexes use the `family_group_membership_invitations` prefix.
-Acceptance creates membership in the same transaction; group deletion cascades.
+Stores historical group-admin invitations created by older application versions. New member additions do not create rows in
+this table, and the application no longer exposes an invitee acceptance API. The table remains in the schema for historical
+data until it is explicitly retired; group deletion cascades its rows.
 
 ## Chore and shopping tables
 

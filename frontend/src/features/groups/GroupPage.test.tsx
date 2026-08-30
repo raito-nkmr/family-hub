@@ -4,12 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api/client'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import {
-  decideGroupMembershipInvitation,
   getGroup,
   getGroupAdministration,
   getGroupAuditEvents,
   getGroups,
-  getMyGroupMembershipInvitations,
   renameGroup,
   updateGroupTimezone,
   type GroupDetail,
@@ -18,15 +16,13 @@ import {
 import { GroupPage } from './GroupPage'
 
 vi.mock('./api', () => ({
-  inviteGroupMember: vi.fn(),
+  addGroupMember: vi.fn(),
   createGroup: vi.fn(),
-  decideGroupMembershipInvitation: vi.fn(),
   getGroup: vi.fn(),
   getGroupAdministration: vi.fn(),
   getGroupAuditEvents: vi.fn(),
   getGroupMemberCandidates: vi.fn(),
   getGroups: vi.fn(),
-  getMyGroupMembershipInvitations: vi.fn(),
   renameGroup: vi.fn(),
   updateGroupTimezone: vi.fn(),
   removeGroupMember: vi.fn(),
@@ -36,7 +32,6 @@ vi.mock('./api', () => ({
 describe('GroupPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([])
   })
 
   it('returns control to the app when the session expires', async () => {
@@ -164,77 +159,5 @@ describe('GroupPage', () => {
     await user.click(saveButtons[1])
 
     await waitFor(() => expect(updateGroupTimezone).toHaveBeenCalledWith('group-1', 'Europe/London'))
-  })
-
-  it('returns control to the app when membership invitations expire', async () => {
-    vi.mocked(getMyGroupMembershipInvitations).mockRejectedValue(new ApiError(401, 'expired'))
-    const onUnauthorized = vi.fn()
-
-    render(<GroupPage currentUserId="current-user" onUnauthorized={onUnauthorized} />, {
-      wrapper: createAppWrapper(),
-    })
-
-    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
-  })
-
-  it('shows a message when membership invitations cannot be loaded', async () => {
-    vi.mocked(getGroups).mockResolvedValue([])
-    vi.mocked(getMyGroupMembershipInvitations).mockRejectedValue(new ApiError(503, 'unavailable'))
-
-    render(<GroupPage currentUserId="current-user" onUnauthorized={vi.fn()} />, {
-      wrapper: createAppWrapper(),
-    })
-
-    await waitFor(() => expect(screen.getByText('招待を読み込めませんでした。')).toBeInTheDocument())
-  })
-
-  it('shows a message when accepting an invitation fails', async () => {
-    vi.mocked(getGroups).mockResolvedValue([])
-    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([
-      {
-        id: 'invitation-1',
-        group_id: 'group-1',
-        group_name: '同居家族',
-        invitee_user_id: 'current-user',
-        invitee_username: 'current-user',
-        role: 'member',
-        status: 'pending',
-        created_at: '2026-07-15T00:00:00Z',
-      },
-    ])
-    vi.mocked(decideGroupMembershipInvitation).mockRejectedValue(new ApiError(503, 'unavailable'))
-    const user = userEvent.setup()
-
-    render(<GroupPage currentUserId="current-user" onUnauthorized={vi.fn()} />, {
-      wrapper: createAppWrapper(),
-    })
-
-    await user.click(await screen.findByRole('button', { name: '承認' }))
-    await waitFor(() => expect(screen.getByText('グループ招待を承認または辞退できませんでした。')).toBeInTheDocument())
-  })
-
-  it('returns control to the app when accepting an invitation expires', async () => {
-    vi.mocked(getMyGroupMembershipInvitations).mockResolvedValue([
-      {
-        id: 'invitation-1',
-        group_id: 'group-1',
-        group_name: '同居家族',
-        invitee_user_id: 'current-user',
-        invitee_username: 'current-user',
-        role: 'member',
-        status: 'pending',
-        created_at: '2026-07-15T00:00:00Z',
-      },
-    ])
-    vi.mocked(decideGroupMembershipInvitation).mockRejectedValue(new ApiError(401, 'expired'))
-    const onUnauthorized = vi.fn()
-    const user = userEvent.setup()
-
-    render(<GroupPage currentUserId="current-user" onUnauthorized={onUnauthorized} />, {
-      wrapper: createAppWrapper(),
-    })
-
-    await user.click(await screen.findByRole('button', { name: '承認' }))
-    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledOnce())
   })
 })

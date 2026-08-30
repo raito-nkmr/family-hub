@@ -9,7 +9,6 @@ export const queryKeys = {
   groupCandidates: (groupId: string) => ['groups', groupId, 'candidates'] as const,
   groupAdministration: (groupId: string) => ['groups', groupId, 'administration'] as const,
   groupAudit: (groupId: string) => ['groups', groupId, 'audit'] as const,
-  groupMembershipInvitations: ['groups', 'membership-invitations'] as const,
   albums: ['albums'] as const,
   album: (albumId: string) => ['albums', albumId] as const,
   photoStorage: ['photos', 'storage'] as const,

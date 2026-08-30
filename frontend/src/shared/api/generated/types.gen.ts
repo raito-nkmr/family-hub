@@ -933,6 +933,17 @@ export type GroupListResponse = {
 }
 
 /**
+ * GroupMemberAdd
+ */
+export type GroupMemberAdd = {
+  role?: GroupRole
+  /**
+   * User Id
+   */
+  user_id: string
+}
+
+/**
  * GroupMemberCandidateListResponse
  */
 export type GroupMemberCandidateListResponse = {
@@ -1014,72 +1025,6 @@ export type GroupMemberResponse = {
  */
 export type GroupMemberRoleUpdate = {
   role: GroupRole
-}
-
-/**
- * GroupMembershipInvitationCreate
- */
-export type GroupMembershipInvitationCreate = {
-  /**
-   * Invitee User Id
-   */
-  invitee_user_id: string
-  role?: GroupRole
-}
-
-/**
- * GroupMembershipInvitationDecision
- */
-export type GroupMembershipInvitationDecision = {
-  /**
-   * Accept
-   */
-  accept: boolean
-}
-
-/**
- * GroupMembershipInvitationListResponse
- */
-export type GroupMembershipInvitationListResponse = {
-  /**
-   * Items
-   */
-  items: Array<GroupMembershipInvitationResponse>
-}
-
-/**
- * GroupMembershipInvitationResponse
- */
-export type GroupMembershipInvitationResponse = {
-  /**
-   * Created At
-   */
-  created_at: string
-  /**
-   * Group Id
-   */
-  group_id: string
-  /**
-   * Group Name
-   */
-  group_name: string
-  /**
-   * Id
-   */
-  id: string
-  /**
-   * Invitee User Id
-   */
-  invitee_user_id: string
-  /**
-   * Invitee Username
-   */
-  invitee_username: string
-  role: GroupRole
-  /**
-   * Status
-   */
-  status: string
 }
 
 /**
@@ -3846,61 +3791,6 @@ export type CreateGroupApiV1GroupsPostResponses = {
 export type CreateGroupApiV1GroupsPostResponse =
   CreateGroupApiV1GroupsPostResponses[keyof CreateGroupApiV1GroupsPostResponses]
 
-export type ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetData = {
-  body?: never
-  path?: never
-  query?: never
-  url: '/api/v1/groups/membership-invitations'
-}
-
-export type ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses = {
-  /**
-   * Successful Response
-   */
-  200: GroupMembershipInvitationListResponse
-}
-
-export type ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponse =
-  ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses[keyof ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses]
-
-export type DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostData = {
-  body: GroupMembershipInvitationDecision
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path: {
-    /**
-     * Invitation Id
-     */
-    invitation_id: string
-  }
-  query?: never
-  url: '/api/v1/groups/membership-invitations/{invitation_id}/decision'
-}
-
-export type DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostError =
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors[keyof DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors]
-
-export type DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses = {
-  /**
-   * Successful Response
-   */
-  204: void
-}
-
-export type DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponse =
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses[keyof DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses]
-
 export type GetGroupApiV1GroupsGroupIdGetData = {
   body?: never
   path: {
@@ -4067,6 +3957,44 @@ export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetRespon
 export type ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponse =
   ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses[keyof ListGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGetResponses]
 
+export type AddGroupMemberApiV1GroupsGroupIdMembersPostData = {
+  body: GroupMemberAdd
+  headers?: {
+    /**
+     * X-Csrf-Token
+     */
+    'X-CSRF-Token'?: string | null
+  }
+  path: {
+    /**
+     * Group Id
+     */
+    group_id: string
+  }
+  query?: never
+  url: '/api/v1/groups/{group_id}/members'
+}
+
+export type AddGroupMemberApiV1GroupsGroupIdMembersPostErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type AddGroupMemberApiV1GroupsGroupIdMembersPostError =
+  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostErrors]
+
+export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponses = {
+  /**
+   * Successful Response
+   */
+  201: GroupMemberResponse
+}
+
+export type AddGroupMemberApiV1GroupsGroupIdMembersPostResponse =
+  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses[keyof AddGroupMemberApiV1GroupsGroupIdMembersPostResponses]
+
 export type RemoveGroupMemberApiV1GroupsGroupIdMembersUserIdDeleteData = {
   body?: never
   headers?: {
@@ -4186,44 +4114,6 @@ export type GetGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImp
 
 export type GetGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGetResponse =
   GetGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGetResponses[keyof GetGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGetResponses]
-
-export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostData = {
-  body: GroupMembershipInvitationCreate
-  headers?: {
-    /**
-     * X-Csrf-Token
-     */
-    'X-CSRF-Token'?: string | null
-  }
-  path: {
-    /**
-     * Group Id
-     */
-    group_id: string
-  }
-  query?: never
-  url: '/api/v1/groups/{group_id}/membership-invitations'
-}
-
-export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError
-}
-
-export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostError =
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors[keyof InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors]
-
-export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses = {
-  /**
-   * Successful Response
-   */
-  201: GroupMembershipInvitationResponse
-}
-
-export type InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponse =
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses[keyof InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses]
 
 export type UpdateGroupSettingsApiV1GroupsGroupIdSettingsPatchData = {
   body: GroupTimezoneUpdate

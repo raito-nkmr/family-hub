@@ -103,14 +103,15 @@ opportunistically. A database outage is surfaced rather than silently falling ba
 
 ### `features.groups`
 
-Owns group creation, membership, group-local roles, invitations, administration summaries, audit access, and member changes.
+Owns group creation, membership, group-local roles, administration summaries, audit access, and member changes.
 Non-members receive `404` without disclosure of group existence. Candidate users are returned only to group administrators and
 must be active and not already members. A database unique constraint and pre-check both map duplicate names to `409 Conflict`.
 
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership, invitations, the deleted group's album-share rows, albums that lose their
+aborts if state changed. Cascades remove membership and legacy membership-invitation records, the deleted group's album-share
+rows, albums that lose their
 last target group, chore history, shopping items and shopping workflow rows, photo shares, activity-group relations, and
 upload-batch shares. Albums with another target group remain. Photos remain; photos whose shares are removed are also removed
 from all albums, and affected sidecars are synchronized after commit.

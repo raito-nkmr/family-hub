@@ -17,14 +17,12 @@ from app.features.groups.schemas import (
     GroupCreate,
     GroupDetailResponse,
     GroupListResponse,
+    GroupMemberAdd,
     GroupMemberCandidateListResponse,
     GroupMemberCandidateResponse,
     GroupMemberRemovalImpactResponse,
+    GroupMemberResponse,
     GroupMemberRoleUpdate,
-    GroupMembershipInvitationCreate,
-    GroupMembershipInvitationDecision,
-    GroupMembershipInvitationListResponse,
-    GroupMembershipInvitationResponse,
     GroupResponse,
     GroupTimezoneUpdate,
     GroupUpdate,
@@ -35,7 +33,6 @@ from app.features.groups.service import (
     GroupInvalidTimezoneError,
     GroupMemberAlreadyExistsError,
     GroupMemberNotFoundError,
-    GroupMembershipInvitationError,
     GroupNameAlreadyExistsError,
     GroupNotFoundError,
     GroupPersistenceError,
@@ -114,51 +111,6 @@ def create_group(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not create group",
         ) from error
-
-
-@router.get("/membership-invitations", response_model=GroupMembershipInvitationListResponse)
-def list_my_group_membership_invitations(
-    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[GroupService, Depends(get_group_service)],
-) -> GroupMembershipInvitationListResponse:
-    return GroupMembershipInvitationListResponse(
-        items=[
-            GroupMembershipInvitationResponse(
-                id=invitation.id,
-                group_id=invitation.group_id,
-                group_name=group_name,
-                invitee_user_id=invitation.invitee_user_id,
-                invitee_username=authenticated_user.username,
-                role=invitation.role,
-                status=invitation.status,
-                created_at=invitation.created_at,
-            )
-            for invitation, group_name in service.list_my_membership_invitations(authenticated_user.id)
-        ]
-    )
-
-
-@router.post(
-    "/membership-invitations/{invitation_id}/decision",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_csrf_token)],
-)
-def decide_group_membership_invitation(
-    invitation_id: UUID,
-    body: GroupMembershipInvitationDecision,
-    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-    service: Annotated[GroupService, Depends(get_group_service)],
-) -> Response:
-    try:
-        service.decide_membership_invitation(
-            invitation_id,
-            authenticated_user.id,
-            authenticated_user.username,
-            body.accept,
-        )
-    except GroupMembershipInvitationError as error:
-        raise HTTPException(status_code=404, detail="Group invitation not found") from error
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{group_id}", response_model=GroupDetailResponse)
@@ -268,37 +220,32 @@ def list_group_member_candidates(
 
 
 @router.post(
-    "/{group_id}/membership-invitations",
-    response_model=GroupMembershipInvitationResponse,
+    "/{group_id}/members",
+    response_model=GroupMemberResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_csrf_token)],
 )
-def invite_group_member(
+def add_group_member(
     group_id: UUID,
-    body: GroupMembershipInvitationCreate,
+    body: GroupMemberAdd,
     authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
     service: Annotated[GroupService, Depends(get_group_service)],
-) -> GroupMembershipInvitationResponse:
+) -> GroupMemberResponse:
     try:
-        invitation, user = service.invite_member(
+        member = service.add_member(
             group_id,
             authenticated_user.id,
             authenticated_user.username,
-            body.invitee_user_id,
+            body.user_id,
             body.role,
         )
-        return GroupMembershipInvitationResponse(
-            id=invitation.id,
-            group_id=group_id,
-            group_name=service.get_group(group_id, authenticated_user.id).group.name,
-            invitee_user_id=user.id,
-            invitee_username=user.username,
-            role=invitation.role,
-            status=invitation.status,
-            created_at=invitation.created_at,
+        return GroupMemberResponse(
+            user_id=member.user_id,
+            username=member.username,
+            is_active=member.is_active,
+            role=member.role,
+            joined_at=member.joined_at,
         )
-    except GroupMembershipInvitationError as error:
-        raise HTTPException(status_code=409, detail="A pending invitation already exists") from error
     except (
         GroupNotFoundError,
         GroupUserNotFoundError,

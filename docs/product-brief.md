@@ -78,7 +78,7 @@ On mobile, the photo list shows thumbnails with month headings, favorite state, 
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
 in photo details. On tablet-sized screens and desktop, tapping or clicking the left or right edge of the enlarged photo view
 moves to the adjacent photo; horizontal swipes provide the same navigation on phones. Both operate on photos already loaded
-in the library.
+in the library. An album detail header and the grid card marked as its cover use the same centered `4:3` thumbnail crop.
 Photo details fit the complete image or video inside a bounded media stage without cropping. If the device cannot display or
 play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
@@ -270,8 +270,9 @@ Users can belong to multiple family groups to separate scopes such as a househol
 Any logged-in user can create a group and is registered as its administrator. Users see only their groups; group existence is
 not disclosed to non-members. Group names are globally unique, and duplicate creation is rejected.
 
-Group administrators can rename a group and invite an existing active user who is not a member. Membership is created when
-the invitee accepts. Administrators can change `admin` and `member` roles and remove membership after reviewing impact counts.
+Group administrators can rename a group and add an existing active user who is not a member. Membership is created
+immediately by the administrator's action; there is no separate group-invitation acceptance step. Administrators can change `admin`
+and `member` roles and remove membership after reviewing impact counts.
 Members cannot perform administrative actions. Every group must retain at least one active administrator; the last active
 administrator cannot be demoted or removed. Only accounts created by invitation acceptance or management command can be added.
 
