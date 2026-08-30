@@ -241,3 +241,14 @@ test('keeps the Japanese capture date control inside a compact mobile viewport',
   await expectCaptureDateWithinDetails(page)
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 360)
 })
+
+test('changes photos when tapping the edge navigation on iPad WebKit', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-webkit', 'This regression test targets iPad WebKit.')
+  await mockPhotoApi(page)
+  await page.goto('/photos/library')
+  await openPhoto(page, 'portrait.jpg')
+
+  await page.getByRole('button', { name: 'Next photo' }).tap()
+
+  await expect(page.getByRole('heading', { name: 'landscape.jpg' })).toBeVisible()
+})

@@ -16,6 +16,10 @@ export default defineConfig({
       name: 'iphone-webkit',
       use: { ...devices['iPhone 15'] },
     },
+    {
+      name: 'ipad-webkit',
+      use: { ...devices['iPad (gen 7)'] },
+    },
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173',

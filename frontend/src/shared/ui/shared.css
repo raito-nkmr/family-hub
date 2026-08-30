@@ -262,6 +262,9 @@
 }
 
 .material-symbol-icon {
+  width: 1.5rem;
+  height: auto;
+  flex: 0 0 auto;
   fill: currentColor;
 }
 

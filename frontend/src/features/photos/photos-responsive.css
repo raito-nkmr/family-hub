@@ -33,10 +33,6 @@
 }
 
 @media (max-width: 900px) {
-  .modal__edge-navigation {
-    display: none;
-  }
-
   .modal__panel {
     grid-template-columns: 1fr;
     height: auto;
@@ -91,6 +87,10 @@
 }
 
 @media (max-width: 640px) {
+  .modal__edge-navigation {
+    display: none;
+  }
+
   .photo-activity-page {
     padding-top: 2.5rem;
   }
