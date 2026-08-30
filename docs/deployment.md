@@ -65,10 +65,19 @@ maintenance units must declare this service in `Requires` and `After`; they must
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
 construction and cutover procedures.
 
-For a schema-changing release, prepare the complete release directory and pinned backend environment without switching
-`/opt/family-hub/current`. Stop the old Backend before an incompatible data or schema migration, run the migration from the
-prepared release's absolute path, and activate that same prepared release only after the migration succeeds. An activation
-after an incompatible migration must not automatically restart the previous Backend against the new schema.
+For a release that contains an Alembic revision or separate data command, prepare the complete release directory and pinned
+backend environment without switching `/opt/family-hub/current`. Use the prepared runtime to query the actual production
+revision before choosing a migration path. If production is already at the target head, skip the migration and leave the old
+Backend running until activation. Otherwise stop the old Backend only when the documented migration requires exclusive
+access, run the migration from the prepared release's absolute path, and activate that same prepared release only after the
+migration succeeds. An activation after an incompatible migration must not automatically restart the previous Backend
+against the new schema.
+
+The release symlink does not manage host configuration. In particular, a versioned `deploy/Caddyfile` does not update
+`/etc/caddy/Caddyfile`. When it changes, compare the prepared copy with the live file, validate a staged file, replace it
+atomically, reload Caddy, and verify that Caddy still returns `404` for `/api/v1/readiness`. Apply changed systemd units through
+the same explicit review and validation boundary. The exact cutover commands and loopback checks are in
+[`production-runbook.md`](./production-runbook.md#release-update).
 
 Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
 startup requirement. The backend remains available for authentication, chore, shopping, groups, and other database-backed
