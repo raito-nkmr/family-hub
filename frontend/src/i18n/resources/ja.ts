@@ -560,7 +560,9 @@ export const ja: TranslationShape = {
     removing: '外しています…',
     removeLabel: '{{filename}}をアルバムから外す',
     removeConfirm: '選択した{{count}}枚をアルバムから外しますか？写真一覧からは削除されません。',
-    group: '家族グループ',
+    groups: '共有する家族グループ',
+    groupsHelp:
+      '自分が所有する写真は必要に応じて選択したグループへ共有されます。他のユーザーの写真は、すべての選択グループに共有済みである必要があります。',
     setCover: '表紙にする',
     currentCover: '現在の表紙',
     coverBadge: '表紙',

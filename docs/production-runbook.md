@@ -163,7 +163,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now family-hub-database.service
 ```
 
-Apply migrations with a temporary unit that reads the production environment:
+For a fresh database with no legacy albums, apply migrations with a temporary unit that reads the production environment:
 
 ```bash
 sudo systemd-run --wait --pipe --collect \
@@ -173,6 +173,42 @@ sudo systemd-run --wait --pipe --collect \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
+
+For an existing database currently stamped at `20260829_04_shopping`, do not apply `upgrade head` in one step: the legacy
+`albums.group_id` column is needed by the data migration. Apply the album schema revision, copy the existing album targets,
+verify that a dry run reports zero rows, and then apply the revision that removes the legacy column:
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/alembic upgrade 20260830_01_album_groups
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.migrate_album_group_shares --apply
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.migrate_album_group_shares
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
+```
+
+Fresh databases with no legacy albums can use `alembic upgrade head` directly. Never run the data command after the second
+revision has removed `albums.group_id`.
 
 When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
 read-only integrity check before starting the Backend. An intentional empty-environment reset uses the guarded orphan-file
@@ -195,7 +231,7 @@ sudo systemd-run --wait --pipe --collect \
   -m app.commands.check_photo_integrity
 ```
 
-The current resettable schema chain has four readable domain revisions, ending at `20260829_04_shopping`. The upgrade contains
+The current resettable schema chain has four readable domain revisions followed by the album sharing revisions. The upgrade contains
 schema DDL only; it does not create users, groups, categories, tasks, completion history, or other application data. Run
 `create_user` and any other bootstrap commands separately. Development reset and production-like reset are independent
 procedures: never run the development `docker compose down --volumes` command against the production-like service or volume.

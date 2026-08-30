@@ -113,6 +113,44 @@
   width: 25px;
 }
 
+.album-form__groups {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.45rem 0 0;
+  padding: 0.85rem 1rem 0.95rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+}
+
+.album-form__groups legend {
+  padding: 0 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.album-form__group-option {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.album-form__group-option input {
+  flex: none;
+  accent-color: var(--color-action-accent);
+}
+
+.album-form__groups-help {
+  margin: -0.2rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
 .album-detail-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

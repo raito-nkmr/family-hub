@@ -29,8 +29,8 @@ def make_summary(photo_count: int = 0) -> AlbumSummary:
         description=None,
         created_by_user_id=TEST_USER.id,
         created_by_username=TEST_USER.username,
-        group_id=uuid4(),
-        group_name="同居家族",
+        group_ids=[uuid4()],
+        group_names=["同居家族"],
         cover_photo_id=None,
         created_at=now,
         updated_at=now,
@@ -62,7 +62,13 @@ class AlbumServiceStub:
         assert self.detail is not None
         return self.detail.album
 
-    def add_photos(self, album_id: UUID, photo_ids: list[UUID], acting_user_id: UUID) -> AlbumDetail:
+    def add_photos(
+        self,
+        album_id: UUID,
+        photo_ids: list[UUID],
+        acting_user_id: UUID,
+        acting_username: str,
+    ) -> AlbumDetail:
         self._raise_error()
         assert photo_ids
         assert acting_user_id == TEST_USER.id
@@ -85,7 +91,7 @@ def test_create_album_returns_created_album() -> None:
     detail = AlbumDetail(make_summary(), [])
 
     response = create_album(
-        AlbumCreate(title="北海道旅行", group_id=detail.album.group_id), TEST_USER, AlbumServiceStub(detail)
+        AlbumCreate(title="北海道旅行", group_ids=detail.album.group_ids), TEST_USER, AlbumServiceStub(detail)
     )
 
     assert response.id == detail.album.id
@@ -96,7 +102,7 @@ def test_create_album_maps_unavailable_group_to_404() -> None:
 
     with pytest.raises(HTTPException) as error:
         create_album(
-            AlbumCreate(title="北海道旅行", group_id=group_id),
+            AlbumCreate(title="北海道旅行", group_ids=[group_id]),
             TEST_USER,
             AlbumServiceStub(error=AlbumNotFoundError(group_id)),
         )
@@ -148,13 +154,19 @@ def test_remove_album_photo_returns_no_content() -> None:
 
 
 def test_album_routes_are_in_openapi_schema() -> None:
-    paths = create_app(Settings(app_env="test")).openapi()["paths"]
+    schema = create_app(Settings(app_env="test")).openapi()
+    paths = schema["paths"]
 
     assert "get" in paths["/api/v1/albums"]
     assert "post" in paths["/api/v1/albums"]
     assert {"get", "patch", "delete"} <= set(paths["/api/v1/albums/{album_id}"])
     assert "post" in paths["/api/v1/albums/{album_id}/photos"]
     assert "delete" in paths["/api/v1/albums/{album_id}/photos/{photo_id}"]
+    album_response_properties = schema["components"]["schemas"]["AlbumResponse"]["properties"]
+    assert "group_ids" in album_response_properties
+    assert "group_names" in album_response_properties
+    assert "group_id" not in album_response_properties
+    assert "group_name" not in album_response_properties
 
 
 def test_album_router_requires_authentication_and_mutations_require_csrf() -> None:

@@ -48,9 +48,9 @@ backend/
 
 Commands include user and dummy-user creation, password reset, database and secondary-storage backup, photo-integrity
 checking, old orphaned-photo cleanup, sidecar synchronization, trash purge, OpenAPI export, notification enqueue and
-delivery, monitoring reporting, and role management. User creation permits regular users only after an active system
-administrator exists; initial setup must explicitly create the administrator. Role management uses the same transaction
-advisory lock as web administration.
+delivery, monitoring reporting, role management, and the one-time migration of legacy single-group album targets. User
+creation permits regular users only after an active system administrator exists; initial setup must explicitly create the
+administrator. Role management uses the same transaction advisory lock as web administration.
 Do not create empty packages or placeholder tests before they are needed.
 
 ## Responsibilities
@@ -110,9 +110,10 @@ must be active and not already members. A database unique constraint and pre-che
 There is no HTTP group-deletion API. The sole physical-delete path is
 `python -m app.commands.delete_group --group-id <UUID>` for operators. If related data exists, `--include-related-data` is
 required. The command displays counts, requires exact group-name confirmation, re-locks and re-counts before deletion, and
-aborts if state changed. Cascades remove membership, invitations, albums and relations, chore history, shopping items and
-shopping workflow rows,
-photo shares, activity-group relations, and upload-batch shares. Photos remain; affected sidecars are synchronized after commit.
+aborts if state changed. Cascades remove membership, invitations, the deleted group's album-share rows, albums that lose their
+last target group, chore history, shopping items and shopping workflow rows, photo shares, activity-group relations, and
+upload-batch shares. Albums with another target group remain. Photos remain; photos whose shares are removed are also removed
+from all albums, and affected sidecars are synchronized after commit.
 
 Membership removal and photo, upload, album, chore, and shopping operations that depend on membership are serialized by
 locking the target `FamilyGroup` first and rechecking membership. When several kinds of rows are needed, lock groups, photos,
@@ -167,8 +168,9 @@ upload, sidecar, finalization, and deletion operations; `storage/facade.py` expo
 operations and storage state;
 `thumbnails.py` creates WebP thumbnails from images or the first video frame, and `video_validation.py` validates supported
 video containers with `ffprobe`;
-`export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes only the read-only photo
-catalog needed by other features. The use-case services are split by responsibility: `access_service.py` handles reads,
+`export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes the read-only photo catalog
+and the album photo-sharing transaction boundary needed by other features. The use-case services are split by responsibility:
+`access_service.py` handles reads,
 content, and favorites; `metadata_service.py` handles memos, capture-time overrides, and sharing; `registration.py` handles
 finalized photo registration; `trash_service.py` handles trash transitions and permanent deletion; and
 `export_service.py` validates ZIP-export selections. `metadata_persistence.py` coordinates sidecar writes, transaction
@@ -176,10 +178,12 @@ commit, and sidecar restoration when metadata persistence fails. Batch uploads r
 
 ### `features.albums`
 
-Owns album creation, editing, deletion, and photo relationships. Album operations never modify originals or JSON sidecars.
-Only photos already shared with the album's group may be added; album membership never grants photo visibility. The feature
-uses only `features.photos.public`, not photo internals. A repository layer is intentionally deferred until service/database
-logic becomes difficult to read.
+Owns album creation, editing, deletion, and photo relationships. Album operations never modify originals. An album targets one
+or more family groups and has one shared `album_photos` collection; it is not copied per group. Adding an owner's photo or a
+new target group can add missing photo shares, with sidecar, New activity, and notification updates in the same transaction.
+Photos owned by another user must already be shared with every target group; album membership never grants access by itself.
+The feature uses only `features.photos.public`, not photo internals. A repository layer is intentionally deferred until
+service/database logic becomes difficult to read.
 
 ### `features.maintenance` and `features.notifications`
 

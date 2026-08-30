@@ -1,11 +1,18 @@
 from collections.abc import Collection
 from uuid import UUID
 
+from fastapi import Request
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from app.features.groups.public import FamilyGroupMember
 from app.features.photos.access import photo_is_in_library
+from app.features.photos.album_sharing import (
+    AlbumPhotoSharingError,
+    AlbumPhotoSharingPermissionError,
+    PhotoAlbumSharingService,
+    PreparedAlbumPhotoShares,
+)
 from app.features.photos.models import Photo, PhotoFavorite, PhotoLifecycleState, PhotoMetadata, PhotoShare
 from app.features.photos.schemas import PhotoResponse, photo_response_from_model
 from app.features.photos.storage.facade import PhotoStorage
@@ -13,12 +20,17 @@ from app.features.photos.storage.types import StorageStatusCode
 
 __all__ = [
     "Photo",
+    "AlbumPhotoSharingError",
+    "AlbumPhotoSharingPermissionError",
     "PhotoCatalog",
     "PhotoLifecycleState",
     "PhotoResponse",
     "PhotoShare",
     "PhotoStorage",
+    "PhotoAlbumSharingService",
+    "PreparedAlbumPhotoShares",
     "StorageStatusCode",
+    "get_photo_storage",
     "photo_response_from_model",
     "visible_share_group_ids",
 ]
@@ -92,3 +104,7 @@ class PhotoCatalog:
 
     def visible_share_group_ids(self, photo_ids: Collection[UUID], viewer_user_id: UUID) -> dict[UUID, set[UUID]]:
         return visible_share_group_ids(self._session, photo_ids, viewer_user_id)
+
+
+async def get_photo_storage(request: Request) -> PhotoStorage:
+    return PhotoStorage(request.app.state.settings)

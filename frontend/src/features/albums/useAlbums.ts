@@ -29,7 +29,7 @@ interface UseAlbumsOptions {
 interface AlbumInput {
   title: string
   description: string | null
-  group_id: string
+  group_ids: string[]
 }
 
 export function useAlbums({ onUnauthorized }: UseAlbumsOptions) {
@@ -122,7 +122,7 @@ export function useAlbums({ onUnauthorized }: UseAlbumsOptions) {
     try {
       await updateMutation.mutateAsync({
         albumId: selectedAlbumId,
-        value: { title: value.title, description: value.description },
+        value: { title: value.title, description: value.description, group_ids: value.group_ids },
       })
       setShowEditDialog(false)
     } catch (error) {

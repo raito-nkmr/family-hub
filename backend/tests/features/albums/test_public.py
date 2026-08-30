@@ -1,10 +1,12 @@
 from unittest.mock import MagicMock
 from uuid import uuid4
 
+from sqlalchemy import select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from app.features.albums.models import Album
-from app.features.albums.public import clear_photo_as_cover
+from app.features.albums.public import album_is_visible_to_user, clear_photo_as_cover
 
 
 def test_clear_photo_as_cover_clears_cover_and_updates_album() -> None:
@@ -16,7 +18,6 @@ def test_clear_photo_as_cover_clears_cover_and_updates_album() -> None:
         description=None,
         created_by_user_id=uuid4(),
         created_by_username="owner",
-        group_id=uuid4(),
         cover_photo_id=photo_id,
     )
     session.scalars.return_value.all.return_value = [album]
@@ -26,3 +27,12 @@ def test_clear_photo_as_cover_clears_cover_and_updates_album() -> None:
     assert album.cover_photo_id is None
     assert album.updated_at is not None
     session.flush.assert_called_once_with()
+
+
+def test_album_visibility_uses_any_target_group_membership() -> None:
+    statement = select(album_is_visible_to_user(uuid4(), uuid4()))
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert "album_group_shares" in sql
+    assert "family_group_members" in sql
+    assert "albums.group_id" not in sql

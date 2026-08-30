@@ -565,7 +565,9 @@ export const en = {
     removing: 'Removing…',
     removeLabel: 'Remove {{filename}} from album',
     removeConfirm: 'Remove {{count}} selected photo(s) from this album? The photos will remain in your photo library.',
-    group: 'Family group',
+    groups: 'Shared family groups',
+    groupsHelp:
+      'Your photos are shared with selected groups when needed. Photos owned by other people must already be shared with every selected group.',
     setCover: 'Set as cover',
     currentCover: 'Current cover',
     coverBadge: 'Cover',

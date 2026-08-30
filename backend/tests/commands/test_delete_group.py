@@ -121,6 +121,8 @@ def test_delete_group_collects_affected_photos_and_commits(monkeypatch: pytest.M
     photo_ids = [uuid4(), uuid4()]
     session.scalars.return_value.all.return_value = photo_ids
     monkeypatch.setattr("app.commands.delete_group.get_group_deletion_impact", MagicMock(return_value=impact))
+    remove_from_albums = MagicMock()
+    monkeypatch.setattr("app.commands.delete_group.remove_photo_from_all_albums", remove_from_albums)
 
     result = delete_group(session, impact, include_related_data=True)
 
@@ -129,6 +131,23 @@ def test_delete_group_collects_affected_photos_and_commits(monkeypatch: pytest.M
     assert "DELETE FROM family_groups" in str(delete_statement.compile(dialect=postgresql.dialect()))
     session.commit.assert_called_once_with()
     session.rollback.assert_not_called()
+    assert [call.args[1] for call in remove_from_albums.call_args_list] == photo_ids
+
+
+def test_delete_group_removes_only_orphaned_albums_before_group(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = MagicMock(spec=Session)
+    impact = make_impact(album_count=2, album_photo_count=3)
+    session.scalars.return_value.all.return_value = []
+    monkeypatch.setattr("app.commands.delete_group.get_group_deletion_impact", MagicMock(return_value=impact))
+
+    delete_group(session, impact, include_related_data=True)
+
+    album_delete_statement = session.execute.call_args_list[-2].args[0]
+    sql = str(album_delete_statement.compile(dialect=postgresql.dialect()))
+    assert "DELETE FROM albums" in sql
+    assert "album_group_shares" in sql
+    assert "HAVING count(*) = %(count_1)s" in sql
+    assert "DELETE FROM family_groups" in str(session.execute.call_args_list[-1].args[0])
 
 
 def test_delete_group_rolls_back_database_failure(monkeypatch: pytest.MonkeyPatch) -> None:

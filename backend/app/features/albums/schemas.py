@@ -16,7 +16,7 @@ def _normalize_optional_text(value: str | None) -> str | None:
 class AlbumCreate(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
-    group_id: UUID
+    group_ids: list[UUID] = Field(min_length=1)
 
     @field_validator("title")
     @classmethod
@@ -31,11 +31,19 @@ class AlbumCreate(BaseModel):
     def normalize_description(cls, value: str | None) -> str | None:
         return _normalize_optional_text(value)
 
+    @field_validator("group_ids")
+    @classmethod
+    def require_unique_group_ids(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("group_ids must not contain duplicates")
+        return value
+
 
 class AlbumUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     cover_photo_id: UUID | None = None
+    group_ids: list[UUID] | None = Field(default=None, min_length=1)
 
     @field_validator("title")
     @classmethod
@@ -52,12 +60,21 @@ class AlbumUpdate(BaseModel):
     def normalize_description(cls, value: str | None) -> str | None:
         return _normalize_optional_text(value)
 
+    @field_validator("group_ids")
+    @classmethod
+    def require_unique_group_ids(cls, value: list[UUID] | None) -> list[UUID] | None:
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("group_ids must not contain duplicates")
+        return value
+
     @model_validator(mode="after")
     def require_at_least_one_field(self) -> "AlbumUpdate":
         if not self.model_fields_set:
             raise ValueError("at least one album field must be provided")
         if "title" in self.model_fields_set and self.title is None:
             raise ValueError("album title must not be null")
+        if "group_ids" in self.model_fields_set and self.group_ids is None:
+            raise ValueError("group_ids must not be null")
         return self
 
 
@@ -80,8 +97,8 @@ class AlbumResponse(BaseModel):
     description: str | None
     created_by_user_id: UUID
     created_by_username: str
-    group_id: UUID
-    group_name: str | None
+    group_ids: list[UUID]
+    group_names: list[str]
     cover_photo_id: UUID | None
     created_at: datetime
     updated_at: datetime

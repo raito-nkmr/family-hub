@@ -15,9 +15,11 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260829_04_shopping"]
+    assert scripts.get_heads() == ["20260830_02_remove_album_group_id"]
     assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260830_02_remove_album_group_id",
+        "20260830_01_album_groups",
         "20260829_04_shopping",
         "20260829_03_household",
         "20260829_02_media",
@@ -80,6 +82,10 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "ck_shopping_trips_discard_state" in sql
     assert "CREATE TABLE login_rate_limits" in sql
     assert "pk_login_rate_limits" in sql
+    assert "CREATE TABLE album_group_shares" in sql
+    assert "pk_album_group_shares" in sql
+    assert "ALTER TABLE albums ALTER COLUMN group_id DROP NOT NULL" in sql
+    assert "ALTER TABLE albums DROP COLUMN group_id" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
@@ -98,6 +104,7 @@ def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_pa
     assert "DROP TABLE photos" in sql
     assert "DROP TABLE chore_categories" in sql
     assert "DROP COLUMN timezone" in sql
+    assert "DROP TABLE album_group_shares" in sql
 
 
 MIGRATION_TEST_DATABASE_URL = os.getenv("MIGRATION_TEST_DATABASE_URL")

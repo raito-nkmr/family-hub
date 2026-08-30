@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_management_settings
 from app.database.session import create_database_engine
-from app.features.albums.models import Album, AlbumPhoto
+from app.features.albums.models import Album, AlbumGroupShare, AlbumPhoto
+from app.features.albums.public import remove_photo_from_all_albums
 from app.features.audit.public import record_administrative_event
 from app.features.chores.models import ChoreCompletion, ChoreTask
 from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation
@@ -84,11 +85,20 @@ class GroupDeletionImpact:
 
 
 def get_group_deletion_impact(session: Session, group_id: UUID, *, lock: bool = False) -> GroupDeletionImpact:
+    orphan_album_ids = (
+        select(AlbumGroupShare.album_id)
+        .where(AlbumGroupShare.group_id == group_id)
+        .group_by(AlbumGroupShare.album_id)
+        .having(func.count() == 1)
+    )
     statement = select(
         FamilyGroup.name,
         _count(FamilyGroupMember, FamilyGroupMember.group_id == group_id).label("member_count"),
-        _count(Album, Album.group_id == group_id).label("album_count"),
-        _count(AlbumPhoto, AlbumPhoto.album_id == Album.id, Album.group_id == group_id).label("album_photo_count"),
+        select(func.count(func.distinct(AlbumGroupShare.album_id)))
+        .where(AlbumGroupShare.group_id == group_id)
+        .scalar_subquery()
+        .label("album_count"),
+        _count(AlbumPhoto, AlbumPhoto.album_id.in_(orphan_album_ids)).label("album_photo_count"),
         _count(ChoreTask, ChoreTask.group_id == group_id).label("chore_task_count"),
         _count(
             ChoreCompletion,
@@ -140,6 +150,8 @@ def delete_group(
                 .order_by(PhotoShare.photo_id)
             ).all()
         )
+        for photo_id in affected_photo_ids:
+            remove_photo_from_all_albums(session, photo_id)
         record_administrative_event(
             session,
             scope="system",
@@ -160,6 +172,13 @@ def delete_group(
                 "shopping_purchase_count": expected_impact.shopping_purchase_count,
             },
         )
+        orphan_album_ids = (
+            select(AlbumGroupShare.album_id)
+            .where(AlbumGroupShare.group_id == expected_impact.group_id)
+            .group_by(AlbumGroupShare.album_id)
+            .having(func.count() == 1)
+        )
+        session.execute(delete(Album).where(Album.id.in_(orphan_album_ids)))
         session.execute(delete(FamilyGroup).where(FamilyGroup.id == expected_impact.group_id))
         session.commit()
         return affected_photo_ids

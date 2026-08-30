@@ -230,9 +230,9 @@ export type AlbumCreate = {
    */
   description?: string | null
   /**
-   * Group Id
+   * Group Ids
    */
-  group_id: string
+  group_ids: Array<string>
   /**
    * Title
    */
@@ -264,13 +264,13 @@ export type AlbumDetailResponse = {
    */
   description: string | null
   /**
-   * Group Id
+   * Group Ids
    */
-  group_id: string
+  group_ids: Array<string>
   /**
-   * Group Name
+   * Group Names
    */
-  group_name: string | null
+  group_names: Array<string>
   /**
    * Id
    */
@@ -342,13 +342,13 @@ export type AlbumResponse = {
    */
   description: string | null
   /**
-   * Group Id
+   * Group Ids
    */
-  group_id: string
+  group_ids: Array<string>
   /**
-   * Group Name
+   * Group Names
    */
-  group_name: string | null
+  group_names: Array<string>
   /**
    * Id
    */
@@ -379,6 +379,10 @@ export type AlbumUpdate = {
    * Description
    */
   description?: string | null
+  /**
+   * Group Ids
+   */
+  group_ids?: Array<string> | null
   /**
    * Title
    */

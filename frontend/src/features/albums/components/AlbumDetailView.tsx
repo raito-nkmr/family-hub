@@ -90,7 +90,7 @@ export function AlbumDetailView({
           <p className="eyebrow">{t('albums.detailEyebrow')}</p>
           <h1>{album.title}</h1>
           <p>{album.description ?? t('albums.noDescription')}</p>
-          {album.group_name && <span>{album.group_name}</span>}
+          {album.group_names.length > 0 && <span>{album.group_names.join(', ')}</span>}
           <span>
             {t('albums.photosCount', { count: album.photo_count })} ·{' '}
             {t('albums.updated', { date: formatDateTime(album.updated_at) })}

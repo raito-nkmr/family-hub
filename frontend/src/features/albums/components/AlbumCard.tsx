@@ -14,7 +14,7 @@ export function AlbumCard({ album, onSelect }: { album: Album; onSelect: (album:
       <span className="album-card__body">
         <strong>{album.title}</strong>
         <span>{album.description ?? t('albums.noDescription')}</span>
-        {album.group_name && <span>{album.group_name}</span>}
+        {album.group_names.length > 0 && <span>{album.group_names.join(', ')}</span>}
       </span>
       <span className="album-card__meta">
         <span>{t('albums.photosCount', { count: album.photo_count })}</span>

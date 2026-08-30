@@ -6,12 +6,19 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import case, delete, func, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.features.albums.models import Album, AlbumPhoto
-from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_user_group_ids
-from app.features.photos.public import Photo, PhotoCatalog, PhotoLifecycleState
+from app.features.albums.models import Album, AlbumGroupShare, AlbumPhoto
+from app.features.groups.public import FamilyGroup, FamilyGroupMember, lock_group_ids, lock_user_group_ids
+from app.features.photos.public import (
+    AlbumPhotoSharingError,
+    AlbumPhotoSharingPermissionError,
+    Photo,
+    PhotoAlbumSharingService,
+    PhotoCatalog,
+    PhotoLifecycleState,
+    PreparedAlbumPhotoShares,
+)
 
 
 class AlbumNotFoundError(Exception):
@@ -48,8 +55,8 @@ class AlbumSummary:
     description: str | None
     created_by_user_id: UUID
     created_by_username: str
-    group_id: UUID
-    group_name: str | None
+    group_ids: list[UUID]
+    group_names: list[str]
     cover_photo_id: UUID | None
     created_at: datetime
     updated_at: datetime
@@ -66,9 +73,15 @@ class AlbumDetail:
 
 
 class AlbumService:
-    def __init__(self, session: Session, photo_catalog: PhotoCatalog) -> None:
+    def __init__(
+        self,
+        session: Session,
+        photo_catalog: PhotoCatalog,
+        photo_sharing: PhotoAlbumSharingService,
+    ) -> None:
         self._session = session
         self._photo_catalog = photo_catalog
+        self._photo_sharing = photo_sharing
 
     def list_albums(self, viewer_user_id: UUID) -> list[AlbumSummary]:
         fallback_cover = (
@@ -91,19 +104,17 @@ class AlbumService:
             select(
                 Album,
                 func.count(Photo.id).filter(Photo.lifecycle_state == PhotoLifecycleState.ACTIVE),
-                FamilyGroup.name,
                 fallback_cover,
             )
             .outerjoin(AlbumPhoto, AlbumPhoto.album_id == Album.id)
             .outerjoin(Photo, Photo.id == AlbumPhoto.photo_id)
-            .outerjoin(FamilyGroup, FamilyGroup.id == Album.group_id)
             .where(self._can_access(viewer_user_id))
-            .group_by(Album.id, FamilyGroup.name)
+            .group_by(Album.id)
             .order_by(Album.updated_at.desc(), Album.id.desc())
         )
         return [
-            self._summary(album, photo_count, group_name, cover_photo_id)
-            for album, photo_count, group_name, cover_photo_id in self._session.execute(statement).all()
+            self._summary(album, photo_count, *self._group_details(album.id), cover_photo_id)
+            for album, photo_count, cover_photo_id in self._session.execute(statement).all()
         ]
 
     def get_album(
@@ -146,7 +157,7 @@ class AlbumService:
                 Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
             )
         )
-        group_name = self._session.scalar(select(FamilyGroup.name).where(FamilyGroup.id == album.group_id))
+        group_ids, group_names = self._group_details(album.id)
         fallback_cover_id = self._session.scalar(
             select(AlbumPhoto.photo_id)
             .join(Photo, Photo.id == AlbumPhoto.photo_id)
@@ -166,7 +177,7 @@ class AlbumService:
             last = visible_rows[-1]
             next_cursor = self._encode_photo_cursor(last.effective_captured_at, last.photo_id)
         return AlbumDetail(
-            album=self._summary(album, photo_count or 0, group_name, fallback_cover_id),
+            album=self._summary(album, photo_count or 0, group_ids, group_names, fallback_cover_id),
             photos=photos,
             next_cursor=next_cursor,
             visible_group_ids=self._photo_catalog.visible_share_group_ids(photo_ids, viewer_user_id),
@@ -179,10 +190,13 @@ class AlbumService:
         description: str | None,
         created_by_user_id: UUID,
         created_by_username: str,
-        group_id: UUID,
+        group_ids: list[UUID],
     ) -> AlbumSummary:
-        if lock_user_group_ids(self._session, created_by_user_id, {group_id}) != {group_id}:
-            raise AlbumNotFoundError(group_id)
+        requested_group_ids = set(group_ids)
+        if not requested_group_ids:
+            raise AlbumNotFoundError(UUID(int=0))
+        if lock_user_group_ids(self._session, created_by_user_id, requested_group_ids) != requested_group_ids:
+            raise AlbumNotFoundError(next(iter(requested_group_ids)))
         now = datetime.now(UTC)
         album = Album(
             id=uuid4(),
@@ -190,15 +204,18 @@ class AlbumService:
             description=description,
             created_by_user_id=created_by_user_id,
             created_by_username=created_by_username,
-            group_id=group_id,
             cover_photo_id=None,
             created_at=now,
             updated_at=now,
         )
         self._session.add(album)
+        self._session.flush()
+        self._session.add_all(
+            AlbumGroupShare(album_id=album.id, group_id=group_id, created_at=now)
+            for group_id in sorted(requested_group_ids, key=str)
+        )
         self._commit()
-        group_name = self._session.scalar(select(FamilyGroup.name).where(FamilyGroup.id == group_id))
-        return self._summary(album, 0, group_name, None)
+        return self._summary(album, 0, *self._group_details(album.id), None)
 
     def update_album(
         self,
@@ -209,28 +226,59 @@ class AlbumService:
         acting_user_id: UUID,
         cover_photo_id: UUID | None,
         update_cover: bool,
+        group_ids: list[UUID] | None = None,
+        update_groups: bool = False,
+        acting_username: str = "",
     ) -> AlbumSummary:
         album = self._get_album_model(album_id, acting_user_id, lock=True)
+        if update_cover and cover_photo_id is not None:
+            active_cover = self._session.scalar(
+                select(Photo.id)
+                .join(AlbumPhoto, AlbumPhoto.photo_id == Photo.id)
+                .where(
+                    AlbumPhoto.album_id == album_id,
+                    AlbumPhoto.photo_id == cover_photo_id,
+                    Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
+                )
+            )
+            if active_cover is None:
+                raise PhotoNotInAlbumError(album_id, cover_photo_id)
+        prepared_shares = PreparedAlbumPhotoShares(())
+        if update_groups:
+            requested_group_ids = set(group_ids or [])
+            if not requested_group_ids:
+                raise AlbumNotFoundError(album_id)
+            current_group_ids = set(self._group_ids(album.id))
+            added_group_ids = requested_group_ids - current_group_ids
+            if lock_user_group_ids(self._session, acting_user_id, added_group_ids) != added_group_ids:
+                raise AlbumNotFoundError(album_id)
+            lock_group_ids(self._session, current_group_ids | requested_group_ids)
+            prepared_shares = self._prepare_album_photo_sharing(
+                album.id,
+                requested_group_ids,
+                acting_user_id,
+                set(self._album_photo_ids(album.id)),
+                acting_username,
+            )
+            self._session.execute(
+                delete(AlbumGroupShare).where(
+                    AlbumGroupShare.album_id == album.id,
+                    ~AlbumGroupShare.group_id.in_(requested_group_ids),
+                )
+            )
+            existing_group_ids = current_group_ids & requested_group_ids
+            self._session.add_all(
+                AlbumGroupShare(album_id=album.id, group_id=group_id, created_at=datetime.now(UTC))
+                for group_id in sorted(requested_group_ids - existing_group_ids, key=str)
+            )
         if title is not None:
             album.title = title
         if update_description:
             album.description = description
         if update_cover:
-            if cover_photo_id is not None:
-                active_cover = self._session.scalar(
-                    select(Photo.id)
-                    .join(AlbumPhoto, AlbumPhoto.photo_id == Photo.id)
-                    .where(
-                        AlbumPhoto.album_id == album_id,
-                        AlbumPhoto.photo_id == cover_photo_id,
-                        Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
-                    )
-                )
-                if active_cover is None:
-                    raise PhotoNotInAlbumError(album_id, cover_photo_id)
             album.cover_photo_id = cover_photo_id
         album.updated_at = datetime.now(UTC)
-        self._commit()
+        self._commit(prepared_shares)
         photo_count = self._session.scalar(
             select(func.count())
             .select_from(AlbumPhoto)
@@ -240,7 +288,7 @@ class AlbumService:
                 Photo.lifecycle_state == PhotoLifecycleState.ACTIVE,
             )
         )
-        group_name = self._session.scalar(select(FamilyGroup.name).where(FamilyGroup.id == album.group_id))
+        group_ids, group_names = self._group_details(album.id)
         fallback_cover_id = self._session.scalar(
             select(AlbumPhoto.photo_id)
             .join(Photo, Photo.id == AlbumPhoto.photo_id)
@@ -255,20 +303,30 @@ class AlbumService:
             )
             .limit(1)
         )
-        return self._summary(album, photo_count or 0, group_name, fallback_cover_id)
+        return self._summary(album, photo_count or 0, group_ids, group_names, fallback_cover_id)
 
     def delete_album(self, album_id: UUID, acting_user_id: UUID) -> None:
         album = self._get_album_model(album_id, acting_user_id, lock=True)
         self._session.delete(album)
         self._commit()
 
-    def add_photos(self, album_id: UUID, photo_ids: list[UUID], acting_user_id: UUID) -> AlbumDetail:
+    def add_photos(
+        self,
+        album_id: UUID,
+        photo_ids: list[UUID],
+        acting_user_id: UUID,
+        acting_username: str = "",
+    ) -> AlbumDetail:
         album = self._get_album_model(album_id, acting_user_id, lock=True)
         requested_ids = set(photo_ids)
-        addable_ids = self._photo_catalog.get_addable_to_group_ids(requested_ids, album.group_id)
-        missing_ids = requested_ids - addable_ids
-        if missing_ids:
-            raise PhotoNotFoundError(missing_ids)
+        group_ids = set(self._group_ids(album.id))
+        prepared_shares = self._prepare_album_photo_sharing(
+            album.id,
+            group_ids,
+            acting_user_id,
+            requested_ids,
+            acting_username,
+        )
 
         existing_ids = set(
             self._session.scalars(
@@ -281,7 +339,7 @@ class AlbumService:
         for photo_id in requested_ids - existing_ids:
             self._session.add(AlbumPhoto(album_id=album_id, photo_id=photo_id, added_at=datetime.now(UTC)))
         album.updated_at = datetime.now(UTC)
-        self._commit()
+        self._commit(prepared_shares)
         return self.get_album(album_id, acting_user_id)
 
     def remove_photo(self, album_id: UUID, photo_id: UUID, acting_user_id: UUID) -> None:
@@ -299,40 +357,96 @@ class AlbumService:
         self._commit()
 
     def _get_album_model(self, album_id: UUID, viewer_user_id: UUID, *, lock: bool = False) -> Album:
-        if lock:
-            candidate = self._session.scalar(
-                select(Album).where(Album.id == album_id, self._can_access(viewer_user_id))
-            )
-            if candidate is None or lock_user_group_ids(self._session, viewer_user_id, {candidate.group_id}) != {
-                candidate.group_id
-            }:
-                self._session.rollback()
-                raise AlbumNotFoundError(album_id)
         statement = select(Album).where(Album.id == album_id, self._can_access(viewer_user_id))
         if lock:
             statement = statement.with_for_update()
         album = self._session.scalar(statement)
         if album is None:
             raise AlbumNotFoundError(album_id)
+        if lock:
+            group_ids = self._group_ids(album.id)
+            if not group_ids or not (lock_user_group_ids(self._session, viewer_user_id, group_ids) & set(group_ids)):
+                self._session.rollback()
+                raise AlbumNotFoundError(album_id)
         return album
 
-    def _commit(self) -> None:
+    def _commit(self, prepared_shares: PreparedAlbumPhotoShares | None = None) -> None:
         try:
-            self._session.commit()
-        except SQLAlchemyError as error:
-            self._session.rollback()
+            self._photo_sharing.commit(prepared_shares or PreparedAlbumPhotoShares(()))
+        except AlbumPhotoSharingError as error:
             raise AlbumPersistenceError("Could not persist album changes") from error
 
+    def _prepare_album_photo_sharing(
+        self,
+        album_id: UUID,
+        group_ids: set[UUID],
+        acting_user_id: UUID,
+        candidate_photo_ids: set[UUID],
+        acting_username: str,
+    ) -> PreparedAlbumPhotoShares:
+        if not candidate_photo_ids or not group_ids:
+            return PreparedAlbumPhotoShares(())
+        photos = self._photo_catalog.list_by_ids(candidate_photo_ids, acting_user_id)
+        photos_by_id = {photo.id: photo for photo in photos}
+        missing_photo_ids = candidate_photo_ids - photos_by_id.keys()
+        if missing_photo_ids:
+            raise PhotoNotFoundError(missing_photo_ids)
+        owner_photo_group_ids: dict[UUID, set[UUID]] = {}
+        unavailable_photo_ids: set[UUID] = set()
+        for photo in photos:
+            missing_group_ids = group_ids - {share.group_id for share in photo.shares}
+            if not missing_group_ids:
+                continue
+            if photo.uploaded_by_user_id == acting_user_id:
+                owner_photo_group_ids[photo.id] = missing_group_ids
+            else:
+                unavailable_photo_ids.add(photo.id)
+        if unavailable_photo_ids:
+            raise PhotoNotFoundError(unavailable_photo_ids)
+        try:
+            return self._photo_sharing.prepare_add_groups(owner_photo_group_ids, acting_user_id, acting_username)
+        except AlbumPhotoSharingPermissionError as error:
+            raise PhotoNotFoundError(set(owner_photo_group_ids)) from error
+        except AlbumPhotoSharingError as error:
+            raise AlbumPersistenceError("Could not prepare album photo sharing") from error
+
+    def _group_ids(self, album_id: UUID) -> list[UUID]:
+        return list(
+            self._session.scalars(
+                select(AlbumGroupShare.group_id)
+                .where(AlbumGroupShare.album_id == album_id)
+                .order_by(AlbumGroupShare.group_id)
+            ).all()
+        )
+
+    def _album_photo_ids(self, album_id: UUID) -> list[UUID]:
+        return list(self._session.scalars(select(AlbumPhoto.photo_id).where(AlbumPhoto.album_id == album_id)).all())
+
+    def _group_details(self, album_id: UUID) -> tuple[list[UUID], list[str]]:
+        rows = self._session.execute(
+            select(AlbumGroupShare.group_id, FamilyGroup.name)
+            .join(FamilyGroup, FamilyGroup.id == AlbumGroupShare.group_id)
+            .where(AlbumGroupShare.album_id == album_id)
+            .order_by(FamilyGroup.name.asc(), AlbumGroupShare.group_id.asc())
+        ).all()
+        return [group_id for group_id, _ in rows], [name for _, name in rows]
+
     @staticmethod
-    def _summary(album: Album, photo_count: int, group_name: str | None, cover_photo_id: UUID | None) -> AlbumSummary:
+    def _summary(
+        album: Album,
+        photo_count: int,
+        group_ids: list[UUID],
+        group_names: list[str],
+        cover_photo_id: UUID | None,
+    ) -> AlbumSummary:
         return AlbumSummary(
             id=album.id,
             title=album.title,
             description=album.description,
             created_by_user_id=album.created_by_user_id,
             created_by_username=album.created_by_username,
-            group_id=album.group_id,
-            group_name=group_name,
+            group_ids=group_ids,
+            group_names=group_names,
             cover_photo_id=cover_photo_id,
             created_at=album.created_at,
             updated_at=album.updated_at,
@@ -341,7 +455,11 @@ class AlbumService:
 
     @staticmethod
     def _can_access(viewer_user_id: UUID):
-        return Album.group_id.in_(select(FamilyGroupMember.group_id).where(FamilyGroupMember.user_id == viewer_user_id))
+        return Album.id.in_(
+            select(AlbumGroupShare.album_id)
+            .join(FamilyGroupMember, FamilyGroupMember.group_id == AlbumGroupShare.group_id)
+            .where(FamilyGroupMember.user_id == viewer_user_id)
+        )
 
     @staticmethod
     def _encode_photo_cursor(sort_at: datetime, photo_id: UUID) -> str:

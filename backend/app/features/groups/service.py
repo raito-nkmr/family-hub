@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, aliased
 
-from app.features.albums.public import Album
+from app.features.albums.public import Album, AlbumGroupShare
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.public import PublicUser, UserDirectory
 from app.features.chores.public import ChoreTask
@@ -258,7 +258,7 @@ class GroupService:
             )
         )
         return {
-            "album_count": self._count(Album, Album.group_id == group_id),
+            "album_count": self._count(AlbumGroupShare, AlbumGroupShare.group_id == group_id),
             "shared_photo_count": self._count(PhotoShare, PhotoShare.group_id == group_id),
             "chore_task_count": self._count(ChoreTask, ChoreTask.group_id == group_id),
             "shopping_item_count": self._count(ShoppingItem, ShoppingItem.group_id == group_id),
@@ -327,7 +327,7 @@ class GroupService:
             ),
             "created_album_count": self._count(
                 Album,
-                Album.group_id == group_id,
+                Album.id.in_(select(AlbumGroupShare.album_id).where(AlbumGroupShare.group_id == group_id)),
                 Album.created_by_user_id == target_user_id,
             ),
             "created_chore_task_count": self._count(
