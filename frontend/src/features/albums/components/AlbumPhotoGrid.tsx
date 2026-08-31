@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '../../../shared/lib/format'
 import { getPhotoCaptureTime } from '../../photos/api'
 import type { Photo } from '../../photos/public'
-import { PhotoPreview } from '../../photos/public'
+import { AlbumPhotoThumbnail } from './AlbumPhotoThumbnail'
 
 interface AlbumPhotoGridProps {
   photos: Photo[]
@@ -42,15 +42,14 @@ export function AlbumPhotoGrid({
               disabled={removing}
               onClick={() => (organizing ? onToggle(photo.id) : onSelect(photo))}
             >
-              <div className="album-photo-card__image-wrap">
-                <PhotoPreview photo={photo} className="album-photo-card__image" />
+              <AlbumPhotoThumbnail photo={photo} className="album-photo-card__image-wrap">
                 {isCover && <span className="album-photo-card__cover-badge">{t('albums.coverBadge')}</span>}
                 {organizing && (
                   <span className="album-photo-card__selection" aria-hidden="true">
                     {selected ? '✓' : ''}
                   </span>
                 )}
-              </div>
+              </AlbumPhotoThumbnail>
               <span className="album-photo-card__body">
                 <strong>{photo.original_filename}</strong>
                 {getPhotoCaptureTime(photo) ? (

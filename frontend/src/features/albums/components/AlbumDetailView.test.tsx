@@ -50,8 +50,8 @@ const album: AlbumDetail = {
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
   photo_count: 2,
-  group_id: 'group-1',
-  group_name: '同居家族',
+  group_ids: ['group-1'],
+  group_names: ['同居家族'],
   cover_photo_id: firstPhoto.id,
   photos: [firstPhoto, secondPhoto],
   next_cursor: null,
@@ -86,10 +86,14 @@ describe('AlbumDetailView', () => {
     expect(screen.queryByRole('button', { name: '表紙にする' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'アルバムから外す' })).not.toBeInTheDocument()
     expect(screen.getByText('表紙')).toBeInTheDocument()
-    expect(document.querySelector('.album-detail-header__cover img')).toHaveAttribute(
-      'src',
-      '/api/v1/photos/photo-1/thumbnail',
-    )
+    const coverFrame = document.querySelector('.album-detail-header__cover')
+    const firstPhotoFrame = document.querySelector(`.album-photo-card__image-wrap[data-photo-id="${firstPhoto.id}"]`)
+    const coverImage = coverFrame?.querySelector('img')
+    const firstPhotoImage = firstPhotoFrame?.querySelector('img')
+    expect(coverFrame).toHaveAttribute('data-photo-id', firstPhoto.id)
+    expect(firstPhotoFrame).toHaveAttribute('data-photo-id', firstPhoto.id)
+    expect(coverImage).toHaveAttribute('src', '/api/v1/photos/photo-1/thumbnail')
+    expect(coverImage).toHaveAttribute('src', firstPhotoImage?.getAttribute('src'))
 
     fireEvent.click(screen.getByRole('button', { name: /second.jpg/ }))
     expect(props.onSelectPhoto).toHaveBeenCalledWith(secondPhoto)

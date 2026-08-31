@@ -31,7 +31,6 @@ describe('PhotoPickerDialog', () => {
     render(
       <PhotoPickerDialog
         albumId="album-1"
-        groupId="group-1"
         submitting={false}
         error={null}
         onUnauthorized={vi.fn()}
@@ -41,7 +40,7 @@ describe('PhotoPickerDialog', () => {
     )
 
     expect(usePhotoListMock).toHaveBeenLastCalledWith({
-      filters: { excludeAlbumId: 'album-1', sharingGroupId: 'group-1' },
+      filters: { excludeAlbumId: 'album-1' },
     })
     await user.click(screen.getByRole('button', { name: '検索条件を表示' }))
     expect(screen.queryByLabelText('共有グループ')).not.toBeInTheDocument()
@@ -50,7 +49,7 @@ describe('PhotoPickerDialog', () => {
     await user.click(screen.getByRole('button', { name: '絞り込む' }))
 
     expect(usePhotoListMock).toHaveBeenLastCalledWith({
-      filters: { q: '旅行', excludeAlbumId: 'album-1', sharingGroupId: 'group-1' },
+      filters: { q: '旅行', excludeAlbumId: 'album-1' },
     })
   })
 })

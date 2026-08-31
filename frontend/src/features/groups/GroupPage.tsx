@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
@@ -8,14 +8,8 @@ import { formatDateTime } from '../../shared/lib/format'
 import { EmptyState } from '../../shared/ui/EmptyState'
 import { PageMessage } from '../../shared/ui/PageMessage'
 import { RefreshButton } from '../../shared/ui/RefreshButton'
-import { BackIcon, CheckIcon, DeleteIcon, GroupAddIcon, GroupIcon, PlusIcon, SaveIcon } from '../../shared/ui/icons'
-import {
-  decideGroupMembershipInvitation,
-  getGroupAdministration,
-  getGroupAuditEvents,
-  getMyGroupMembershipInvitations,
-  type GroupRole,
-} from './api'
+import { BackIcon, DeleteIcon, GroupAddIcon, GroupIcon, PlusIcon, SaveIcon } from '../../shared/ui/icons'
+import { getGroupAdministration, getGroupAuditEvents, type GroupRole } from './api'
 import { InviteGroupMemberDialog } from './components/InviteGroupMemberDialog'
 import { GroupFormDialog } from './components/GroupFormDialog'
 import { useGroups } from './useGroups'
@@ -27,23 +21,9 @@ interface GroupPageProps {
 
 export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
   const [renameValue, setRenameValue] = useState('')
   const state = useGroups({ currentUserId, onUnauthorized })
   const selectedGroup = state.selectedGroup
-  const invitationsQuery = useQuery({
-    queryKey: queryKeys.groupMembershipInvitations,
-    queryFn: ({ signal }) => getMyGroupMembershipInvitations(signal),
-  })
-  const invitationMutation = useMutation({
-    mutationFn: ({ id, accept }: { id: string; accept: boolean }) => decideGroupMembershipInvitation(id, accept),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.groupMembershipInvitations }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.groups }),
-      ])
-    },
-  })
   const administrationQuery = useQuery({
     queryKey: queryKeys.groupAdministration(selectedGroup?.id ?? ''),
     queryFn: ({ signal }) => getGroupAdministration(selectedGroup!.id, signal),
@@ -56,7 +36,6 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
   })
   useUnauthorizedError(administrationQuery.error, onUnauthorized)
   useUnauthorizedError(auditQuery.error, onUnauthorized)
-  useUnauthorizedError([invitationsQuery.error, invitationMutation.error].find(isUnauthorizedError), onUnauthorized)
 
   const submitRename = async (event: FormEvent) => {
     event.preventDefault()
@@ -164,9 +143,9 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
                 <h2 id="group-members-heading">{t('groups.members')}</h2>
               </div>
               {selectedGroup.current_user_role === 'admin' && (
-                <button className="primary-button icon-button" type="button" onClick={() => state.openDialog('invite')}>
+                <button className="primary-button icon-button" type="button" onClick={() => state.openDialog('add')}>
                   <GroupAddIcon />
-                  {t('groups.inviteMember')}
+                  {t('groups.addMember')}
                 </button>
               )}
             </div>
@@ -223,14 +202,14 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             </div>
           </section>
         </main>
-        {state.showInviteMemberDialog && (
+        {state.showAddMemberDialog && (
           <InviteGroupMemberDialog
             submitting={state.submitting}
             loadingCandidates={state.loadingMemberCandidates}
             candidates={state.memberCandidates}
             error={state.dialogError}
-            onSubmit={state.inviteMember}
-            onClose={state.closeInviteMemberDialog}
+            onSubmit={state.addMember}
+            onClose={state.closeAddMemberDialog}
           />
         )}
       </>
@@ -250,47 +229,6 @@ export function GroupPage({ currentUserId, onUnauthorized }: GroupPageProps) {
             {t('groups.create')}
           </button>
         </section>
-        {invitationsQuery.error && !isUnauthorizedError(invitationsQuery.error) && (
-          <PageMessage>{t('errors.invitationLoad')}</PageMessage>
-        )}
-        {invitationMutation.error && !isUnauthorizedError(invitationMutation.error) && (
-          <PageMessage>{t('errors.invitationDecision')}</PageMessage>
-        )}
-        {(invitationsQuery.data?.length ?? 0) > 0 && (
-          <section className="group-library">
-            <h2>{t('groups.pendingInvitations')}</h2>
-            <div className="group-grid">
-              {invitationsQuery.data?.map((invitation) => (
-                <article className="group-card" key={invitation.id}>
-                  <span className="group-card__body">
-                    <strong>{invitation.group_name}</strong>
-                    <span>{t(invitation.role === 'admin' ? 'common.admin' : 'common.member')}</span>
-                    <span>
-                      <button
-                        className="success-button icon-button"
-                        type="button"
-                        disabled={invitationMutation.isPending}
-                        onClick={() => invitationMutation.mutate({ id: invitation.id, accept: true })}
-                      >
-                        <CheckIcon />
-                        {t('common.accept')}
-                      </button>
-                      <button
-                        className="danger-button icon-button"
-                        type="button"
-                        disabled={invitationMutation.isPending}
-                        onClick={() => invitationMutation.mutate({ id: invitation.id, accept: false })}
-                      >
-                        <DeleteIcon />
-                        {t('common.reject')}
-                      </button>
-                    </span>
-                  </span>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
         <section className="group-library" aria-labelledby="group-library-heading">
           <div className="section-heading">
             <div>

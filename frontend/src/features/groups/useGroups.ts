@@ -7,7 +7,7 @@ import { useUnauthorizedError } from '../../shared/api/useUnauthorizedError'
 import { useSearchSelection } from '../../shared/routing/useSearchSelection'
 import { useConfirmation } from '../../shared/ui/confirmation'
 import {
-  inviteGroupMember,
+  addGroupMember,
   createGroup,
   getGroup,
   getGroupMemberRemovalImpact,
@@ -33,7 +33,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
   const confirm = useConfirmation()
   const [selectedGroupId, setSelectedGroupId] = useSearchSelection('group')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false)
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
   const [memberActionId, setMemberActionId] = useState<string | null>(null)
   const [pageMutationError, setPageMutationError] = useState<string | null>(null)
   const [dialogError, setDialogError] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
   const candidatesQuery = useQuery({
     queryKey: queryKeys.groupCandidates(selectedGroupId ?? ''),
     queryFn: ({ signal }) => getGroupMemberCandidates(selectedGroupId!, signal),
-    enabled: showInviteMemberDialog && selectedGroupId !== null,
+    enabled: showAddMemberDialog && selectedGroupId !== null,
   })
   useUnauthorizedError(groupsQuery.error, onUnauthorized)
   useUnauthorizedError(detailQuery.error, onUnauthorized)
@@ -63,9 +63,9 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
       setShowCreateDialog(false)
     },
   })
-  const inviteMemberMutation = useMutation({
-    mutationFn: ({ groupId, inviteeUserId, role }: { groupId: string; inviteeUserId: string; role: GroupRole }) =>
-      inviteGroupMember(groupId, inviteeUserId, role),
+  const addMemberMutation = useMutation({
+    mutationFn: ({ groupId, userId, role }: { groupId: string; userId: string; role: GroupRole }) =>
+      addGroupMember(groupId, userId, role),
     onSuccess: (_invitation, { groupId }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.groups })
       void queryClient.invalidateQueries({ queryKey: queryKeys.group(groupId) })
@@ -95,16 +95,16 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     }
   }
 
-  const inviteMember = async (inviteeUserId: string, role: GroupRole) => {
+  const addMember = async (userId: string, role: GroupRole) => {
     if (!selectedGroupId) return
     setDialogError(null)
     try {
-      await inviteMemberMutation.mutateAsync({ groupId: selectedGroupId, inviteeUserId, role })
-      setShowInviteMemberDialog(false)
+      await addMemberMutation.mutateAsync({ groupId: selectedGroupId, userId, role })
+      setShowAddMemberDialog(false)
     } catch (error) {
       if (isApiErrorWithStatus(error, 409)) setDialogError(i18n.t('errors.groupAlreadyMember'))
       else if (isApiErrorWithStatus(error, 404)) setDialogError(i18n.t('errors.groupUserNotFound'))
-      else handleGroupError(error, i18n.t('errors.groupInvite'), onUnauthorized, setDialogError)
+      else handleGroupError(error, i18n.t('errors.groupAdd'), onUnauthorized, setDialogError)
     }
   }
 
@@ -220,10 +220,10 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     await groupsQuery.refetch()
   }
 
-  const openDialog = (dialog: 'create' | 'invite') => {
+  const openDialog = (dialog: 'create' | 'add') => {
     setDialogError(null)
     if (dialog === 'create') setShowCreateDialog(true)
-    if (dialog === 'invite' && selectedGroupId) setShowInviteMemberDialog(true)
+    if (dialog === 'add' && selectedGroupId) setShowAddMemberDialog(true)
   }
   const queryError = groupsQuery.error
     ? i18n.t('errors.groupLoad')
@@ -238,21 +238,18 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     selectedGroup: detailQuery.data ?? null,
     loading: groupsQuery.isPending || (selectedGroupId !== null && detailQuery.isPending),
     submitting:
-      createMutation.isPending ||
-      inviteMemberMutation.isPending ||
-      renameMutation.isPending ||
-      timezoneMutation.isPending,
+      createMutation.isPending || addMemberMutation.isPending || renameMutation.isPending || timezoneMutation.isPending,
     showCreateDialog,
-    showInviteMemberDialog,
+    showAddMemberDialog,
     memberCandidates: candidatesQuery.data ?? [],
-    loadingMemberCandidates: candidatesQuery.isPending && showInviteMemberDialog,
+    loadingMemberCandidates: candidatesQuery.isPending && showAddMemberDialog,
     memberActionId,
     pageError: pageMutationError ?? queryError,
     dialogError,
     create,
     rename,
     updateTimezone,
-    inviteMember,
+    addMember,
     changeRole,
     removeMember,
     openGroup,
@@ -260,7 +257,7 @@ export function useGroups({ currentUserId, onUnauthorized }: UseGroupsOptions) {
     backToList: () => setSelectedGroupId(null),
     openDialog,
     closeCreateDialog: () => setShowCreateDialog(false),
-    closeInviteMemberDialog: () => setShowInviteMemberDialog(false),
+    closeAddMemberDialog: () => setShowAddMemberDialog(false),
   }
 }
 

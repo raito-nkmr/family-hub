@@ -7,14 +7,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, aliased
 
-from app.features.albums.public import Album
+from app.features.albums.public import Album, AlbumGroupShare
 from app.features.audit.public import AdministrativeAuditEvent, record_administrative_event
 from app.features.auth.public import PublicUser, UserDirectory
 from app.features.chores.public import ChoreTask
 from app.features.groups.models import (
     FamilyGroup,
     FamilyGroupMember,
-    FamilyGroupMembershipInvitation,
     GroupRole,
 )
 from app.features.groups.public import lock_administrator_mutations
@@ -57,10 +56,6 @@ class GroupUserNotFoundError(Exception):
 
 
 class LastGroupAdminError(Exception):
-    pass
-
-
-class GroupMembershipInvitationError(Exception):
     pass
 
 
@@ -258,7 +253,7 @@ class GroupService:
             )
         )
         return {
-            "album_count": self._count(Album, Album.group_id == group_id),
+            "album_count": self._count(AlbumGroupShare, AlbumGroupShare.group_id == group_id),
             "shared_photo_count": self._count(PhotoShare, PhotoShare.group_id == group_id),
             "chore_task_count": self._count(ChoreTask, ChoreTask.group_id == group_id),
             "shopping_item_count": self._count(ShoppingItem, ShoppingItem.group_id == group_id),
@@ -327,7 +322,7 @@ class GroupService:
             ),
             "created_album_count": self._count(
                 Album,
-                Album.group_id == group_id,
+                Album.id.in_(select(AlbumGroupShare.album_id).where(AlbumGroupShare.group_id == group_id)),
                 Album.created_by_user_id == target_user_id,
             ),
             "created_chore_task_count": self._count(
@@ -342,123 +337,58 @@ class GroupService:
             ),
         }
 
-    def invite_member(
+    def add_member(
         self,
         group_id: UUID,
         actor_user_id: UUID,
         actor_username: str,
-        invitee_user_id: UUID,
+        user_id: UUID,
         role: GroupRole,
-    ) -> tuple[FamilyGroupMembershipInvitation, PublicUser]:
+    ) -> GroupMemberSummary:
         try:
-            self._get_group_for_admin(group_id, actor_user_id)
-            user = self._user_directory.list_by_ids({invitee_user_id}).get(invitee_user_id)
+            group = self._get_group_for_admin(group_id, actor_user_id)
+            user = self._user_directory.list_by_ids({user_id}).get(user_id)
             if user is None or not user.is_active:
                 raise GroupUserNotFoundError
-            if self._session.get(FamilyGroupMember, (group_id, invitee_user_id)) is not None:
+            if self._session.get(FamilyGroupMember, (group_id, user_id)) is not None:
                 raise GroupMemberAlreadyExistsError
-            invitation = FamilyGroupMembershipInvitation(
-                id=uuid4(),
+
+            now = datetime.now(UTC)
+            membership = FamilyGroupMember(
                 group_id=group_id,
-                invitee_user_id=invitee_user_id,
-                invited_by_user_id=actor_user_id,
+                user_id=user_id,
                 role=role,
-                status="pending",
-                created_at=datetime.now(UTC),
-                responded_at=None,
+                joined_at=now,
             )
-            self._session.add(invitation)
+            self._session.add(membership)
+            group.updated_at = now
             record_administrative_event(
                 self._session,
                 scope="group",
-                action="membership.invited",
+                action="membership.added",
                 actor_user_id=actor_user_id,
                 actor_username=actor_username,
                 group_id=group_id,
                 target_type="user",
-                target_id=str(invitee_user_id),
+                target_id=str(user_id),
                 details={"username": user.username, "role": role.value},
             )
             self._session.commit()
-            return invitation, user
+            return GroupMemberSummary(
+                user_id=user.id,
+                username=user.username,
+                is_active=user.is_active,
+                role=role,
+                joined_at=now,
+            )
         except IntegrityError as error:
             self._session.rollback()
-            raise GroupMembershipInvitationError from error
+            if self._constraint_name(error) == "pk_family_group_members":
+                raise GroupMemberAlreadyExistsError from error
+            raise GroupPersistenceError("Could not add group member") from error
         except SQLAlchemyError as error:
             self._session.rollback()
-            raise GroupPersistenceError("Could not invite group member") from error
-
-    def list_my_membership_invitations(self, user_id: UUID) -> list[tuple[FamilyGroupMembershipInvitation, str]]:
-        return list(
-            self._session.execute(
-                select(FamilyGroupMembershipInvitation, FamilyGroup.name)
-                .join(FamilyGroup, FamilyGroup.id == FamilyGroupMembershipInvitation.group_id)
-                .where(
-                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
-                    FamilyGroupMembershipInvitation.status == "pending",
-                )
-                .order_by(FamilyGroupMembershipInvitation.created_at.desc())
-            )
-        )
-
-    def decide_membership_invitation(
-        self,
-        invitation_id: UUID,
-        user_id: UUID,
-        username: str,
-        accept: bool,
-    ) -> None:
-        if accept:
-            lock_administrator_mutations(self._session)
-            invitation_reference = self._session.scalar(
-                select(FamilyGroupMembershipInvitation).where(
-                    FamilyGroupMembershipInvitation.id == invitation_id,
-                    FamilyGroupMembershipInvitation.invitee_user_id == user_id,
-                    FamilyGroupMembershipInvitation.status == "pending",
-                )
-            )
-            if invitation_reference is None:
-                raise GroupMembershipInvitationError
-            group = self._session.scalar(
-                select(FamilyGroup).where(FamilyGroup.id == invitation_reference.group_id).with_for_update()
-            )
-            if group is None:
-                raise GroupMembershipInvitationError
-        invitation = self._session.scalar(
-            select(FamilyGroupMembershipInvitation)
-            .where(
-                FamilyGroupMembershipInvitation.id == invitation_id,
-                FamilyGroupMembershipInvitation.invitee_user_id == user_id,
-                FamilyGroupMembershipInvitation.status == "pending",
-            )
-            .with_for_update()
-        )
-        if invitation is None:
-            raise GroupMembershipInvitationError
-        invitation.status = "accepted" if accept else "rejected"
-        invitation.responded_at = datetime.now(UTC)
-        if accept:
-            if self._session.get(FamilyGroupMember, (invitation.group_id, user_id)) is None:
-                self._session.add(
-                    FamilyGroupMember(
-                        group_id=invitation.group_id,
-                        user_id=user_id,
-                        role=invitation.role,
-                        joined_at=invitation.responded_at,
-                    )
-                )
-            group.updated_at = invitation.responded_at
-        record_administrative_event(
-            self._session,
-            scope="group",
-            action="membership.accepted" if accept else "membership.rejected",
-            actor_user_id=user_id,
-            actor_username=username,
-            group_id=invitation.group_id,
-            target_type="membership_invitation",
-            target_id=str(invitation.id),
-        )
-        self._commit("Could not respond to group invitation")
+            raise GroupPersistenceError("Could not add group member") from error
 
     def list_group_audit_events(self, group_id: UUID, actor_user_id: UUID) -> list[AdministrativeAuditEvent]:
         self._get_group_for_admin(group_id, actor_user_id, lock=False)

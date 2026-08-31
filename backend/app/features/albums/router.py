@@ -94,7 +94,7 @@ def create_album(
             description=body.description,
             created_by_user_id=authenticated_user.id,
             created_by_username=authenticated_user.username,
-            group_id=body.group_id,
+            group_ids=body.group_ids,
         )
     except (AlbumNotFoundError, AlbumPersistenceError) as error:
         _raise_http_error(error)
@@ -139,8 +139,11 @@ def update_album(
             acting_user_id=authenticated_user.id,
             cover_photo_id=body.cover_photo_id,
             update_cover="cover_photo_id" in body.model_fields_set,
+            group_ids=body.group_ids,
+            update_groups="group_ids" in body.model_fields_set,
+            acting_username=authenticated_user.username,
         )
-    except (AlbumNotFoundError, PhotoNotInAlbumError, AlbumPersistenceError) as error:
+    except (AlbumNotFoundError, PhotoNotFoundError, PhotoNotInAlbumError, AlbumPersistenceError) as error:
         _raise_http_error(error)
     return AlbumResponse.model_validate(album)
 
@@ -175,7 +178,7 @@ def add_album_photos(
 ) -> AlbumDetailResponse:
     try:
         return _detail_response(
-            service.add_photos(album_id, body.photo_ids, authenticated_user.id),
+            service.add_photos(album_id, body.photo_ids, authenticated_user.id, authenticated_user.username),
         )
     except (AlbumNotFoundError, PhotoNotFoundError, AlbumPersistenceError) as error:
         _raise_http_error(error)

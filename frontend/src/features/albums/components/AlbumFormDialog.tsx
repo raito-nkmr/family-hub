@@ -9,7 +9,7 @@ import type { Album } from '../api'
 interface AlbumFormValue {
   title: string
   description: string | null
-  group_id: string
+  group_ids: string[]
 }
 
 interface AlbumFormDialogProps {
@@ -28,12 +28,20 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
   const descriptionId = useId()
   const [title, setTitle] = useState(album?.title ?? '')
   const [description, setDescription] = useState(album?.description ?? '')
-  const [groupId, setGroupId] = useState(album?.group_id ?? groups[0]?.id ?? '')
+  const existingGroups = (album?.group_ids ?? []).map((id, index) => ({
+    id,
+    name: album?.group_names[index] ?? id,
+  }))
+  const availableGroups = [
+    ...groups,
+    ...existingGroups.filter((existing) => !groups.some((group) => group.id === existing.id)),
+  ]
+  const [groupIds, setGroupIds] = useState<string[]>(album?.group_ids ?? (groups[0]?.id ? [groups[0].id] : []))
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (submitting || !title.trim() || !groupId) return
-    await onSubmit({ title: title.trim(), description: description.trim() || null, group_id: groupId })
+    if (submitting || !title.trim() || groupIds.length === 0) return
+    await onSubmit({ title: title.trim(), description: description.trim() || null, group_ids: groupIds })
   }
 
   return (
@@ -53,24 +61,24 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
           placeholder={t('albums.namePlaceholder')}
           onChange={(event) => setTitle(event.target.value)}
         />
-        {!album && (
-          <>
-            <label htmlFor={`${titleId}-group`}>{t('albums.group')}</label>
-            <select
-              className="form-control form-control--subtle"
-              id={`${titleId}-group`}
-              value={groupId}
-              required
-              onChange={(event) => setGroupId(event.target.value)}
-            >
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
+        <fieldset className="album-form__groups">
+          <legend>{t('albums.groups')}</legend>
+          {availableGroups.map((group) => (
+            <label className="album-form__group-option" key={group.id}>
+              <input
+                type="checkbox"
+                checked={groupIds.includes(group.id)}
+                onChange={() =>
+                  setGroupIds((current) =>
+                    current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id],
+                  )
+                }
+              />
+              {group.name}
+            </label>
+          ))}
+        </fieldset>
+        <p className="album-form__groups-help">{t('albums.groupsHelp')}</p>
         <label htmlFor={descriptionId}>{t('albums.optionalDescription')}</label>
         <textarea
           className="form-control form-control--subtle"
@@ -90,7 +98,7 @@ export function AlbumFormDialog({ album, submitting, error, groups, onSubmit, on
           <button
             className="primary-button icon-button"
             type="submit"
-            disabled={submitting || !title.trim() || !groupId}
+            disabled={submitting || !title.trim() || groupIds.length === 0}
           >
             {album ? <SaveIcon /> : <AlbumIcon />}
             {submitting ? t('common.saving') : album ? t('albums.saveChanges') : t('albums.create')}

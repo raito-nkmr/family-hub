@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { client } from '../../shared/api/generated/client.gen'
-import { getGroups, inviteGroupMember } from './api'
+import { addGroupMember, getGroups } from './api'
 
 describe('generated groups API', () => {
   const fetchMock = vi.fn<typeof fetch>()
@@ -31,29 +31,28 @@ describe('generated groups API', () => {
     expect(request.credentials).toBe('same-origin')
   })
 
-  it('returns the invitation response without fetching group details', async () => {
+  it('adds a group member through the generated SDK', async () => {
     fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
-          id: 'invitation-1',
-          group_id: 'group-1',
-          group_name: 'Family',
-          invitee_user_id: 'user-2',
-          invitee_username: 'member',
+          user_id: 'user-2',
+          username: 'member',
+          is_active: true,
           role: 'member',
-          status: 'pending',
-          created_at: '2026-07-15T00:00:00Z',
+          joined_at: '2026-07-15T00:00:00Z',
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     )
 
-    await expect(inviteGroupMember('group-1', 'user-2', 'member')).resolves.toMatchObject({
-      id: 'invitation-1',
-      group_id: 'group-1',
+    await expect(addGroupMember('group-1', 'user-2', 'member')).resolves.toMatchObject({
+      user_id: 'user-2',
+      username: 'member',
     })
 
     expect(fetchMock).toHaveBeenCalledOnce()
-    expect((fetchMock.mock.calls[0][0] as Request).url).toContain('/api/v1/groups/group-1/membership-invitations')
+    const request = fetchMock.mock.calls[0][0] as Request
+    expect(request.url).toContain('/api/v1/groups/group-1/members')
+    await expect(request.json()).resolves.toMatchObject({ user_id: 'user-2', role: 'member' })
   })
 })

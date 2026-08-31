@@ -35,8 +35,8 @@ const album: Album = {
   created_at: '2026-07-15T00:00:00Z',
   updated_at: '2026-07-15T00:00:00Z',
   photo_count: 0,
-  group_id: 'group-1',
-  group_name: '同居家族',
+  group_ids: ['group-1'],
+  group_names: ['同居家族'],
   cover_photo_id: null,
 }
 
@@ -56,7 +56,7 @@ describe('useAlbums', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     act(() => result.current.openDialog('create'))
-    await act(() => result.current.create({ title: album.title, description: null, group_id: 'group-1' }))
+    await act(() => result.current.create({ title: album.title, description: null, group_ids: ['group-1'] }))
 
     expect(result.current.albums).toEqual([album])
     expect(result.current.showCreateDialog).toBe(false)

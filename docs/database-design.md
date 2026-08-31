@@ -7,13 +7,14 @@ and shopping. Image files are stored on the internal photo-storage HDD; PostgreS
 integrity checks. JSON sidecars with the same UUID as each original are also stored on the internal HDD for recovery. A
 disconnected external HDD stores versioned snapshots of the originals and database backups.
 
-The current application schema starts with a short three-revision linear baseline because the development and pre-production
+The current application schema starts with a short four-revision linear baseline because the development and pre-production
 databases are reset when the baseline is rebuilt. Subsequent approved schema changes extend that chain. Revisions are
 divided by dependency boundaries so each remains readable. Tables for future features such as person detection are not
 created until the feature is approved and its requirements are known.
 
 ```text
-family_groups 1 ───── 0..N albums 1 ───── 0..N album_photos N..0 ───── 1 photos
+albums 1 ───── 0..N album_group_shares N..1 ───── 1 family_groups
+albums 1 ───── 0..N album_photos N..0 ───── 1 photos
 photos 1 ───── 1 photo_metadata
 photos 1 ───── 0..N photo_derivatives
 photos 1 ───── 0..N photo_shares N..1 ───── 1 family_groups
@@ -124,15 +125,15 @@ Stores family sharing scopes with a globally unique name, creator, creation time
 ### `family_group_members`
 
 Stores the many-to-many user/group relationship and the group-local `admin` or `member` role. Use `(group_id, user_id)` as
-the composite primary key and index `user_id`. Create a group and its creator's admin membership in one transaction. Lock the
-group during membership and role changes and reject demotion or removal of the last active administrator before commit.
+the composite primary key and index `user_id`. Create a group and its creator's admin membership in one transaction. A
+group administrator adds an existing active user directly; there is no separate group-invitation acceptance step. Lock the group
+during membership and role changes and reject demotion or removal of the last active administrator before commit.
 
-### `family_group_membership_invitations`
+### `family_group_membership_invitations` (legacy)
 
-Stores group-admin invitations to existing active users, including `invitee_user_id`, `invited_by_user_id`, group, proposed
-role, `pending`, `accepted`, or `rejected` state, and creation and response times. Only one pending invitation per group and
-invitee is allowed. Invitation constraints and indexes use the `family_group_membership_invitations` prefix.
-Acceptance creates membership in the same transaction; group deletion cascades.
+Stores historical group-admin invitations created by older application versions. New member additions do not create rows in
+this table, and the application no longer exposes an invitee acceptance API. The table remains in the schema for historical
+data until it is explicitly retired; group deletion cascades its rows.
 
 ## Chore and shopping tables
 
@@ -327,8 +328,15 @@ unregistered files, and database rows missing files.
 
 ## Albums and file mapping
 
-`albums` stores title, optional description, group, cover photo, creator snapshots, and timestamps. Names need not be unique.
-Members of the group can view and edit albums. List by `updated_at DESC, id DESC` and count `album_photos`.
+`albums` stores title, optional description, cover photo, creator snapshots, and timestamps. Names need not be unique.
+`album_group_shares` stores the unique `(album_id, group_id)` target set. Members of any target group can view and edit an
+album. List by `updated_at DESC, id DESC` and count `album_photos`; one album photo relationship is shared across all target
+groups and is never duplicated per group.
+
+When an owner adds a photo or adds a new target group to an album, the application adds any missing `photo_shares` rows for that
+photo and target group in the same transaction, including sidecar, New activity, and notification updates. A photo owned by
+another user must already be shared with every target group. Removing any photo share removes that photo from every album and
+clears affected covers in the same transaction.
 
 `album_photos` has composite primary key `(album_id, photo_id)` and `added_at`. Index `photo_id`; order album photos by
 `effective_captured_at ASC, photos.id ASC`. An unset cover falls back to the oldest added photo. A cover must
@@ -397,6 +405,8 @@ the resettable databases are rebuilt:
 - `20260829_02_media` — photos, activity, uploads, and albums
 - `20260829_03_household` — chores, notifications, maintenance, and audit schema
 - `20260829_04_shopping` — shopping items, categories, assignments, trips, purchase history, and discarded-trip state
+- `20260830_01_album_groups` — album-to-family-group many-to-many sharing schema
+- `20260830_02_drop_album_group` — removal of the legacy single-group album column
 
 This is a history rebuild, not a forward-compatible upgrade path from the retired revisions. Disposable databases still
 stamped with a retired revision ID must be reset before applying this chain; real-data environments require a reviewed
@@ -405,7 +415,13 @@ transition or restoration plan.
 The final constraints and indexes, including forced password changes, lifecycle invariants, required positive photo
 dimensions, effective photo capture time, required chore category references, completion snapshots, group time zones,
 and category ordering, are included directly in the current chain.
-After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations.
+After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations. For
+existing data, apply `20260830_01_album_groups`, run
+`python -m app.commands.migrate_album_group_shares --apply`, verify the dry-run reports zero remaining rows, and only then
+apply `20260830_02_drop_album_group`. The command is idempotent and is intentionally separate because Alembic
+migrations must not backfill application data. The second revision locks `albums` and `album_group_shares`, verifies that
+every album has a target and that every non-null legacy target has been copied, and aborts before dropping the legacy column
+when that check fails.
 
 Alembic migrations are schema-only: they may create or alter schema objects and schema defaults, but must not insert,
 update, delete, seed, transform, migrate, or backfill application data. Required application data is created by separate

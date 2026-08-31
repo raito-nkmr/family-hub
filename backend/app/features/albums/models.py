@@ -45,10 +45,6 @@ class Album(Base):
         ForeignKey("users.id", ondelete="RESTRICT", name="fk_albums_created_by_user_id_users"),
     )
     created_by_username: Mapped[str] = mapped_column(String(64))
-    group_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True),
-        ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_albums_group_id_family_groups"),
-    )
     cover_photo_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
     )
@@ -73,7 +69,24 @@ class AlbumPhoto(Base):
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
 
+class AlbumGroupShare(Base):
+    __tablename__ = "album_group_shares"
+    __table_args__ = (PrimaryKeyConstraint("album_id", "group_id", name="pk_album_group_shares"),)
+
+    album_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("albums.id", ondelete="CASCADE", name="fk_album_group_shares_album_id_albums"),
+        primary_key=True,
+    )
+    group_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("family_groups.id", ondelete="CASCADE", name="fk_album_group_shares_group_id_family_groups"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+
 Index("ix_albums_created_by_user_id", Album.created_by_user_id)
-Index("ix_albums_group_id", Album.group_id)
 Index("ix_albums_updated_at_id", Album.updated_at.desc(), Album.id.desc())
 Index("ix_album_photos_photo_id", AlbumPhoto.photo_id)
+Index("ix_album_group_shares_group_id_album_id", AlbumGroupShare.group_id, AlbumGroupShare.album_id)
