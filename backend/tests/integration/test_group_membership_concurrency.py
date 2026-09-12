@@ -13,8 +13,8 @@ from app.features.auth.models import SystemRole, User
 from app.features.auth.public import UserDirectory
 from app.features.chores.models import ChoreCategory, ChoreTask
 from app.features.chores.service import ChoreNotFoundError, ChoreService
-from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
-from app.features.groups.service import GroupMembershipInvitationError, GroupService
+from app.features.groups.models import FamilyGroup, FamilyGroupMember, GroupRole
+from app.features.groups.service import GroupMemberAlreadyExistsError, GroupService
 from app.features.notifications.models import NotificationType
 from app.features.notifications.public import enqueue_group_notification
 from app.features.photos.schemas import UploadFileCreate
@@ -31,13 +31,12 @@ pytestmark = [
 ]
 
 
-def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
+def test_concurrent_member_addition_inserts_one_membership() -> None:
     assert TEST_DATABASE_URL is not None
     engine = create_engine(TEST_DATABASE_URL, connect_args={"options": "-c timezone=UTC"})
     actor_id = uuid4()
     target_id = uuid4()
     group_id = uuid4()
-    invitation_id = uuid4()
     now = datetime.now(UTC)
 
     with Session(engine) as session:
@@ -69,57 +68,34 @@ def test_concurrent_invitation_acceptance_inserts_one_membership() -> None:
                     updated_at=now,
                 ),
                 FamilyGroupMember(group_id=group_id, user_id=actor_id, role=GroupRole.ADMIN, joined_at=now),
-                FamilyGroupMembershipInvitation(
-                    id=invitation_id,
-                    group_id=group_id,
-                    invitee_user_id=target_id,
-                    invited_by_user_id=actor_id,
-                    role=GroupRole.MEMBER,
-                    status="pending",
-                    created_at=now,
-                    responded_at=None,
-                ),
             ]
         )
         session.commit()
 
     start = Event()
 
-    def accept_invitation() -> str:
+    def add_member() -> str:
         assert start.wait(timeout=5)
         with Session(engine) as session:
             try:
-                GroupService(session, UserDirectory(session)).decide_membership_invitation(
-                    invitation_id,
+                GroupService(session, UserDirectory(session)).add_member(
+                    group_id,
+                    actor_id,
+                    f"membership-admin-{actor_id.hex}",
                     target_id,
-                    f"membership-target-{target_id.hex}",
-                    True,
+                    GroupRole.MEMBER,
                 )
-            except GroupMembershipInvitationError:
-                return "invitation-not-pending"
-        return "accepted"
-
-    def accept_invitation_again() -> str:
-        assert start.wait(timeout=5)
-        with Session(engine) as session:
-            try:
-                GroupService(session, UserDirectory(session)).decide_membership_invitation(
-                    invitation_id,
-                    target_id,
-                    f"membership-target-{target_id.hex}",
-                    True,
-                )
-            except GroupMembershipInvitationError:
-                return "invitation-not-pending"
-        return "accepted"
+            except GroupMemberAlreadyExistsError:
+                return "already-member"
+        return "added"
 
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(accept_invitation), executor.submit(accept_invitation_again)]
+            futures = [executor.submit(add_member), executor.submit(add_member)]
             start.set()
             outcomes = [future.result(timeout=10) for future in futures]
 
-        assert sorted(outcomes) == ["accepted", "invitation-not-pending"]
+        assert sorted(outcomes) == ["added", "already-member"]
         with Session(engine) as session:
             assert (
                 session.scalar(

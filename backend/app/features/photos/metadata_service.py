@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.features.albums.public import remove_photo_from_group_albums
+from app.features.albums.public import remove_photo_from_all_albums
 from app.features.audit.public import record_administrative_event
 from app.features.groups.public import FamilyGroupMember, lock_group_admin, lock_user_group_ids
 from app.features.notifications.public import NotificationType, enqueue_group_notification
@@ -115,7 +115,8 @@ class PhotoMetadataService:
                     {"url": "/photos/new", "activity_operation_id": str(activity_event.activity_operation_id)},
                     exclude_user_id=acting_user_id,
                 )
-            remove_photo_from_group_albums(self._session, photo.id, previous_group_ids - next_group_ids)
+            if previous_group_ids - next_group_ids:
+                remove_photo_from_all_albums(self._session, photo.id)
         photo.metadata_record.version += 1
         photo.metadata_record.updated_at = datetime.now(UTC)
         next_metadata = build_sidecar_metadata(photo)
@@ -148,7 +149,7 @@ class PhotoMetadataService:
             raise PhotoNotFoundError(photo_id)
         previous_metadata = build_sidecar_metadata(photo)
         photo.shares.remove(share)
-        remove_photo_from_group_albums(self._session, photo.id, {group_id})
+        remove_photo_from_all_albums(self._session, photo.id)
         photo.metadata_record.version += 1
         photo.metadata_record.updated_at = datetime.now(UTC)
         record_administrative_event(

@@ -16,7 +16,6 @@ import { usePhotoList } from '../../photos/usePhotoList'
 
 interface PhotoPickerDialogProps {
   albumId: string
-  groupId: string
   searchOptions?: PhotoSearchOptions | null
   searchOptionsLoading?: boolean
   submitting: boolean
@@ -28,7 +27,6 @@ interface PhotoPickerDialogProps {
 
 export function PhotoPickerDialog({
   albumId,
-  groupId,
   searchOptions = null,
   searchOptionsLoading = false,
   submitting,
@@ -41,7 +39,7 @@ export function PhotoPickerDialog({
   const headingId = useId()
   const [searchFilters, setSearchFilters] = useState<PhotoFilters>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const photoList = usePhotoList({ filters: { ...searchFilters, excludeAlbumId: albumId, sharingGroupId: groupId } })
+  const photoList = usePhotoList({ filters: { ...searchFilters, excludeAlbumId: albumId } })
   useUnauthorizedError(photoList.error, onUnauthorized)
   const listError =
     photoList.error && !isUnauthorizedError(photoList.error)

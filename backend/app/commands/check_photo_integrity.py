@@ -75,6 +75,7 @@ def check_photo_integrity(
             {
                 storage_root / "incoming" / f"{item_id}.part",
                 storage_root / "incoming" / f"{item_id}.json.part",
+                storage_root / "incoming" / f"{item_id}.preview.part",
             }
         )
         expected_derivative_parts.add(derivative_root / "incoming" / f"{item_id}.thumbnail.part")
@@ -150,11 +151,11 @@ def check_photo_integrity(
             elif path not in expected_originals:
                 issues.append(IntegrityIssue("orphan_original", str(path)))
 
-    thumbnails_root = derivative_root / "thumbnails"
-    if thumbnails_root.is_dir():
-        for path in thumbnails_root.rglob("*"):
-            if path.is_file() and not path.is_symlink() and path not in expected_derivatives:
-                issues.append(IntegrityIssue("orphan_derivative", str(path)))
+    for derivative_directory in (derivative_root / "thumbnails", storage_root / "previews"):
+        if derivative_directory.is_dir():
+            for path in derivative_directory.rglob("*"):
+                if path.is_file() and not path.is_symlink() and path not in expected_derivatives:
+                    issues.append(IntegrityIssue("orphan_derivative", str(path)))
 
     for incoming_root, expected_parts in (
         (storage_root / "incoming", expected_storage_parts),

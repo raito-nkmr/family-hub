@@ -67,6 +67,8 @@ class FamilyGroupMember(Base):
 
 
 class FamilyGroupMembershipInvitation(Base):
+    """Legacy group invitation records retained for databases created before direct member addition."""
+
     __tablename__ = "family_group_membership_invitations"
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_family_group_membership_invitations"),

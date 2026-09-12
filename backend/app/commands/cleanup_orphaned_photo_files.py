@@ -42,9 +42,9 @@ def _path_is_under_root(path: Path, root: Path) -> bool:
 
 
 def _candidate_root(candidate: OrphanFileCandidate, storage_root: Path, derivative_root: Path) -> Path:
-    if candidate.issue_code == "orphan_derivative" or (
-        candidate.issue_code == "orphan_part" and _path_is_under_root(candidate.path, derivative_root)
-    ):
+    if candidate.issue_code == "orphan_derivative" and _path_is_under_root(candidate.path, derivative_root):
+        return derivative_root
+    if candidate.issue_code == "orphan_part" and _path_is_under_root(candidate.path, derivative_root):
         return derivative_root
     return storage_root
 

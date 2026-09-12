@@ -121,10 +121,40 @@ def register_staged_photo(
         uploaded_at = datetime.now(UTC)
         storage_key = f"originals/{uploaded_at:%Y/%m}/{staged.photo_id}{image.extension}"
         thumbnail_key = f"thumbnails/{uploaded_at:%Y/%m}/{staged.photo_id}.webp"
+        preview_key = f"previews/{uploaded_at:%Y/%m}/{staged.photo_id}.webp"
         if image.content_type.startswith("video/"):
             thumbnail = storage.stage_thumbnail(staged.path, thumbnail_key, content_type=image.content_type)
+            preview = None
         else:
             thumbnail = storage.stage_thumbnail(staged.path, thumbnail_key)
+            preview = storage.stage_preview(staged.path, preview_key)
+        derivatives = [
+            PhotoDerivative(
+                id=uuid4(),
+                photo_id=staged.photo_id,
+                kind=PhotoDerivativeKind.THUMBNAIL,
+                storage_key=thumbnail.storage_key,
+                content_type=thumbnail.content_type,
+                width=thumbnail.width,
+                height=thumbnail.height,
+                size_bytes=thumbnail.size_bytes,
+                created_at=uploaded_at,
+            )
+        ]
+        if preview is not None:
+            derivatives.append(
+                PhotoDerivative(
+                    id=uuid4(),
+                    photo_id=staged.photo_id,
+                    kind=PhotoDerivativeKind.PREVIEW,
+                    storage_key=preview.storage_key,
+                    content_type=preview.content_type,
+                    width=preview.width,
+                    height=preview.height,
+                    size_bytes=preview.size_bytes,
+                    created_at=uploaded_at,
+                )
+            )
         photo = Photo(
             id=staged.photo_id,
             uploaded_by_user_id=uploaded_by_user_id,
@@ -144,19 +174,7 @@ def register_staged_photo(
             trashed_by_user_id=None,
             purge_after=None,
             purge_requested_at=None,
-            derivatives=[
-                PhotoDerivative(
-                    id=uuid4(),
-                    photo_id=staged.photo_id,
-                    kind=PhotoDerivativeKind.THUMBNAIL,
-                    storage_key=thumbnail.storage_key,
-                    content_type=thumbnail.content_type,
-                    width=thumbnail.width,
-                    height=thumbnail.height,
-                    size_bytes=thumbnail.size_bytes,
-                    created_at=uploaded_at,
-                )
-            ],
+            derivatives=derivatives,
             metadata_record=PhotoMetadata(
                 photo_id=staged.photo_id,
                 memo=None,
@@ -178,7 +196,7 @@ def register_staged_photo(
                 for group_id in sorted(group_ids or set(), key=str)
             ],
         )
-        finalized = storage.finalize_upload(staged, thumbnail, build_sidecar_metadata(photo))
+        finalized = storage.finalize_upload(staged, thumbnail, build_sidecar_metadata(photo), preview=preview)
         activity_event = create_photo_activity_event(
             photo.id,
             uploaded_by_user_id,

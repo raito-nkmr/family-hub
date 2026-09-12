@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../shared/api/client'
 import { createAppWrapper } from '../../test/renderWithAppProviders'
 import {
-  inviteGroupMember,
+  addGroupMember,
   createGroup,
   getGroup,
   getGroups,
@@ -16,7 +16,7 @@ import {
 import { useGroups } from './useGroups'
 
 vi.mock('./api', () => ({
-  inviteGroupMember: vi.fn(),
+  addGroupMember: vi.fn(),
   createGroup: vi.fn(),
   getGroup: vi.fn(),
   getGroupMemberCandidates: vi.fn(),
@@ -144,27 +144,24 @@ describe('useGroups', () => {
     expect(getGroup).toHaveBeenCalledWith(group.id, expect.any(AbortSignal))
   })
 
-  it('keeps a successful invitation successful when refreshing the group fails', async () => {
+  it('keeps a successful member addition successful when refreshing the group fails', async () => {
     vi.mocked(getGroup).mockResolvedValueOnce(group).mockRejectedValue(new Error('refresh failed'))
-    vi.mocked(inviteGroupMember).mockResolvedValue({
-      id: 'invitation-1',
-      group_id: group.id,
-      group_name: group.name,
-      invitee_user_id: 'user-2',
-      invitee_username: 'new member',
+    vi.mocked(addGroupMember).mockResolvedValue({
+      user_id: 'user-2',
+      username: 'new member',
+      is_active: true,
       role: 'member',
-      status: 'pending',
-      created_at: '2026-07-15T00:00:00Z',
+      joined_at: '2026-07-15T00:00:00Z',
     })
     const { result } = renderHook(() => useGroups({ currentUserId: 'user-1', onUnauthorized: vi.fn() }), {
       wrapper: createAppWrapper('/groups?group=group-1'),
     })
 
     await waitFor(() => expect(result.current.selectedGroup).toEqual(group))
-    await act(() => result.current.inviteMember('user-2', 'member'))
+    await act(() => result.current.addMember('user-2', 'member'))
     await waitFor(() => expect(vi.mocked(getGroup).mock.calls.length).toBeGreaterThan(1))
 
-    expect(inviteGroupMember).toHaveBeenCalledWith(group.id, 'user-2', 'member')
+    expect(addGroupMember).toHaveBeenCalledWith(group.id, 'user-2', 'member')
     expect(result.current.dialogError).toBeNull()
   })
 

@@ -27,6 +27,7 @@ from app.features.photos.image_validation import ImageMetadata
 from app.features.photos.metadata_service import PhotoMetadataService
 from app.features.photos.models import (
     PhotoActivityEventType,
+    PhotoDerivative,
     PhotoDerivativeKind,
     PhotoLifecycleState,
     PhotoVisibility,
@@ -302,6 +303,33 @@ def test_get_photo_thumbnail_returns_generated_derivative(tmp_path: Path) -> Non
     storage.get_derivative_path.assert_called_once_with(derivative.storage_key)
 
 
+def test_get_photo_preview_returns_hdd_derivative(tmp_path: Path) -> None:
+    session = MagicMock(spec=Session)
+    photo = make_photo()
+    preview = PhotoDerivative(
+        id=uuid4(),
+        photo_id=photo.id,
+        kind=PhotoDerivativeKind.PREVIEW,
+        storage_key=f"previews/2026/07/{photo.id}.webp",
+        content_type="image/webp",
+        width=1600,
+        height=1200,
+        size_bytes=64_000,
+        created_at=photo.uploaded_at,
+    )
+    photo.derivatives.append(preview)
+    session.scalar.return_value = photo
+    service, storage = make_access_service(session)
+    preview_path = tmp_path / "preview.webp"
+    storage.get_derivative_path.return_value = preview_path
+
+    result = service.get_photo_preview(photo.id, uuid4())
+
+    assert result.path == preview_path
+    assert result.content_type == "image/webp"
+    storage.get_derivative_path.assert_called_once_with(preview.storage_key)
+
+
 def test_update_photo_updates_memo_sharing_sidecar_and_database() -> None:
     session = MagicMock(spec=Session)
     photo = make_photo()
@@ -386,7 +414,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
     session.scalar.return_value = photo
     session.scalars.return_value.all.return_value = [group_id]
     remove_from_albums = MagicMock()
-    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_group_albums", remove_from_albums)
+    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_all_albums", remove_from_albums)
     service, _ = make_metadata_service(session)
 
     service.update_photo(
@@ -399,7 +427,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
         expected_version=1,
     )
 
-    remove_from_albums.assert_called_once_with(session, photo.id, {group_id})
+    remove_from_albums.assert_called_once_with(session, photo.id)
 
 
 def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
@@ -697,3 +725,33 @@ def test_register_staged_photo_cleans_staged_derivative_on_storage_failure(
         )
 
     storage.cleanup_staged.assert_called_once_with(staged, preserve_resumable=True)
+
+
+def test_register_staged_photo_fails_when_detail_preview_generation_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = MagicMock(spec=Session)
+    session.scalar.return_value = None
+    storage = MagicMock(spec=PhotoStorage)
+    staged = configure_staged_upload(tmp_path)
+    storage.stage_preview.side_effect = PhotoStorageError("preview generation failed")
+    monkeypatch.setattr(
+        "app.features.photos.registration.inspect_image",
+        lambda path, content_type, timezone: ImageMetadata("image/jpeg", ".jpg", 640, 480, None),
+    )
+
+    with pytest.raises(PhotoUploadStorageError):
+        register_staged_photo(
+            session,
+            storage,
+            "Asia/Tokyo",
+            staged,
+            "original.jpg",
+            "image/jpeg",
+            uuid4(),
+            "owner",
+        )
+
+    storage.cleanup_staged.assert_called_once_with(staged, preserve_resumable=True)
+    storage.finalize_upload.assert_not_called()

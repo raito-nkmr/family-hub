@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const media = [
-  { id: 'portrait', original_filename: 'portrait.jpg', content_type: 'image/jpeg', width: 4032, height: 3024 },
+  { id: 'portrait', original_filename: 'portrait.jpg', content_type: 'image/jpeg', width: 3024, height: 4032 },
   { id: 'landscape', original_filename: 'landscape.jpg', content_type: 'image/jpeg', width: 4032, height: 2268 },
   { id: 'square', original_filename: 'square.jpg', content_type: 'image/jpeg', width: 1200, height: 1200 },
   {
@@ -51,7 +51,7 @@ async function mockPhotoApi(page: Page) {
     const json = (value: unknown) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) })
     const mediaRequest = url.pathname.match(
-      /^\/api\/v1\/photos\/(portrait|landscape|square|unsupported-video)\/(thumbnail|content)$/,
+      /^\/api\/v1\/photos\/(portrait|landscape|square|unsupported-video)\/(thumbnail|preview|content)$/,
     )
     if (mediaRequest) {
       const [, id, source] = mediaRequest
@@ -227,6 +227,34 @@ test('keeps a bounded fallback stage when MOV playback fails', async ({ page }) 
   await expect(fallback).toBeVisible()
   await expect(fallback).toHaveCSS('display', 'flex')
   await expectContainedMedia(page)
+})
+
+test('pinch zooms and pans without changing photos, then swipes at equal scale on iPhone WebKit', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'iphone-webkit', 'This regression test targets iPhone WebKit.')
+  await mockPhotoApi(page)
+  await page.goto('/photos/library')
+  await openPhoto(page, 'portrait.jpg')
+
+  const viewer = page.locator('.photo-zoom-viewer')
+  await viewer.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 200 })
+  await viewer.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 200 })
+  await viewer.dispatchEvent('pointermove', { pointerId: 2, pointerType: 'touch', clientX: 300, clientY: 200 })
+
+  await expect(viewer).toHaveAttribute('data-zoom-scale', '2')
+  await viewer.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 300, clientY: 200 })
+  await viewer.dispatchEvent('pointermove', { pointerId: 1, pointerType: 'touch', clientX: 130, clientY: 230 })
+  await viewer.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'touch', clientX: 130, clientY: 230 })
+  await expect(page.getByRole('heading', { name: 'portrait.jpg' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Close photo preview' }).click()
+  await openPhoto(page, 'portrait.jpg')
+  const resetViewer = page.locator('.photo-zoom-viewer')
+  await resetViewer.dispatchEvent('pointerdown', { pointerId: 3, pointerType: 'touch', clientX: 200, clientY: 200 })
+  await resetViewer.dispatchEvent('pointerup', { pointerId: 3, pointerType: 'touch', clientX: 100, clientY: 205 })
+
+  await expect(page.getByRole('heading', { name: 'landscape.jpg' })).toBeVisible()
 })
 
 test('keeps the Japanese capture date control inside a compact mobile viewport', async ({ page }) => {

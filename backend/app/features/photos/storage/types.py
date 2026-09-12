@@ -143,6 +143,7 @@ class FinalizedUpload:
     sidecar_path: Path
     derivative_path: Path | None = None
     photo_id: UUID | None = None
+    preview_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)

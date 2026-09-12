@@ -65,6 +65,20 @@ maintenance units must declare this service in `Requires` and `After`; they must
 `postgresql.service` that may not exist. The [`production-runbook.md`](./production-runbook.md) is the source of truth for
 construction and cutover procedures.
 
+For a release that contains an Alembic revision or separate data command, prepare the complete release directory and pinned
+backend environment without switching `/opt/family-hub/current`. Use the prepared runtime to query the actual production
+revision before choosing a migration path. If production is already at the target head, skip the migration and leave the old
+Backend running until activation. Otherwise stop the old Backend only when the documented migration requires exclusive
+access, run the migration from the prepared release's absolute path, and activate that same prepared release only after the
+migration succeeds. An activation after an incompatible migration must not automatically restart the previous Backend
+against the new schema.
+
+The release symlink does not manage host configuration. In particular, a versioned `deploy/Caddyfile` does not update
+`/etc/caddy/Caddyfile`. When it changes, compare the prepared copy with the live file, validate a staged file, replace it
+atomically, reload Caddy, and verify that Caddy still returns `404` for `/api/v1/readiness`. Apply changed systemd units through
+the same explicit review and validation boundary. The exact cutover commands and loopback checks are in
+[`production-runbook.md`](./production-runbook.md#release-update).
+
 Uvicorn is managed by a service definition under `deploy/systemd/`. Only the production database service is a backend
 startup requirement. The backend remains available for authentication, chore, shopping, groups, and other database-backed
 features when the photo HDD is unavailable; photo operations that need the HDD return `503` or an equivalent unavailable
@@ -182,7 +196,7 @@ Do not store API responses whose contents depend on authentication or authorizat
 - Set a Cloudflare Cache Rule for `URI Path starts with /api/` to `Bypass cache`.
 - Set Cloudflare Browser Cache TTL to `Respect Existing Headers` so it does not override Caddy's purpose-specific headers.
 - Bypass `/sw.js` in Cache Rules as well, so Service Worker update checks are not delayed.
-- Return `Cache-Control: private, no-store` for authenticated binaries such as originals, thumbnails, and ZIP exports.
+- Return `Cache-Control: private, no-store` for authenticated binaries such as originals, thumbnails, detail previews, and ZIP exports.
 - Apply `private, no-store` consistently to dynamic authentication, group, album, chore, and shopping APIs.
 - Hashed `/assets/*` files may use `public, max-age=31536000, immutable`.
 - Do not long-cache `index.html`.
@@ -208,8 +222,9 @@ database state before deleting `.part`; if a commit fails, the file remains for 
 orphan-file cleanup job can recover a later deletion failure.
 
 The backend host must provide `ffprobe` and `ffmpeg` on `PATH` for MP4, QuickTime MOV, and M4V validation and thumbnail
-generation. Video originals are stored without conversion; playback uses the browser's native support for the returned MIME
-type.
+generation. Pillow and the HEIF plugin are required for JPEG, PNG, HEIF/HEIC, and WebP derivative generation. Still-image
+detail previews are stored on `PHOTO_STORAGE_ROOT` at a maximum longest edge of 1600 px; video originals are stored without
+conversion and playback uses the browser's native support for the returned MIME type.
 
 ## Web Push outbound communication
 
@@ -264,7 +279,7 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 
 - The Named Tunnel reconnects automatically after reboot and does not depend on a Quick Tunnel.
 - The router has no inbound port forwards, and Caddy and Uvicorn listen only on loopback.
-- Protected APIs and photo originals cannot be fetched while unauthenticated.
+- Protected APIs and photo originals or detail previews cannot be fetched while unauthenticated.
 - Loopback `/api/v1/readiness` reports both database and photo-storage status, while the Caddy route returns `404`. Photo
   storage being unavailable must not prevent the backend process or non-photo APIs from running.
 - `AUTH_TRUSTED_ORIGINS`, CORS, and cookie attributes match the production origin.

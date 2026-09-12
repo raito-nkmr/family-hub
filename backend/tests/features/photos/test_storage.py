@@ -362,6 +362,22 @@ def test_stage_and_get_thumbnail_uses_derivative_root(tmp_path: Path, monkeypatc
     assert storage.get_derivative_path(storage_key) == destination
 
 
+def test_stage_and_finalize_preview_uses_photo_storage_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = make_available_storage(tmp_path, monkeypatch)
+    source = tmp_path / "source.jpg"
+    Image.new("RGB", (3200, 1600), "navy").save(source)
+    photo_id = uuid4()
+    storage_key = f"previews/2026/07/{photo_id}.webp"
+
+    staged = storage.stage_preview(source, storage_key)
+    destination = storage.finalize_staged_derivative(staged)
+
+    assert (staged.width, staged.height) == (1600, 800)
+    assert staged.content_type == "image/webp"
+    assert destination == tmp_path / storage_key
+    assert storage.get_derivative_path(storage_key) == destination
+
+
 @pytest.mark.parametrize("storage_key", ["../photo.webp", "/thumbnails/photo.webp", "originals/photo.jpg"])
 def test_get_derivative_path_rejects_unsafe_keys(
     storage_key: str,

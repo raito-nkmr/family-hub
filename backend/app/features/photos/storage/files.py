@@ -19,6 +19,7 @@ from app.features.photos.storage.types import (
 from app.features.photos.thumbnails import (
     THUMBNAIL_CONTENT_TYPE,
     ThumbnailGenerationError,
+    generate_preview,
     generate_thumbnail,
     generate_video_thumbnail,
 )
@@ -61,26 +62,55 @@ class PhotoFileOperations:
             size_bytes=generated.size_bytes,
         )
 
+    def stage_preview(self, source_path: Path, storage_key: str) -> StagedDerivative:
+        key = self._validate_derivative_key(storage_key)
+        if key.parts[0] != "previews":
+            raise InvalidStorageKeyError("Photo preview key must be below previews")
+        incoming = self._get_or_create_preview_directory(PurePosixPath("incoming"))
+        part_path = incoming / f"{key.stem}.preview.part"
+        self._unlink_if_possible(part_path)
+        try:
+            generated = generate_preview(source_path, part_path)
+        except ThumbnailGenerationError as error:
+            raise PhotoStorageError("Could not generate photo preview") from error
+        return StagedDerivative(
+            path=part_path,
+            storage_key=str(key),
+            content_type=THUMBNAIL_CONTENT_TYPE,
+            width=generated.width,
+            height=generated.height,
+            size_bytes=generated.size_bytes,
+        )
+
     def finalize_upload(
         self,
         staged: StagedUpload,
         derivative: StagedDerivative,
         metadata: SidecarMetadata,
+        *,
+        preview: StagedDerivative | None = None,
     ) -> FinalizedUpload:
         storage_key = self._validate_original_key(metadata.storage_key)
-        derivative_key = self._validate_derivative_key(derivative.storage_key)
+        derivatives = (derivative, preview) if preview is not None else (derivative,)
+        derivative_destinations: list[tuple[StagedDerivative, Path]] = []
         payload = json.dumps(metadata.as_json(), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
         self._require_upload_ready(len(payload))
         destination_directory = self._get_or_create_directory(PurePosixPath(*storage_key.parts[:-1]))
         original_path = destination_directory / storage_key.name
         sidecar_path = original_path.with_suffix(".json")
         sidecar_part = staged.path.with_name(f"{staged.photo_id}.json.part")
-        derivative_directory = self._get_or_create_derivative_directory(PurePosixPath(*derivative_key.parts[:-1]))
-        derivative_path = derivative_directory / derivative_key.name
 
-        if original_path.exists() or sidecar_path.exists() or derivative_path.exists():
+        for derivative in derivatives:
+            key = self._validate_derivative_key(derivative.storage_key)
+            if key.parts[0] == "previews" and derivative.content_type != THUMBNAIL_CONTENT_TYPE:
+                raise PhotoStorageError("Photo preview must be a WebP derivative")
+            directory = self._get_or_create_derivative_directory_for_key(key)
+            derivative_destinations.append((derivative, directory / key.name))
+
+        if original_path.exists() or sidecar_path.exists() or any(path.exists() for _, path in derivative_destinations):
             raise PhotoStorageError("Upload destination already exists")
 
+        moved_derivatives: list[tuple[StagedDerivative, Path]] = []
         try:
             with sidecar_part.open("xb") as destination:
                 destination.write(payload)
@@ -95,21 +125,73 @@ class PhotoFileOperations:
                     original_path, self._photo_storage_is_available(), photo_id=staged.photo_id
                 )
                 raise
-            try:
-                derivative.path.replace(derivative_path)
-            except OSError:
-                photo_storage_available = self._photo_storage_is_available()
-                self._unlink_photo_path_if_available(original_path, photo_storage_available, photo_id=staged.photo_id)
-                self._unlink_photo_path_if_available(sidecar_path, photo_storage_available, photo_id=staged.photo_id)
-                raise
+            for staged_derivative, derivative_path in derivative_destinations:
+                staged_derivative.path.replace(derivative_path)
+                moved_derivatives.append((staged_derivative, derivative_path))
         except OSError as error:
             photo_storage_available = self._photo_storage_is_available()
             self._unlink_photo_path_if_available(staged.path, photo_storage_available, photo_id=staged.photo_id)
             self._unlink_photo_path_if_available(sidecar_part, photo_storage_available, photo_id=staged.photo_id)
-            self._unlink_if_possible(derivative.path, photo_id=staged.photo_id)
+            self._unlink_photo_path_if_available(original_path, photo_storage_available, photo_id=staged.photo_id)
+            self._unlink_photo_path_if_available(sidecar_path, photo_storage_available, photo_id=staged.photo_id)
+            for staged_derivative, derivative_path in derivative_destinations:
+                if (staged_derivative, derivative_path) in moved_derivatives:
+                    self._cleanup_derivative_path(
+                        derivative_path,
+                        staged_derivative.storage_key,
+                        photo_storage_available,
+                        photo_id=staged.photo_id,
+                    )
+                else:
+                    self._cleanup_derivative_path(
+                        staged_derivative.path,
+                        staged_derivative.storage_key,
+                        photo_storage_available,
+                        photo_id=staged.photo_id,
+                    )
             raise PhotoStorageError("Could not finalize uploaded photo") from error
 
-        return FinalizedUpload(original_path, sidecar_path, derivative_path, staged.photo_id)
+        derivative_path = next(
+            path
+            for staged_derivative, path in moved_derivatives
+            if staged_derivative.storage_key.startswith("thumbnails/")
+        )
+        preview_path = next(
+            (
+                path
+                for staged_derivative, path in moved_derivatives
+                if staged_derivative.storage_key.startswith("previews/")
+            ),
+            None,
+        )
+        return FinalizedUpload(
+            original_path,
+            sidecar_path,
+            derivative_path,
+            photo_id=staged.photo_id,
+            preview_path=preview_path,
+        )
+
+    def finalize_staged_derivative(self, derivative: StagedDerivative, *, replace_existing: bool = False) -> Path:
+        key = self._validate_derivative_key(derivative.storage_key)
+        directory = self._get_or_create_derivative_directory_for_key(key)
+        destination = directory / key.name
+        if destination.is_symlink():
+            raise InvalidStorageKeyError("Photo derivative path must not be a symlink")
+        if destination.exists() and not replace_existing:
+            raise PhotoStorageError("Derivative destination already exists")
+        try:
+            derivative.path.replace(destination)
+        except OSError as error:
+            photo_storage_available = self._photo_storage_is_available()
+            self._cleanup_derivative_path(
+                derivative.path,
+                derivative.storage_key,
+                photo_storage_available,
+                photo_id=None,
+            )
+            raise PhotoStorageError("Could not finalize photo derivative") from error
+        return destination
 
     def update_sidecar(self, metadata: SidecarMetadata) -> None:
         payload = json.dumps(metadata.as_json(), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
@@ -143,6 +225,9 @@ class PhotoFileOperations:
             Path(os.path.abspath(self._derivative_root)) / "incoming" / f"{staged.photo_id}.thumbnail.part"
         )
         self._unlink_if_possible(derivative_part, photo_id=staged.photo_id)
+        if self._root is not None:
+            preview_part = Path(os.path.abspath(self._root)) / "incoming" / f"{staged.photo_id}.preview.part"
+            self._unlink_photo_path_if_available(preview_part, photo_storage_available, photo_id=staged.photo_id)
 
     def cleanup_finalized(self, upload: FinalizedUpload) -> None:
         photo_storage_available = self._photo_storage_is_available()
@@ -150,6 +235,8 @@ class PhotoFileOperations:
         self._unlink_photo_path_if_available(upload.sidecar_path, photo_storage_available, photo_id=upload.photo_id)
         if upload.derivative_path is not None:
             self._unlink_if_possible(upload.derivative_path, photo_id=upload.photo_id)
+        if upload.preview_path is not None:
+            self._unlink_photo_path_if_available(upload.preview_path, photo_storage_available, photo_id=upload.photo_id)
 
     def delete_photo_files(
         self,
@@ -168,14 +255,15 @@ class PhotoFileOperations:
         root = Path(os.path.abspath(self._root))
         original_path = root.joinpath(*original_key.parts)
         sidecar_path = original_path.with_suffix(".json")
-        derivative_root = Path(os.path.abspath(self._derivative_root))
-        derivative_paths = [
-            derivative_root.joinpath(*self._validate_derivative_key(key).parts) for key in derivative_storage_keys
-        ]
+        derivative_paths = []
+        for raw_key in derivative_storage_keys:
+            key = self._validate_derivative_key(raw_key)
+            derivative_root = self._get_derivative_root(key)
+            derivative_paths.append((derivative_root.joinpath(*key.parts), derivative_root))
         for path, expected_root in (
             (original_path, root),
             (sidecar_path, root),
-            *((path, derivative_root) for path in derivative_paths),
+            *derivative_paths,
         ):
             try:
                 if path.is_symlink():
@@ -189,6 +277,24 @@ class PhotoFileOperations:
             except OSError as error:
                 _storage_logger().exception("Photo storage file deletion failed photo_id=%s path=%s", photo_id, path)
                 raise PhotoStorageError("Could not permanently delete photo files") from error
+
+    def _get_or_create_derivative_directory_for_key(self, key: PurePosixPath) -> Path:
+        if key.parts[0] == "previews":
+            return self._get_or_create_preview_directory(PurePosixPath(*key.parts[:-1]))
+        return self._get_or_create_derivative_directory(PurePosixPath(*key.parts[:-1]))
+
+    def _cleanup_derivative_path(
+        self,
+        path: Path,
+        storage_key: str,
+        photo_storage_available: bool,
+        *,
+        photo_id: UUID | None,
+    ) -> None:
+        if storage_key.startswith("previews/"):
+            self._unlink_photo_path_if_available(path, photo_storage_available, photo_id=photo_id)
+        else:
+            self._unlink_if_possible(path, photo_id=photo_id)
 
     def _unlink_photo_path_if_available(
         self, path: Path, storage_available: bool, *, photo_id: UUID | None = None

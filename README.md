@@ -10,13 +10,13 @@ layout.
 
 - **Photo library**
   - Cursor-based infinite scrolling, timeline navigation, and server-side search
-  - Image and video uploads with first-frame thumbnails and in-browser playback
+  - Image and video uploads with WebP thumbnails, still-image detail previews, and in-browser video playback
   - Favorites, shared photos, photo activity, shared memos, and group-based visibility
-  - Desktop edge clicks and mobile detail-view swipes between adjacent photos in the library
-  - Group albums with selectable cover photos
+  - Desktop edge clicks and mobile detail-view pinch/pan and swipes between adjacent photos in the library
+  - Albums shared with multiple family groups and selectable cover photos
   - Bulk sharing to multiple family groups
   - Individual downloads and streamed ZIP exports for photos the user can view
-  - Trash, restore, permanent deletion, and storage integrity checks
+  - Trash, restore, permanent deletion, and storage integrity checks for originals and regenerable derivatives
 - **Household coordination**
   - Categorized chore tasks with configurable intervals, completion history, pause, and resume
   - Chore task, daily completion calendar/chart, and monthly report pages with category, member, and task statistics

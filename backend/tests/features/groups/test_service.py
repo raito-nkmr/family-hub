@@ -7,10 +7,10 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.features.auth.public import PublicUser, UserDirectory
-from app.features.groups.models import FamilyGroup, FamilyGroupMember, FamilyGroupMembershipInvitation, GroupRole
+from app.features.groups.models import FamilyGroup, FamilyGroupMember, GroupRole
 from app.features.groups.service import (
     GroupForbiddenError,
-    GroupMembershipInvitationError,
+    GroupMemberAlreadyExistsError,
     GroupNameAlreadyExistsError,
     GroupNotFoundError,
     GroupPersistenceError,
@@ -153,7 +153,7 @@ def test_rename_group_wraps_unexpected_database_errors() -> None:
     session.rollback.assert_called_once_with()
 
 
-def test_invite_member_wraps_unexpected_database_errors() -> None:
+def test_add_member_wraps_unexpected_database_errors() -> None:
     session = MagicMock(spec=Session)
     actor_id = uuid4()
     target_id = uuid4()
@@ -168,7 +168,7 @@ def test_invite_member_wraps_unexpected_database_errors() -> None:
     ]
 
     with pytest.raises(GroupPersistenceError):
-        service.invite_member(group.id, actor_id, "owner", target_id, GroupRole.MEMBER)
+        service.add_member(group.id, actor_id, "owner", target_id, GroupRole.MEMBER)
 
     session.rollback.assert_called_once_with()
 
@@ -193,70 +193,48 @@ def test_list_member_candidates_returns_active_non_members() -> None:
     assert result == [candidate]
 
 
-def test_accept_membership_invitation_locks_group_before_invitation_and_adds_member() -> None:
+def test_add_member_registers_member_immediately() -> None:
     session = MagicMock(spec=Session)
+    actor_id = uuid4()
     user_id = uuid4()
-    group = make_group()
-    invitation = FamilyGroupMembershipInvitation(
-        id=uuid4(),
-        group_id=group.id,
-        invitee_user_id=user_id,
-        invited_by_user_id=uuid4(),
-        role=GroupRole.MEMBER,
-        status="pending",
-        created_at=group.created_at,
-        responded_at=None,
-    )
-    session.scalar.side_effect = [invitation, group, invitation]
-    session.get.return_value = None
-    service, _ = make_service(session)
+    group = make_group(created_by_user_id=actor_id)
+    session.scalar.return_value = group
+    session.get.side_effect = [make_membership(group.id, actor_id), None]
+    service, directory = make_service(session)
+    directory.list_by_ids.side_effect = [
+        {actor_id: PublicUser(id=actor_id, username="owner", is_active=True)},
+        {user_id: PublicUser(id=user_id, username="member", is_active=True)},
+    ]
 
-    service.decide_membership_invitation(invitation.id, user_id, "member", True)
+    result = service.add_member(group.id, actor_id, "owner", user_id, GroupRole.MEMBER)
 
-    statements = [call.args[0] for call in session.scalar.call_args_list]
-    assert "FOR UPDATE" not in str(statements[0])
-    assert "family_groups.id" in str(statements[1])
-    assert "FOR UPDATE" in str(statements[1])
-    assert "family_group_membership_invitations.id" in str(statements[2])
-    assert "FOR UPDATE" in str(statements[2])
     memberships = [call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], FamilyGroupMember)]
     assert len(memberships) == 1
     assert memberships[0].user_id == user_id
+    assert result.user_id == user_id
+    assert result.role is GroupRole.MEMBER
+    assert group.updated_at == result.joined_at
     session.commit.assert_called_once_with()
 
 
-def test_accept_membership_invitation_does_not_insert_existing_member() -> None:
+def test_add_member_rejects_existing_member() -> None:
     session = MagicMock(spec=Session)
+    actor_id = uuid4()
     user_id = uuid4()
-    group = make_group()
-    invitation = FamilyGroupMembershipInvitation(
-        id=uuid4(),
-        group_id=group.id,
-        invitee_user_id=user_id,
-        invited_by_user_id=uuid4(),
-        role=GroupRole.MEMBER,
-        status="pending",
-        created_at=group.created_at,
-        responded_at=None,
-    )
-    session.scalar.side_effect = [invitation, group, invitation]
-    session.get.return_value = make_membership(group.id, user_id)
-    service, _ = make_service(session)
+    group = make_group(created_by_user_id=actor_id)
+    session.scalar.return_value = group
+    session.get.side_effect = [
+        make_membership(group.id, actor_id, role=GroupRole.ADMIN),
+        make_membership(group.id, user_id),
+    ]
+    service, directory = make_service(session)
+    directory.list_by_ids.side_effect = [
+        {actor_id: PublicUser(id=actor_id, username="owner", is_active=True)},
+        {user_id: PublicUser(id=user_id, username="member", is_active=True)},
+    ]
 
-    service.decide_membership_invitation(invitation.id, user_id, "member", True)
-
-    assert not any(isinstance(call.args[0], FamilyGroupMember) for call in session.add.call_args_list)
-    assert invitation.status == "accepted"
-    session.commit.assert_called_once_with()
-
-
-def test_accept_membership_invitation_rejects_missing_pending_invitation() -> None:
-    session = MagicMock(spec=Session)
-    session.scalar.return_value = None
-    service, _ = make_service(session)
-
-    with pytest.raises(GroupMembershipInvitationError):
-        service.decide_membership_invitation(uuid4(), uuid4(), "member", True)
+    with pytest.raises(GroupMemberAlreadyExistsError):
+        service.add_member(group.id, actor_id, "owner", user_id, GroupRole.MEMBER)
 
     session.commit.assert_not_called()
 

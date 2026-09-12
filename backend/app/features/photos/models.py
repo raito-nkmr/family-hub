@@ -34,6 +34,7 @@ class PhotoLifecycleState(StrEnum):
 
 class PhotoDerivativeKind(StrEnum):
     THUMBNAIL = "thumbnail"
+    PREVIEW = "preview"
 
 
 class PhotoActivityEventType(StrEnum):
@@ -175,7 +176,7 @@ class PhotoDerivative(Base):
         PrimaryKeyConstraint("id", name="pk_photo_derivatives"),
         UniqueConstraint("storage_key", name="uq_photo_derivatives_storage_key"),
         UniqueConstraint("photo_id", "kind", name="uq_photo_derivatives_photo_id_kind"),
-        CheckConstraint("kind IN ('thumbnail')", name="ck_photo_derivatives_kind"),
+        CheckConstraint("kind IN ('thumbnail', 'preview')", name="ck_photo_derivatives_kind"),
         CheckConstraint("width > 0 AND height > 0", name="ck_photo_derivatives_dimensions"),
         CheckConstraint("size_bytes > 0", name="ck_photo_derivatives_size_bytes_positive"),
     )

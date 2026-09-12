@@ -51,6 +51,17 @@ class PhotoAccessService:
             raise PhotoContentUnavailableError(photo_id) from error
         return PhotoContent(path=path, content_type=derivative.content_type)
 
+    def get_photo_preview(self, photo_id: UUID, viewer_user_id: UUID) -> PhotoContent:
+        photo = self.get_photo(photo_id, viewer_user_id)
+        derivative = photo.get_derivative(PhotoDerivativeKind.PREVIEW)
+        if derivative is None:
+            raise PhotoContentUnavailableError(photo_id)
+        try:
+            path = self._storage.get_derivative_path(derivative.storage_key)
+        except PhotoStorageError as error:
+            raise PhotoContentUnavailableError(photo_id) from error
+        return PhotoContent(path=path, content_type=derivative.content_type)
+
     def is_favorite(self, photo_id: UUID, user_id: UUID) -> bool:
         return self._session.get(PhotoFavorite, (user_id, photo_id)) is not None
 
