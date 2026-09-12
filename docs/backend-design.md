@@ -171,7 +171,7 @@ filesystem implementation: `storage/paths.py` owns storage-key and path safety v
 storage status, error, and staged/finalized-file types. `storage/uploads.py` and `storage/files.py` implement resumable
 upload, sidecar, finalization, and deletion operations; `storage/facade.py` exposes the `PhotoStorage` facade for those
 operations and storage state;
-`thumbnails.py` creates WebP thumbnails from images or the first video frame, and `video_validation.py` validates supported
+`thumbnails.py` creates WebP thumbnails and still-image detail previews from images, or thumbnails from the first video frame, and `video_validation.py` validates supported
 video containers with `ffprobe`;
 `export.py` streams ZIP output without first creating a full temporary ZIP. `public.py` exposes the read-only photo catalog
 and the album photo-sharing transaction boundary needed by other features. The use-case services are split by responsibility:
@@ -285,6 +285,7 @@ invariant checks remain authoritative for stale or concurrent client data.
 photo-storage/                       # Internal HDD; PHOTO_STORAGE_ROOT
 ├── originals/YYYY/MM/<UUID>.<ext>
 │   └── <UUID>.json
+├── previews/YYYY/MM/<UUID>.webp
 └── incoming/<UUID>.part
 
 backend/var/photo-derivatives/       # Regenerable internal-SSD data
@@ -309,8 +310,10 @@ and height from every accepted image or video, applying EXIF image orientation a
 dimensions. Use the first MPO image or first video frame for validation and thumbnails while preserving the original file.
 
 At finalization, create a WebP thumbnail with a longest edge of at most 480 px, quality 80, and method 4 on the internal SSD.
-Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses the original
-API. Originals, downloads, thumbnails, and ZIP exports return `private, no-store`.
+For still images, also create a WebP detail preview with a longest edge of at most 1600 px, quality 80, and method 4 on the
+photo-storage HDD. Do not enlarge small images and preserve alpha. Lists and albums use thumbnail APIs; the enlarged modal uses
+the detail preview API for images and the original API for videos. Original, preview, thumbnail, and ZIP export responses return
+`private, no-store`. The original download API always returns the original file.
 
 Sidecars use schema version 8 and contain original recovery data, derivative locations, editable memo metadata, owner-entered
 capture-time overrides, and `group_ids`. The database stores `effective_captured_at` as the denormalized sort value
@@ -387,18 +390,19 @@ remove completed files when possible and report unremovable files for integrity 
 
 ## Filesystem and database consistency
 
-Original, sidecar, thumbnail renames, and PostgreSQL commit cannot be one transaction. Finalize in original → sidecar →
-thumbnail → database order and compensate on failure. Keep stable path rules and sidecar schema so originals and sidecars can
+Original, sidecar, derivative renames, and PostgreSQL commit cannot be one transaction. Finalize in original → sidecar →
+derivatives → database order and compensate on failure. Keep stable path rules and sidecar schema so originals and sidecars can
 rebuild photo metadata. The integrity command is read-only: it reports missing files, size mismatches, sidecar mismatches,
 orphaned files, and unmatched `.part` files; `--verify-hashes` additionally reads originals to compare SHA-256. It returns
 0 with no findings and 1 with findings and never changes files or the database. Automatic repair and sidecar-to-database
-rebuild are not implemented. `python -m app.commands.cleanup_orphaned_photo_files` can remove orphaned originals, sidecars,
+rebuild are not implemented; `python -m app.commands.generate_photo_previews` explicitly regenerates missing still-image previews.
+`python -m app.commands.cleanup_orphaned_photo_files` can remove orphaned originals, sidecars,
 derivatives, and stale upload parts after a 24-hour grace period. It defaults to a dry run, requires `--apply` to delete,
 and refuses an empty database unless `--allow-empty-database` is explicitly provided for an intentional full reset.
 
 ## Storage availability
 
-Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals`, `incoming`, and
+Before upload, verify the configured root is the expected HDD mount, the marker exists and matches, `originals`, `previews`, `incoming`, and
 `database-backups` are writable, free space meets the safety threshold, and path resolution cannot escape the allowed root.
 Integrity checks and database backups use the same validated storage-path derivation and reject absolute paths, `..`, and
 symlinks without reading outside the root. A directory merely existing is not sufficient; this prevents writing to an

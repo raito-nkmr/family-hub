@@ -405,6 +405,25 @@
   object-fit: contain;
 }
 
+.photo-zoom-viewer {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  place-items: center;
+}
+
+.photo-zoom-viewer--zoomed {
+  touch-action: none;
+}
+
+.photo-zoom-viewer__image {
+  will-change: transform;
+}
+
 .modal__image.image-fallback {
   display: flex;
 }

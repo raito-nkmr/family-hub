@@ -4988,6 +4988,35 @@ export type PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteResponses = {
 export type PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteResponse =
   PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteResponses[keyof PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteResponses]
 
+export type GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetData = {
+  body?: never
+  path: {
+    /**
+     * Photo Id
+     */
+    photo_id: string
+  }
+  query?: never
+  url: '/api/v1/photos/{photo_id}/preview'
+}
+
+export type GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError
+}
+
+export type GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetError =
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors[keyof GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors]
+
+export type GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown
+}
+
 export type RestorePhotoApiV1PhotosPhotoIdRestorePostData = {
   body?: never
   headers?: {

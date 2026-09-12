@@ -234,9 +234,10 @@ increments the version and synchronizes `metadata_version` in the JSON sidecar.
 
 ### `photo_derivatives`
 
-Stores regenerable display files, initially one thumbnail per photo. Each row has an ID, photo ID, kind (`thumbnail`),
-relative derivative `storage_key`, content type (`image/webp`), positive dimensions, and creation time. Photo deletion
-cascades; storage keys are unique.
+Stores regenerable display files, including one list `thumbnail` and one still-image `preview` per photo when available. Each
+row has an ID, photo ID, kind, relative derivative `storage_key`, content type (`image/webp`), positive dimensions, and creation
+time. Thumbnail keys resolve below the internal SSD derivative root; preview keys resolve below `PHOTO_STORAGE_ROOT/previews/`.
+Photo deletion cascades; storage keys are unique.
 
 ### `photo_shares`
 
@@ -304,7 +305,7 @@ After each chunk, commit `received_bytes` so the `.part` size can be reconciled 
 streamed through a bounded temporary file and then appended to the durable `.part` file in bounded reads. Cancel and expiry
 commit the database state before attempting `.part` deletion; a failed commit leaves the `.part` for offset reconciliation,
 and failed cleanup is recovered by orphan maintenance. After receipt, commit the item as `processing`, finalize original,
-sidecar, and WebP thumbnail, then insert `photos`, `photo_metadata`,
+sidecar, and WebP derivatives, then insert `photos`, `photo_metadata`,
 `photo_derivatives`, required shares, and activity rows in one transaction. Use `UploadItem.id` as `Photo.id` to make retries
 idempotent.
 
@@ -315,6 +316,8 @@ Finalize JSON sidecar on HDD
   ↓
 Finalize WebP thumbnail on internal SSD
   ↓
+Finalize still-image WebP preview on photo-storage HDD
+  ↓
 Insert photos, photo_metadata, photo_derivatives, and photo_shares
   ↓
 Insert activity event and target groups when shared
@@ -323,7 +326,7 @@ Commit one database transaction
 ```
 
 If the commit fails, try to remove finalized files; unrecoverable files become integrity-recovery candidates. File renames and
-database commits cannot form one transaction, so maintenance checks must find partial originals, sidecars, thumbnails,
+database commits cannot form one transaction, so maintenance checks must find partial originals, sidecars, thumbnails, previews,
 unregistered files, and database rows missing files.
 
 ## Albums and file mapping
@@ -347,6 +350,7 @@ Store only relative keys, for example:
 
 ```text
 originals/2026/07/550e8400-e29b-41d4-a716-446655440000.jpg
+previews/2026/07/550e8400-e29b-41d4-a716-446655440000.webp
 ```
 
 `YYYY/MM` is based on upload time, not capture time. Changing capture metadata does not move an original. Do not use
@@ -375,8 +379,8 @@ original size, optional hashes, sidecar contents, and derivative files. `sync_ph
 database records when existing data is retained. `cleanup_orphaned_photo_files` removes only old files not referenced by
 PostgreSQL, defaults to a dry run, and refuses an empty database unless an intentional reset explicitly passes
 `--allow-empty-database`. Restore the database from a backup if PostgreSQL is lost; sidecar-to-database rebuilding and
-automatic thumbnail repair are not implemented. Thumbnail locations are recorded for integrity checks, but not other
-regenerable derived data such as person-analysis results.
+automatic thumbnail repair are not implemented. Thumbnail and detail-preview locations are recorded for integrity checks;
+`python -m app.commands.generate_photo_previews` regenerates missing still-image previews from originals.
 
 ## Maintenance and notification tables
 
@@ -407,6 +411,7 @@ the resettable databases are rebuilt:
 - `20260829_04_shopping` — shopping items, categories, assignments, trips, purchase history, and discarded-trip state
 - `20260830_01_album_groups` — album-to-family-group many-to-many sharing schema
 - `20260830_02_drop_album_group` — removal of the legacy single-group album column
+- `20260912_01_photo_previews` — allow still-image detail preview derivatives
 
 This is a history rebuild, not a forward-compatible upgrade path from the retired revisions. Disposable databases still
 stamped with a retired revision ID must be reset before applying this chain; real-data environments require a reviewed
@@ -418,7 +423,7 @@ and category ordering, are included directly in the current chain.
 After the rebuild, never rewrite these revisions again; future approved schema changes must be added as new migrations. For
 existing data, apply `20260830_01_album_groups`, run
 `python -m app.commands.migrate_album_group_shares --apply`, verify the dry-run reports zero remaining rows, and only then
-apply `20260830_02_drop_album_group`. The command is idempotent and is intentionally separate because Alembic
+apply `20260830_02_drop_album_group` and `20260912_01_photo_previews`. The command is idempotent and is intentionally separate because Alembic
 migrations must not backfill application data. The second revision locks `albums` and `album_group_shares`, verifies that
 every album has a target and that every non-null legacy target has been copied, and aborts before dropping the legacy column
 when that check fails.

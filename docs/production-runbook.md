@@ -201,8 +201,10 @@ sudo systemd-run --wait --pipe --collect \
 
 Choose the next step from the reported revision:
 
-- `20260830_02_drop_album_group (head)`: the album migration is already complete. Do not rerun either album revision or
-  `migrate_album_group_shares`; leave Backend running and proceed to prepared-release activation.
+- `20260912_01_photo_previews (head)`: the schema is current. Do not rerun migrations; continue with the prepared-release
+  data preparation below and verify that previews and integrity are clean before activation.
+- `20260830_02_drop_album_group`: apply `alembic upgrade head` from the prepared release, then continue with the prepared-release
+  data preparation below.
 - `20260829_04_shopping`: use the one-time album migration below.
 - Any other revision, multiple revisions, or no revision: stop and investigate. Do not guess an upgrade path.
 
@@ -251,7 +253,8 @@ sudo systemd-run --wait --pipe --collect \
 The second revision locks the album tables and refuses to remove `albums.group_id` if any album target is missing. If any
 migration command fails, keep Backend stopped, correct the migration state, and retry from the same prepared release. After
 the second revision succeeds, do not start the previous release against the new schema. Fresh databases with no legacy
-albums can use `alembic upgrade head` directly. A database already at `20260830_02_drop_album_group` needs no migration.
+albums can use `alembic upgrade head` directly. A database already at `20260912_01_photo_previews` needs no schema migration;
+a database at `20260830_02_drop_album_group` still needs the preview migration.
 Never run the data command after the second revision has removed `albums.group_id`.
 
 When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
@@ -274,10 +277,19 @@ sudo systemd-run --wait --pipe --collect \
   --property="WorkingDirectory=$migration_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
   "$migration_backend/.venv/bin/python" \
+  -m app.commands.generate_photo_previews
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$migration_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$migration_backend/.venv/bin/python" \
   -m app.commands.check_photo_integrity
 ```
 
-After all migration-specific data commands and integrity checks succeed, return to
+The preview-generation command is idempotent and must complete before activating a release whose image detail view uses
+`/preview`. It reads originals, writes only regenerable previews, and does not copy them to the external backup HDD. After all
+migration-specific data commands and integrity checks succeed, return to
 [the prepared cutover procedure](#prepared-cutover-for-database-changes) and activate that exact release. This starts Backend
 on the migrated schema.
 
@@ -468,6 +480,30 @@ sudo systemd-run --wait --pipe --collect \
   -m app.commands.cleanup_orphaned_photo_files --apply
 ```
 
+When the integrity report shows a missing still-image detail preview but the original is present, regenerate previews before
+switching the detail UI to a release that requires them. The command is idempotent and does not modify originals:
+
+```bash
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.generate_photo_previews
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  /opt/family-hub/current/backend/.venv/bin/python \
+  -m app.commands.check_photo_integrity
+```
+
+The detail previews are regenerable internal cache data and are intentionally not copied to the external backup HDD. After
+restoring originals, sidecars, and the database, mount and verify `PHOTO_STORAGE_ROOT`, run the preview-generation command,
+then run the integrity check before starting the application.
+
 ### Trash purge
 
 Trash purge permanently deletes photos past retention. Run it only after database backup and integrity succeed and the trash
@@ -567,17 +603,18 @@ derivative, or backup deletion commands as part of the development reset above. 
 schema, guarded orphan-file cleanup, bootstrap, and storage steps against the production-like service and its explicitly
 verified paths.
 
-For the development storage reset, use the guarded cleanup command for `originals/`, sidecars, primary `incoming/`,
+For the development storage reset, use the guarded cleanup command for `originals/`, sidecars, `previews/`, primary `incoming/`,
 derivative `thumbnails/`, and derivative `incoming/`; it preserves each root directory and storage marker. It intentionally
 does not delete `database-backups/` or the separate development backup root. Remove those backup contents only as a separate,
 explicitly reviewed operation when they are no longer needed. Never use an unset or broad environment variable as a deletion
 target.
 
-The guarded cleanup command clears old originals, sidecars, thumbnails, and upload parts while preserving storage markers and
-database-backup files. Recreate only the development directories that are intentionally part of the local reset, apply the
-new migrations to the development database, and recreate its initial administrator. The cleanup command performs a final
-integrity check; verify separately that the first test upload creates one original, one sidecar, and one thumbnail. After a
-real-data rebuild, use backup restoration instead of this reset procedure.
+The guarded cleanup command clears old originals, sidecars, detail previews, thumbnails, and upload parts while preserving
+storage markers and database-backup files. Recreate only the development directories that are intentionally part of the local
+reset, apply the new migrations to the development database, and recreate its initial administrator. The cleanup command
+performs a final integrity check; verify separately that the first still-image upload creates one original, one sidecar, one
+thumbnail, and one detail preview. After a real-data rebuild, use backup restoration followed by preview regeneration instead
+of this reset procedure.
 
 ## Release update
 
@@ -691,7 +728,8 @@ that exact release ID for activation; do not rerun preparation with the same ID.
 the prepared runtime, following [the existing-database procedure](#existing-database-migration-before-cutover). Do not infer
 it from the old application version or from deployment notes.
 
-- If production is already at the target head, skip the migration and every associated data command. Leave Backend running.
+- If production is already at the target head, skip the migration. Still run any release-specific preparation, including
+  preview generation and integrity verification when the release introduces the image detail preview UI. Leave Backend running.
 - If production is at an explicitly documented predecessor, create and verify a fresh backup, then stop Backend only when
   the documented migration requires exclusive access.
 - For an unexpected, missing, or multi-head revision, stop the cutover and investigate instead of guessing an upgrade path.

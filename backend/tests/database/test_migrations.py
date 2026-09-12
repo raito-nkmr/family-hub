@@ -18,9 +18,10 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260830_02_drop_album_group"]
+    assert scripts.get_heads() == ["20260912_01_photo_previews"]
     assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260912_01_photo_previews",
         "20260830_02_drop_album_group",
         "20260830_01_album_groups",
         "20260829_04_shopping",
@@ -91,6 +92,7 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "LOCK TABLE albums, album_group_shares IN SHARE ROW EXCLUSIVE MODE" in sql
     assert "Cannot remove albums.group_id before every album group share has been migrated" in sql
     assert "ALTER TABLE albums DROP COLUMN group_id" in sql
+    assert "ck_photo_derivatives_kind" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 

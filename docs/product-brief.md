@@ -28,12 +28,16 @@ explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
 state kept for 24 hours, and partial success. JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V are supported. A WebP
 thumbnail with a longest edge of at most 480 px is generated synchronously from the image or the first video frame when an
-upload is finalized. Lists and albums serve thumbnails; the enlarged modal serves images or playable video originals. Resume from React is
-limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
+upload is finalized. Still-image uploads also receive a WebP detail preview with a longest edge of at most 1600 px on the
+photo-storage HDD. Lists and albums serve thumbnails; the enlarged modal serves detail previews for images and playable video
+originals. On touch devices, image details support pinch zoom and one-finger panning up to the available preview pixels; equal-scale
+horizontal swipes navigate between photos. Resume from React is limited to retrying requests while the same page remains open;
+resume after a page reload is not implemented.
 
-Original image previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
-photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
-cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
+Image detail previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
+photo does not download the detail preview again. Individual blobs larger than 64 MiB are held only for the active preview and are
+not added to that cache. The cache is released when the authenticated session ends; API responses remain non-cacheable. Original
+images are retrieved by the explicit download and ZIP export operations.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping is divided into
 an in-store mode, list management, and purchase history/statistics. Assignees are requests rather than permissions: every
@@ -41,7 +45,7 @@ group member can complete a purchase, and the actual purchaser is recorded separ
 trip totals are entered later in yen, and history uses cursor pagination without a 20-item limit.
 
 The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
-shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
+shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, detail previews, size or
 content mismatches, and orphaned files using the database as the reference. A separate guarded maintenance command can
 remove old orphaned photo files after an explicit apply flag; it refuses an empty database unless an intentional reset is
 explicitly confirmed. Original SHA-256 recalculation is optional.
@@ -158,8 +162,8 @@ configured as `PHOTO_STORAGE_ROOT`; it must not also be treated as a backup of i
 
 ### Internal HDD
 
-The internal HDD is the primary photo storage device. It stores photo and video originals, recovery JSON metadata, in-progress
-upload files, and database backups staged for the external snapshot. Originals are stored in directories based on upload date
+The internal HDD is the primary photo storage device. It stores photo and video originals, recovery JSON metadata, regenerable
+still-image detail previews, in-progress upload files, and database backups staged for the external snapshot. Originals are stored in directories based on upload date
 and use server-generated UUIDs as filenames. Capture time
 is used for organization, list ordering, search, and date timelines, but not for choosing the HDD directory because EXIF may
 be absent or not yet parsed.
@@ -167,8 +171,8 @@ be absent or not yet parsed.
 Each original has a JSON sidecar with the same UUID. It records the schema version, ID, upload user ID and username,
 filename, storage path, MIME type, file size, SHA-256 hash, media dimensions, capture and upload times, derivatives, shared
 memo and its last editor and timestamp, share targets, and lifecycle state. The current integrity command uses PostgreSQL as
-the reference, and sidecar-to-database re-registration or automatic thumbnail repair is not implemented; restore the database
-from a backup after database loss.
+the reference, and sidecar-to-database re-registration or automatic thumbnail/preview repair is not implemented; restore the
+database from a backup after database loss and regenerate missing previews from originals.
 
 ```text
 photo-storage/                       # Internal HDD
@@ -177,6 +181,7 @@ photo-storage/                       # Internal HDD
 │       ├── <UUID>.jpg
 │       └── <UUID>.json
 ├── incoming/
+├── previews/YYYY/MM/<UUID>.webp
 └── database-backups/
 
 backend/var/photo-derivatives/       # Internal SSD; configurable with PHOTO_DERIVATIVE_ROOT
@@ -191,7 +196,7 @@ separate marker so an incorrectly mounted disk cannot be used as a backup target
 
 ### Internal SSD
 
-The internal SSD stores the application, PostgreSQL data, thumbnails, and regenerable caches. Do not normally duplicate
+The internal SSD stores the application, PostgreSQL data, thumbnails, and other regenerable caches. Do not normally duplicate
 photo or video originals there. Set a future usage limit so thumbnails and caches cannot consume the SSD.
 
 ### Cloud storage
@@ -281,7 +286,8 @@ Group physical deletion is available only as an operator management command, not
 show counts for members, invitations, albums that will lose their final target group, album-photo associations removed with
 the group's photo shares, chore history, shopping items, photo shares, activity events, and upload batch targets. Require an
 exact group-name confirmation. Delete related data only with an explicit option. Preserve albums that still have another
-target group and delete albums that would have no target groups. Preserve photo records, originals, and thumbnails; remove
+target group and delete albums that would have no target groups. Preserve photo records, originals, thumbnails, and detail
+previews; remove
 affected photos from albums and synchronize affected JSON sidecars with the remaining share state.
 
 Owners can share a photo with multiple groups. Albums can target multiple groups and are visible and editable by members of
@@ -440,7 +446,6 @@ configured on the browser or server operating system.
 ## Future candidates
 
 - Repair and recovery commands for integrity findings
-- Background regeneration of derivatives for existing photos
 - Devices other than iPhone and browsers other than Safari
 - Additional EXIF fields
 - Tags

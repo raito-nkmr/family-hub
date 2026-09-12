@@ -126,6 +126,9 @@ import type {
   GetPhotoContentApiV1PhotosPhotoIdContentGetData,
   GetPhotoContentApiV1PhotosPhotoIdContentGetErrors,
   GetPhotoContentApiV1PhotosPhotoIdContentGetResponses,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetData,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetData,
@@ -1610,6 +1613,22 @@ export const permanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDelete = <ThrowOnE
     PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteErrors,
     ThrowOnError
   >({ url: '/api/v1/photos/{photo_id}/permanent', ...options })
+
+/**
+ * Get Photo Preview
+ */
+export const getPhotoPreviewApiV1PhotosPhotoIdPreviewGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetData, ThrowOnError>,
+): RequestResult<
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
+    GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/photos/{photo_id}/preview', ...options })
 
 /**
  * Restore Photo

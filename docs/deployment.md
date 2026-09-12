@@ -196,7 +196,7 @@ Do not store API responses whose contents depend on authentication or authorizat
 - Set a Cloudflare Cache Rule for `URI Path starts with /api/` to `Bypass cache`.
 - Set Cloudflare Browser Cache TTL to `Respect Existing Headers` so it does not override Caddy's purpose-specific headers.
 - Bypass `/sw.js` in Cache Rules as well, so Service Worker update checks are not delayed.
-- Return `Cache-Control: private, no-store` for authenticated binaries such as originals, thumbnails, and ZIP exports.
+- Return `Cache-Control: private, no-store` for authenticated binaries such as originals, thumbnails, detail previews, and ZIP exports.
 - Apply `private, no-store` consistently to dynamic authentication, group, album, chore, and shopping APIs.
 - Hashed `/assets/*` files may use `public, max-age=31536000, immutable`.
 - Do not long-cache `index.html`.
@@ -222,8 +222,9 @@ database state before deleting `.part`; if a commit fails, the file remains for 
 orphan-file cleanup job can recover a later deletion failure.
 
 The backend host must provide `ffprobe` and `ffmpeg` on `PATH` for MP4, QuickTime MOV, and M4V validation and thumbnail
-generation. Video originals are stored without conversion; playback uses the browser's native support for the returned MIME
-type.
+generation. Pillow and the HEIF plugin are required for JPEG, PNG, HEIF/HEIC, and WebP derivative generation. Still-image
+detail previews are stored on `PHOTO_STORAGE_ROOT` at a maximum longest edge of 1600 px; video originals are stored without
+conversion and playback uses the browser's native support for the returned MIME type.
 
 ## Web Push outbound communication
 
@@ -278,7 +279,7 @@ plain `http://192.168.x.x:8080` as an alternative path for production cookies.
 
 - The Named Tunnel reconnects automatically after reboot and does not depend on a Quick Tunnel.
 - The router has no inbound port forwards, and Caddy and Uvicorn listen only on loopback.
-- Protected APIs and photo originals cannot be fetched while unauthenticated.
+- Protected APIs and photo originals or detail previews cannot be fetched while unauthenticated.
 - Loopback `/api/v1/readiness` reports both database and photo-storage status, while the Caddy route returns `404`. Photo
   storage being unavailable must not prevent the backend process or non-photo APIs from running.
 - `AUTH_TRUSTED_ORIGINS`, CORS, and cookie attributes match the production origin.

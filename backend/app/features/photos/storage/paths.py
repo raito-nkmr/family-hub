@@ -56,11 +56,11 @@ def validate_derivative_key(storage_key: str) -> PurePosixPath:
     if (
         key.is_absolute()
         or len(key.parts) < 2
-        or key.parts[0] != "thumbnails"
+        or key.parts[0] not in {"thumbnails", "previews"}
         or ".." in key.parts
         or "\\" in storage_key
     ):
-        raise InvalidStorageKeyError("Storage key must be a relative path below thumbnails")
+        raise InvalidStorageKeyError("Storage key must be a relative path below thumbnails or previews")
     return key
 
 

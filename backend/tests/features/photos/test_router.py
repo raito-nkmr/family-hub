@@ -17,6 +17,7 @@ from app.features.photos.router import (
     download_photo_original,
     get_photo,
     get_photo_content,
+    get_photo_preview,
     get_photo_thumbnail,
     get_photo_timeline,
     list_photo_activity,
@@ -246,6 +247,9 @@ class PhotoRouterStub:
     def get_photo_thumbnail(self, photo_id: UUID, viewer_user_id: UUID) -> PhotoContent:
         return self.get_photo_content(photo_id, viewer_user_id)
 
+    def get_photo_preview(self, photo_id: UUID, viewer_user_id: UUID) -> PhotoContent:
+        return self.get_photo_content(photo_id, viewer_user_id)
+
     def is_favorite(self, photo_id: UUID, user_id: UUID) -> bool:
         return False
 
@@ -416,6 +420,19 @@ def test_get_photo_thumbnail_returns_cacheable_file_response(tmp_path) -> None:
     assert response.headers["cache-control"] == "private, no-store"
 
 
+def test_get_photo_preview_returns_private_file_response(tmp_path) -> None:
+    photo = make_photo()
+    path = tmp_path / "preview.webp"
+    path.write_bytes(b"preview")
+    service = PhotoRouterStub([photo], PhotoContent(path=path, content_type="image/webp"))
+
+    response = get_photo_preview(photo.id, authenticated_user=TEST_USER, service=service)
+
+    assert response.path == path
+    assert response.media_type == "image/webp"
+    assert response.headers["cache-control"] == "private, no-store"
+
+
 def test_photo_metadata_routes_are_in_openapi_schema() -> None:
     paths = create_app(Settings(app_env="test")).openapi()["paths"]
 
@@ -425,6 +442,7 @@ def test_photo_metadata_routes_are_in_openapi_schema() -> None:
     assert "patch" in paths["/api/v1/photos/{photo_id}"]
     assert "get" in paths["/api/v1/photos/{photo_id}/content"]
     assert "get" in paths["/api/v1/photos/{photo_id}/download"]
+    assert "get" in paths["/api/v1/photos/{photo_id}/preview"]
     assert "get" in paths["/api/v1/photos/{photo_id}/thumbnail"]
     assert "get" in paths["/api/v1/photos/activity"]
     assert "post" in paths["/api/v1/photos/activity/seen"]

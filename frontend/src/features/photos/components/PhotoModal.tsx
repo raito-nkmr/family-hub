@@ -7,8 +7,9 @@ import { useConfirmation } from '../../../shared/ui/confirmation'
 import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, RetryIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoCaptureTime, getPhotoDownloadUrl, type Photo, type PhotoListItem } from '../api'
-import { formatPhotoContentType } from '../contentType'
+import { formatPhotoContentType, isVideoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
+import { PhotoZoomViewer } from './PhotoZoomViewer'
 
 interface PhotoModalProps {
   photo: Photo | PhotoListItem
@@ -167,6 +168,7 @@ function PhotoModalDetails({
   const moderatedGroups = groups.filter(
     (group) => (photo.sharing.group_ids ?? []).includes(group.id) && group.current_user_role === 'admin',
   )
+  const isVideo = isVideoContentType(photo.content_type)
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length !== 1) {
       swipeStartRef.current = null
@@ -234,25 +236,38 @@ function PhotoModalDetails({
           <div
             className="modal__image-wrap"
             style={{ aspectRatio: mediaAspectRatio }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={() => {
-              swipeStartRef.current = null
-            }}
+            onTouchStart={isVideo ? handleTouchStart : undefined}
+            onTouchEnd={isVideo ? handleTouchEnd : undefined}
+            onTouchCancel={
+              isVideo
+                ? () => {
+                    swipeStartRef.current = null
+                  }
+                : undefined
+            }
           >
-            <PhotoPreview
-              key={photo.id}
-              photo={photo}
-              className="modal__image"
-              source="original"
-              onDisplayDimensions={(width, height) => {
-                setDisplayDimensions((current) =>
-                  current?.photoId === photo.id && current.width === width && current.height === height
-                    ? current
-                    : { photoId: photo.id, width, height },
-                )
-              }}
-            />
+            {isVideo ? (
+              <PhotoPreview
+                key={photo.id}
+                photo={photo}
+                className="modal__image"
+                source="original"
+                onDisplayDimensions={(width, height) => {
+                  setDisplayDimensions((current) =>
+                    current?.photoId === photo.id && current.width === width && current.height === height
+                      ? current
+                      : { photoId: photo.id, width, height },
+                  )
+                }}
+              />
+            ) : (
+              <PhotoZoomViewer
+                key={photo.id}
+                photo={photo}
+                onPreviousPhoto={onPreviousPhoto}
+                onNextPhoto={onNextPhoto}
+              />
+            )}
           </div>
           <div className="modal__details">
             <div>
@@ -494,6 +509,7 @@ function PhotoModalFallback({
   const { t } = useTranslation()
   const metadataBusy = updatingMetadata || photoDetailLoading
   const mediaAspectRatio = `${photo.width} / ${photo.height}`
+  const isVideo = isVideoContentType(photo.content_type)
 
   return (
     <Dialog
@@ -517,7 +533,11 @@ function PhotoModalFallback({
       }
     >
       <div className="modal__image-wrap" style={{ aspectRatio: mediaAspectRatio }}>
-        <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+        {isVideo ? (
+          <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+        ) : (
+          <PhotoZoomViewer key={photo.id} photo={photo} onPreviousPhoto={onPreviousPhoto} onNextPhoto={onNextPhoto} />
+        )}
       </div>
       <div className="modal__details">
         <p className="eyebrow">{t('photoDetails.eyebrow')}</p>
