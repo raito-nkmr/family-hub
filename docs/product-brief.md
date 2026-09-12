@@ -334,6 +334,7 @@ Shopping is shared per family group and is split into three pages: list manageme
 and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
 completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
 an immediate undo. The start control resumes the latest in-progress trip for the group, or creates one when none exists.
+The Shopping entry point opens list management first; in-store mode is a separate tab for active purchasing.
 
 - All group members can add, edit, and delete unpurchased requests between 1 and 120 characters.
 - The list-management page keeps the active list as the primary view, filters it by all, a shared category, or no
