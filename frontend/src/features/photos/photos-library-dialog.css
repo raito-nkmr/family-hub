@@ -350,6 +350,7 @@
   opacity: 0.7;
   place-items: center;
   pointer-events: auto;
+  touch-action: manipulation;
   transition:
     background 160ms ease,
     opacity 160ms ease;

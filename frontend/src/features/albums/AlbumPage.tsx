@@ -118,7 +118,6 @@ export function AlbumPage({ onUnauthorized, onSelectPhoto }: AlbumPageProps) {
       {state.showPhotoPicker && state.selectedAlbum && (
         <PhotoPickerDialog
           albumId={state.selectedAlbum.id}
-          groupId={state.selectedAlbum.group_id}
           searchOptions={state.searchOptions}
           searchOptionsLoading={state.searchOptionsLoading}
           submitting={state.submitting}

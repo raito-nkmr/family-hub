@@ -125,6 +125,37 @@ describe('PhotoModal', () => {
     expect(onNextPhoto).toHaveBeenCalledOnce()
   })
 
+  it('moves to adjacent photos when tablet edge controls receive a tap', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const previousButton = screen.getByRole('button', { name: '前の写真を表示' })
+    const nextButton = screen.getByRole('button', { name: '次の写真を表示' })
+    fireEvent.touchStart(previousButton, { touches: [{ clientX: 12, clientY: 320 }] })
+    fireEvent.touchEnd(previousButton, { changedTouches: [{ clientX: 13, clientY: 321 }] })
+    fireEvent.touchStart(nextButton, { touches: [{ clientX: 788, clientY: 320 }] })
+    fireEvent.touchEnd(nextButton, { changedTouches: [{ clientX: 787, clientY: 321 }] })
+
+    expect(onPreviousPhoto).toHaveBeenCalledOnce()
+    expect(onNextPhoto).toHaveBeenCalledOnce()
+  })
+
   it('hides the previous photo when detail loading fails and offers retry', () => {
     const onRetryPhotoDetail = vi.fn()
     render(

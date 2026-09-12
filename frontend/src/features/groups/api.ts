@@ -1,14 +1,12 @@
 import {
+  addGroupMemberApiV1GroupsGroupIdMembersPost,
   createGroupApiV1GroupsPost,
-  decideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPost,
   getGroupAdministrationOverviewApiV1GroupsGroupIdAdministrationGet,
   getGroupApiV1GroupsGroupIdGet,
   getGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGet,
-  inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost,
   listGroupAuditEventsApiV1GroupsGroupIdAuditEventsGet,
   listGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGet,
   listGroupsApiV1GroupsGet,
-  listMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGet,
   removeGroupMemberApiV1GroupsGroupIdMembersUserIdDelete,
   renameGroupApiV1GroupsGroupIdPatch,
   updateGroupSettingsApiV1GroupsGroupIdSettingsPatch,
@@ -19,7 +17,6 @@ import {
   type GroupMemberRemovalImpactResponse,
   type GroupAdministrationOverviewResponse,
   type GroupAuditEventResponse,
-  type GroupMembershipInvitationResponse,
   type GroupResponse,
   type GroupRole as ApiGroupRole,
 } from '../../shared/api/generated'
@@ -32,7 +29,6 @@ export type GroupMemberCandidate = GroupMemberCandidateResponse
 export type GroupDetail = GroupDetailResponse
 export type GroupAdministrationOverview = GroupAdministrationOverviewResponse
 export type GroupAuditEvent = GroupAuditEventResponse
-export type GroupMembershipInvitation = GroupMembershipInvitationResponse
 export type GroupMemberRemovalImpact = GroupMemberRemovalImpactResponse
 
 export async function getGroups(signal?: AbortSignal): Promise<FamilyGroup[]> {
@@ -55,15 +51,11 @@ export function createGroup(name: string): Promise<GroupDetail> {
   return sdkData(createGroupApiV1GroupsPost({ body: { name } }))
 }
 
-export function inviteGroupMember(
-  groupId: string,
-  inviteeUserId: string,
-  role: GroupRole,
-): Promise<GroupMembershipInvitation> {
+export function addGroupMember(groupId: string, userId: string, role: GroupRole): Promise<GroupMember> {
   return sdkData(
-    inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost({
+    addGroupMemberApiV1GroupsGroupIdMembersPost({
       path: { group_id: groupId },
-      body: { invitee_user_id: inviteeUserId, role },
+      body: { user_id: userId, role },
     }),
   )
 }
@@ -101,19 +93,6 @@ export function getGroupMemberRemovalImpact(
     getGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGet({
       path: { group_id: groupId, user_id: userId },
       signal,
-    }),
-  )
-}
-
-export async function getMyGroupMembershipInvitations(signal?: AbortSignal): Promise<GroupMembershipInvitation[]> {
-  return (await sdkData(listMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGet({ signal }))).items
-}
-
-export function decideGroupMembershipInvitation(invitationId: string, accept: boolean): Promise<void> {
-  return sdkData(
-    decideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPost({
-      path: { invitation_id: invitationId },
-      body: { accept },
     }),
   )
 }

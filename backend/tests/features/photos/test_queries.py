@@ -89,6 +89,8 @@ def test_list_photos_applies_cursor_and_search_filters() -> None:
     assert "photos.uploaded_by_user_id" in sql
     assert "coalesce(photo_metadata.captured_at_override, photos.captured_at_original) IS NOT NULL" in sql
     assert "album_photos" in sql
+    assert "album_group_shares" in sql
+    assert "photos.uploaded_by_user_id =" in sql
     assert "photos.effective_captured_at <" in sql
 
 
