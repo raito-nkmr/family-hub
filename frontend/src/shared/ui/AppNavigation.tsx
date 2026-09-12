@@ -133,18 +133,18 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         {t('navigation.shopping')}
       </span>
       <NavLink
-        className={itemClass('shopping', 'app-navigation__desktop-only app-navigation__item--nested')}
-        to={shoppingTo('shopping')}
-      >
-        <StoreIcon />
-        {t('navigation.shoppingStore')}
-      </NavLink>
-      <NavLink
         className={itemClass('shopping-list', 'app-navigation__desktop-only app-navigation__item--nested')}
         to={shoppingTo('shopping-list')}
       >
         <ListIcon />
         {t('navigation.shoppingList')}
+      </NavLink>
+      <NavLink
+        className={itemClass('shopping', 'app-navigation__desktop-only app-navigation__item--nested')}
+        to={shoppingTo('shopping')}
+      >
+        <StoreIcon />
+        {t('navigation.shoppingStore')}
       </NavLink>
       <NavLink
         className={itemClass('shopping-history', 'app-navigation__desktop-only app-navigation__item--nested')}
@@ -221,8 +221,8 @@ export function SectionNavigation({ showInvitations, photoUnseenCount }: Navigat
           ]
         : activeView && shoppingViews.includes(activeView)
           ? [
-              { view: 'shopping' as const, label: t('navigation.shoppingStore'), count: 0, icon: <StoreIcon /> },
               { view: 'shopping-list' as const, label: t('navigation.shoppingList'), count: 0, icon: <ListIcon /> },
+              { view: 'shopping' as const, label: t('navigation.shoppingStore'), count: 0, icon: <StoreIcon /> },
               {
                 view: 'shopping-history' as const,
                 label: t('navigation.shoppingHistory'),

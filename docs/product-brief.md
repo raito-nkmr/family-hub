@@ -64,7 +64,7 @@ administrator. The footer displays the application version from `frontend/packag
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chores, Shopping, and Other appear in bottom
 navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chores;
-In store, List, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
+List, In store, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
 administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
@@ -324,7 +324,7 @@ each month, assignees, notifications, points, and completion undo are future fea
 
 ## Shopping list application
 
-Shopping is shared per family group and is split into three pages: a deliberately simple in-store mode, list management,
+Shopping is shared per family group and is split into three pages: list management, a deliberately simple in-store mode,
 and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
 completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
 an immediate undo. The start control resumes the latest in-progress trip for the group, or creates one when none exists.
