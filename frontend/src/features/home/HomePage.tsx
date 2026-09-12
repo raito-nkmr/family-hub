@@ -167,7 +167,7 @@ export function HomePage({
             ) : (
               <p className="home-panel__empty">{groups.length === 0 ? t('home.groupNeeded') : t('home.noShopping')}</p>
             )}
-            <Link className="secondary-button icon-button home-panel__action" to={appPaths.shopping}>
+            <Link className="secondary-button icon-button home-panel__action" to={appPaths['shopping-list']}>
               <ShoppingCartIcon />
               {t('home.openShopping')}
             </Link>

@@ -33,6 +33,19 @@ describe('AppNavigation', () => {
     expect(screen.getByLabelText('current path')).toHaveTextContent('/groups')
   })
 
+  it('opens the shopping list from the mobile shopping entry point', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/photos/library']}>
+        <AppNavigation showInvitations={false} photoUnseenCount={0} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('link', { name: '買い物' }))
+    expect(screen.getByLabelText('current path')).toHaveTextContent('/shopping/list')
+  })
+
   it('switches between photo views using section tabs', async () => {
     const user = userEvent.setup()
     render(

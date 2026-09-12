@@ -70,7 +70,7 @@ describe('HomePage', () => {
     expect(screen.getByText('お風呂')).toBeInTheDocument()
     expect(screen.getByText('牛乳')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '家事を開く' })).toHaveAttribute('href', '/chores')
-    expect(screen.getByRole('link', { name: '買い物リストを開く' })).toHaveAttribute('href', '/shopping')
+    expect(screen.getByRole('link', { name: '買い物リストを開く' })).toHaveAttribute('href', '/shopping/list')
   })
 
   it('opens and dismisses the Home Screen guide suggestion', async () => {
