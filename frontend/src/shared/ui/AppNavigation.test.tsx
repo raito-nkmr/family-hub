@@ -102,6 +102,23 @@ describe('AppNavigation', () => {
     await user.click(shoppingListLink!)
     expect(screen.getByLabelText('current path')).toHaveTextContent('/shopping/list')
     expect(screen.getByLabelText('current search')).toHaveTextContent('?group=group-1')
+
+    expect(
+      [...document.querySelectorAll<HTMLElement>('.section-navigation a')].map((link) => link.textContent?.trim()),
+    ).toEqual(['リスト', '店内', '履歴・集計'])
+  })
+
+  it('keeps desktop shopping links in the same order as mobile shopping tabs', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/shopping']}>
+        <AppNavigation showInvitations={false} photoUnseenCount={0} />
+      </MemoryRouter>,
+    )
+
+    const desktopLinks = [...container.querySelectorAll<HTMLAnchorElement>('a.app-navigation__desktop-only')].filter(
+      (link) => link.getAttribute('href')?.startsWith('/shopping'),
+    )
+    expect(desktopLinks.map((link) => link.textContent?.trim())).toEqual(['リスト', '店内', '履歴・集計'])
   })
 
   it('keeps desktop management links in the same order as mobile management tabs', () => {
