@@ -23,6 +23,12 @@ describe('PhotoPreview', () => {
     expect(screen.getByRole('img')).toHaveAttribute('src', '/api/v1/photos/photo%2Fid/content')
   })
 
+  it('uses the HDD-backed preview when requested', () => {
+    render(<PhotoPreview photo={photo} source="preview" />)
+
+    expect(screen.getByRole('img')).toHaveAttribute('src', '/api/v1/photos/photo%2Fid/preview')
+  })
+
   it('reports decoded image dimensions', () => {
     const onDisplayDimensions = vi.fn()
     render(<PhotoPreview photo={photo} source="original" onDisplayDimensions={onDisplayDimensions} />)
@@ -84,7 +90,7 @@ describe('PhotoPreview', () => {
     expect(screen.getByText('プレビュー未対応')).toBeInTheDocument()
   })
 
-  it('releases an oversized original when the preview is unmounted', async () => {
+  it('releases an oversized detail preview when the preview is unmounted', async () => {
     const revokeObjectUrl = vi.fn()
     const largeBlob = new Blob([new Uint8Array(64 * 1024 * 1024 + 1)])
     const cache = createPhotoMediaCache({
@@ -98,7 +104,7 @@ describe('PhotoPreview', () => {
     })
     const { unmount } = render(
       <PhotoMediaCacheContext.Provider value={cache}>
-        <PhotoPreview photo={photo} source="original" />
+        <PhotoPreview photo={photo} source="preview" />
       </PhotoMediaCacheContext.Provider>,
     )
 

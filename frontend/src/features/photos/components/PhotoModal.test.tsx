@@ -72,7 +72,7 @@ describe('PhotoModal', () => {
     expect(container.querySelector('.modal__image-wrap')).toHaveStyle({ aspectRatio })
   })
 
-  it('updates the media stage to the decoded display orientation', () => {
+  it('keeps the media stage based on metadata dimensions', () => {
     const { container } = render(
       <PhotoModal
         photo={{ ...photo, width: 4032, height: 3024 }}
@@ -95,7 +95,7 @@ describe('PhotoModal', () => {
 
     fireEvent.load(image)
 
-    expect(container.querySelector('.modal__image-wrap')).toHaveStyle({ aspectRatio: '3024 / 4032' })
+    expect(container.querySelector('.modal__image-wrap')).toHaveStyle({ aspectRatio: '4032 / 3024' })
   })
 
   it('moves to adjacent photos when desktop edge controls are clicked', () => {
@@ -120,6 +120,37 @@ describe('PhotoModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '前の写真を表示' }))
     fireEvent.click(screen.getByRole('button', { name: '次の写真を表示' }))
+
+    expect(onPreviousPhoto).toHaveBeenCalledOnce()
+    expect(onNextPhoto).toHaveBeenCalledOnce()
+  })
+
+  it('moves to adjacent photos when tablet edge controls receive a tap', () => {
+    const onPreviousPhoto = vi.fn()
+    const onNextPhoto = vi.fn()
+    render(
+      <PhotoModal
+        photo={photo}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[]}
+        onClose={vi.fn()}
+        onSharingChange={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+        onPreviousPhoto={onPreviousPhoto}
+        onNextPhoto={onNextPhoto}
+      />,
+    )
+
+    const previousButton = screen.getByRole('button', { name: '前の写真を表示' })
+    const nextButton = screen.getByRole('button', { name: '次の写真を表示' })
+    fireEvent.touchStart(previousButton, { touches: [{ clientX: 12, clientY: 320 }] })
+    fireEvent.touchEnd(previousButton, { changedTouches: [{ clientX: 13, clientY: 321 }] })
+    fireEvent.touchStart(nextButton, { touches: [{ clientX: 788, clientY: 320 }] })
+    fireEvent.touchEnd(nextButton, { changedTouches: [{ clientX: 787, clientY: 321 }] })
 
     expect(onPreviousPhoto).toHaveBeenCalledOnce()
     expect(onNextPhoto).toHaveBeenCalledOnce()
@@ -219,11 +250,11 @@ describe('PhotoModal', () => {
       />,
     )
 
-    const imageWrap = container.querySelector('.modal__image-wrap')!
-    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
-    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 105 }] })
-    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 180, clientY: 100 }] })
-    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 100, clientY: 105 }] })
+    const imageWrap = container.querySelector('.photo-zoom-viewer')!
+    fireEvent.pointerDown(imageWrap, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 })
+    fireEvent.pointerUp(imageWrap, { pointerId: 1, pointerType: 'touch', clientX: 180, clientY: 105 })
+    fireEvent.pointerDown(imageWrap, { pointerId: 2, pointerType: 'touch', clientX: 180, clientY: 100 })
+    fireEvent.pointerUp(imageWrap, { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 105 })
 
     expect(onPreviousPhoto).toHaveBeenCalledOnce()
     expect(onNextPhoto).toHaveBeenCalledOnce()
@@ -249,11 +280,11 @@ describe('PhotoModal', () => {
       />,
     )
 
-    const imageWrap = container.querySelector('.modal__image-wrap')!
-    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
-    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 140, clientY: 101 }] })
-    fireEvent.touchStart(imageWrap, { touches: [{ clientX: 100, clientY: 100 }] })
-    fireEvent.touchEnd(imageWrap, { changedTouches: [{ clientX: 180, clientY: 250 }] })
+    const imageWrap = container.querySelector('.photo-zoom-viewer')!
+    fireEvent.pointerDown(imageWrap, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 })
+    fireEvent.pointerUp(imageWrap, { pointerId: 1, pointerType: 'touch', clientX: 140, clientY: 101 })
+    fireEvent.pointerDown(imageWrap, { pointerId: 2, pointerType: 'touch', clientX: 100, clientY: 100 })
+    fireEvent.pointerUp(imageWrap, { pointerId: 2, pointerType: 'touch', clientX: 180, clientY: 250 })
 
     expect(onPreviousPhoto).not.toHaveBeenCalled()
     expect(onNextPhoto).not.toHaveBeenCalled()

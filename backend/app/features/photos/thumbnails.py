@@ -11,6 +11,7 @@ from pillow_heif import open_heif
 
 THUMBNAIL_CONTENT_TYPE = "image/webp"
 THUMBNAIL_MAX_PIXELS = 480
+PREVIEW_MAX_PIXELS = 1600
 THUMBNAIL_WEBP_QUALITY = 80
 THUMBNAIL_WEBP_METHOD = 4
 VIDEO_THUMBNAIL_TIMEOUT_SECONDS = 120
@@ -28,6 +29,19 @@ class ThumbnailMetadata:
 
 
 def generate_thumbnail(source_path: Path, destination_path: Path) -> ThumbnailMetadata:
+    return generate_image_derivative(source_path, destination_path, max_pixels=THUMBNAIL_MAX_PIXELS)
+
+
+def generate_preview(source_path: Path, destination_path: Path) -> ThumbnailMetadata:
+    return generate_image_derivative(source_path, destination_path, max_pixels=PREVIEW_MAX_PIXELS)
+
+
+def generate_image_derivative(
+    source_path: Path,
+    destination_path: Path,
+    *,
+    max_pixels: int,
+) -> ThumbnailMetadata:
     try:
         with catch_warnings():
             simplefilter("error", Image.DecompressionBombWarning)
@@ -35,7 +49,7 @@ def generate_thumbnail(source_path: Path, destination_path: Path) -> ThumbnailMe
                 source.load()
                 oriented = ImageOps.exif_transpose(source)
                 try:
-                    oriented.thumbnail((THUMBNAIL_MAX_PIXELS, THUMBNAIL_MAX_PIXELS), Image.Resampling.LANCZOS)
+                    oriented.thumbnail((max_pixels, max_pixels), Image.Resampling.LANCZOS)
                     output = _prepare_for_webp(oriented)
                     try:
                         with destination_path.open("xb") as destination:

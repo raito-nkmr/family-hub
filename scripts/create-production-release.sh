@@ -59,8 +59,14 @@ fi
 printf '%s\n' 'Installing locked frontend dependencies...'
 npm --prefix frontend ci
 
+production_upload_timeout="${VITE_UPLOAD_REQUEST_TIMEOUT_MS:-}"
 printf '%s\n' 'Running backend and frontend checks...'
-make check
+env -u VITE_UPLOAD_REQUEST_TIMEOUT_MS make check
+
+if [[ -n "$production_upload_timeout" ]]; then
+  printf 'Building frontend with VITE_UPLOAD_REQUEST_TIMEOUT_MS=%s...\n' "$production_upload_timeout"
+  VITE_UPLOAD_REQUEST_TIMEOUT_MS="$production_upload_timeout" npm --prefix frontend run build
+fi
 
 [[ -f frontend/dist/index.html ]] || die 'frontend build did not create frontend/dist/index.html'
 

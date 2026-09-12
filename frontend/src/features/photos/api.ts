@@ -185,6 +185,10 @@ export function getPhotoContentUrl(photoId: string): string {
   return `/api/v1/photos/${encodeURIComponent(photoId)}/content`
 }
 
+export function getPhotoPreviewUrl(photoId: string): string {
+  return `/api/v1/photos/${encodeURIComponent(photoId)}/preview`
+}
+
 export function getPhotoDownloadUrl(photoId: string): string {
   return `/api/v1/photos/${encodeURIComponent(photoId)}/download`
 }

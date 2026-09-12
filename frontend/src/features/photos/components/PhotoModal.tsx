@@ -7,8 +7,9 @@ import { useConfirmation } from '../../../shared/ui/confirmation'
 import { BackIcon, DeleteIcon, FavoriteBorderIcon, FavoriteIcon, RetryIcon, SaveIcon } from '../../../shared/ui/icons'
 import type { FamilyGroup } from '../../groups/api'
 import { getPhotoCaptureTime, getPhotoDownloadUrl, type Photo, type PhotoListItem } from '../api'
-import { formatPhotoContentType } from '../contentType'
+import { formatPhotoContentType, isVideoContentType } from '../contentType'
 import { PhotoPreview } from './PhotoPreview'
+import { PhotoZoomViewer } from './PhotoZoomViewer'
 
 interface PhotoModalProps {
   photo: Photo | PhotoListItem
@@ -31,6 +32,81 @@ interface PhotoModalProps {
 }
 
 const SWIPE_THRESHOLD_PX = 50
+const TAP_MOVE_TOLERANCE_PX = 10
+
+interface PhotoEdgeNavigationProps {
+  disabled: boolean
+  previousPhoto?: () => void
+  nextPhoto?: () => void
+  label: string
+  previousLabel: string
+  nextLabel: string
+}
+
+function PhotoEdgeNavigation({
+  disabled,
+  previousPhoto,
+  nextPhoto,
+  label,
+  previousLabel,
+  nextLabel,
+}: PhotoEdgeNavigationProps) {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const handleTouchStart = (event: TouchEvent<HTMLButtonElement>) => {
+    if (event.touches.length !== 1) {
+      touchStartRef.current = null
+      return
+    }
+    const touch = event.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+  const handleTouchEnd = (event: TouchEvent<HTMLButtonElement>, navigate?: () => void) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start || disabled || !navigate || event.changedTouches.length !== 1) return
+    const touch = event.changedTouches[0]
+    const movedDistance = Math.hypot(touch.clientX - start.x, touch.clientY - start.y)
+    if (movedDistance > TAP_MOVE_TOLERANCE_PX) return
+
+    // Some tablet browsers do not synthesize a click for a transparent, full-height button.
+    // Handle the tap directly and prevent the compatibility click from firing twice.
+    event.preventDefault()
+    navigate()
+  }
+
+  return (
+    <nav className="modal__edge-navigation" aria-label={label}>
+      <button
+        className="modal__edge-navigation-button modal__edge-navigation-button--previous"
+        type="button"
+        disabled={disabled || !previousPhoto}
+        aria-label={previousLabel}
+        onClick={previousPhoto}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={(event) => handleTouchEnd(event, previousPhoto)}
+        onTouchCancel={() => {
+          touchStartRef.current = null
+        }}
+      >
+        <BackIcon />
+      </button>
+      <button
+        className="modal__edge-navigation-button modal__edge-navigation-button--next"
+        type="button"
+        disabled={disabled || !nextPhoto}
+        aria-label={nextLabel}
+        onClick={nextPhoto}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={(event) => handleTouchEnd(event, nextPhoto)}
+        onTouchCancel={() => {
+          touchStartRef.current = null
+        }}
+      >
+        <BackIcon />
+      </button>
+    </nav>
+  )
+}
 
 export function PhotoModal(props: PhotoModalProps) {
   return isPhotoDetails(props.photo) ? (
@@ -92,6 +168,7 @@ function PhotoModalDetails({
   const moderatedGroups = groups.filter(
     (group) => (photo.sharing.group_ids ?? []).includes(group.id) && group.current_user_role === 'admin',
   )
+  const isVideo = isVideoContentType(photo.content_type)
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length !== 1) {
       swipeStartRef.current = null
@@ -132,26 +209,14 @@ function PhotoModalDetails({
       surface="media"
       onClose={onClose}
       overlayContent={
-        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
-            type="button"
-            disabled={metadataBusy || !onPreviousPhoto}
-            aria-label={t('photoDetails.previousPhoto')}
-            onClick={onPreviousPhoto}
-          >
-            <BackIcon />
-          </button>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--next"
-            type="button"
-            disabled={metadataBusy || !onNextPhoto}
-            aria-label={t('photoDetails.nextPhoto')}
-            onClick={onNextPhoto}
-          >
-            <BackIcon />
-          </button>
-        </nav>
+        <PhotoEdgeNavigation
+          disabled={metadataBusy}
+          previousPhoto={onPreviousPhoto}
+          nextPhoto={onNextPhoto}
+          label={t('photoDetails.navigationLabel')}
+          previousLabel={t('photoDetails.previousPhoto')}
+          nextLabel={t('photoDetails.nextPhoto')}
+        />
       }
     >
       {photoDetailError ? (
@@ -171,25 +236,38 @@ function PhotoModalDetails({
           <div
             className="modal__image-wrap"
             style={{ aspectRatio: mediaAspectRatio }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={() => {
-              swipeStartRef.current = null
-            }}
+            onTouchStart={isVideo ? handleTouchStart : undefined}
+            onTouchEnd={isVideo ? handleTouchEnd : undefined}
+            onTouchCancel={
+              isVideo
+                ? () => {
+                    swipeStartRef.current = null
+                  }
+                : undefined
+            }
           >
-            <PhotoPreview
-              key={photo.id}
-              photo={photo}
-              className="modal__image"
-              source="original"
-              onDisplayDimensions={(width, height) => {
-                setDisplayDimensions((current) =>
-                  current?.photoId === photo.id && current.width === width && current.height === height
-                    ? current
-                    : { photoId: photo.id, width, height },
-                )
-              }}
-            />
+            {isVideo ? (
+              <PhotoPreview
+                key={photo.id}
+                photo={photo}
+                className="modal__image"
+                source="original"
+                onDisplayDimensions={(width, height) => {
+                  setDisplayDimensions((current) =>
+                    current?.photoId === photo.id && current.width === width && current.height === height
+                      ? current
+                      : { photoId: photo.id, width, height },
+                  )
+                }}
+              />
+            ) : (
+              <PhotoZoomViewer
+                key={photo.id}
+                photo={photo}
+                onPreviousPhoto={onPreviousPhoto}
+                onNextPhoto={onNextPhoto}
+              />
+            )}
           </div>
           <div className="modal__details">
             <div>
@@ -431,6 +509,7 @@ function PhotoModalFallback({
   const { t } = useTranslation()
   const metadataBusy = updatingMetadata || photoDetailLoading
   const mediaAspectRatio = `${photo.width} / ${photo.height}`
+  const isVideo = isVideoContentType(photo.content_type)
 
   return (
     <Dialog
@@ -443,30 +522,22 @@ function PhotoModalFallback({
       surface="media"
       onClose={onClose}
       overlayContent={
-        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
-            type="button"
-            disabled={metadataBusy || !onPreviousPhoto}
-            aria-label={t('photoDetails.previousPhoto')}
-            onClick={onPreviousPhoto}
-          >
-            <BackIcon />
-          </button>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--next"
-            type="button"
-            disabled={metadataBusy || !onNextPhoto}
-            aria-label={t('photoDetails.nextPhoto')}
-            onClick={onNextPhoto}
-          >
-            <BackIcon />
-          </button>
-        </nav>
+        <PhotoEdgeNavigation
+          disabled={metadataBusy}
+          previousPhoto={onPreviousPhoto}
+          nextPhoto={onNextPhoto}
+          label={t('photoDetails.navigationLabel')}
+          previousLabel={t('photoDetails.previousPhoto')}
+          nextLabel={t('photoDetails.nextPhoto')}
+        />
       }
     >
       <div className="modal__image-wrap" style={{ aspectRatio: mediaAspectRatio }}>
-        <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+        {isVideo ? (
+          <PhotoPreview key={photo.id} photo={photo} className="modal__image" source="original" />
+        ) : (
+          <PhotoZoomViewer key={photo.id} photo={photo} onPreviousPhoto={onPreviousPhoto} onNextPhoto={onNextPhoto} />
+        )}
       </div>
       <div className="modal__details">
         <p className="eyebrow">{t('photoDetails.eyebrow')}</p>

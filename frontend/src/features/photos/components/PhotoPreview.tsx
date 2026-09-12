@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, type CSSProperties, type PointerEventHandler } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PhotoIcon } from '../../../shared/ui/icons'
-import { getPhotoContentUrl, getPhotoThumbnailUrl } from '../api'
+import { getPhotoContentUrl, getPhotoPreviewUrl, getPhotoThumbnailUrl } from '../api'
 import { isVideoContentType } from '../contentType'
 import { useCachedPhotoMediaUrl } from './usePhotoMediaCache'
 
@@ -16,17 +16,30 @@ export function PhotoPreview({
   className = '',
   source = 'thumbnail',
   onDisplayDimensions,
+  style,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
 }: {
   photo: PreviewPhoto
   className?: string
-  source?: 'thumbnail' | 'original'
+  source?: 'thumbnail' | 'preview' | 'original'
   onDisplayDimensions?: (width: number, height: number) => void
+  style?: CSSProperties
+  onPointerDown?: PointerEventHandler<HTMLImageElement>
+  onPointerMove?: PointerEventHandler<HTMLImageElement>
+  onPointerUp?: PointerEventHandler<HTMLImageElement>
+  onPointerCancel?: PointerEventHandler<HTMLImageElement>
 }) {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
   const contentUrl = getPhotoContentUrl(photo.id)
+  const previewUrl = getPhotoPreviewUrl(photo.id)
   const isOriginalImage = source === 'original' && !isVideoContentType(photo.content_type)
-  const cachedMedia = useCachedPhotoMediaUrl(contentUrl, isOriginalImage)
+  const isCachedImage = (source === 'preview' || isOriginalImage) && !isVideoContentType(photo.content_type)
+  const mediaUrl = source === 'preview' ? previewUrl : contentUrl
+  const cachedMedia = useCachedPhotoMediaUrl(mediaUrl, isCachedImage)
 
   if (failed || cachedMedia.failed) {
     return (
@@ -68,9 +81,14 @@ export function PhotoPreview({
   return (
     <img
       className={className}
-      src={source === 'thumbnail' ? getPhotoThumbnailUrl(photo.id) : (cachedMedia.url ?? contentUrl)}
+      src={source === 'thumbnail' ? getPhotoThumbnailUrl(photo.id) : (cachedMedia.url ?? mediaUrl)}
       alt={photo.original_filename}
-      loading={source === 'original' ? 'eager' : 'lazy'}
+      loading={source === 'thumbnail' ? 'lazy' : 'eager'}
+      style={style}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onLoad={(event) => {
         const { naturalWidth, naturalHeight } = event.currentTarget
         if (naturalWidth > 0 && naturalHeight > 0) onDisplayDimensions?.(naturalWidth, naturalHeight)

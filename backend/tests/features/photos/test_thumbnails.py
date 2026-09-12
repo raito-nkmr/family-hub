@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.features.photos.thumbnails import ThumbnailGenerationError, generate_thumbnail
+from app.features.photos.thumbnails import ThumbnailGenerationError, generate_preview, generate_thumbnail
 
 
 def test_generate_thumbnail_resizes_to_bounding_box_and_writes_webp(tmp_path: Path) -> None:
@@ -28,6 +28,19 @@ def test_generate_thumbnail_does_not_upscale_small_image(tmp_path: Path) -> None
     result = generate_thumbnail(source, destination)
 
     assert (result.width, result.height) == (160, 120)
+
+
+def test_generate_preview_resizes_to_1600px_longest_edge(tmp_path: Path) -> None:
+    source = tmp_path / "source.jpg"
+    destination = tmp_path / "preview.part"
+    Image.new("RGB", (3200, 1600), "navy").save(source)
+
+    result = generate_preview(source, destination)
+
+    assert (result.width, result.height) == (1600, 800)
+    with Image.open(destination) as preview:
+        assert preview.format == "WEBP"
+        assert preview.size == (1600, 800)
 
 
 def test_generate_thumbnail_uses_primary_mpo_image(tmp_path: Path) -> None:

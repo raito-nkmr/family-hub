@@ -5,9 +5,9 @@ import { EmptyState } from '../../../shared/ui/EmptyState'
 import { InfiniteScrollTrigger } from '../../../shared/ui/InfiniteScrollTrigger'
 import { PageMessage } from '../../../shared/ui/PageMessage'
 import { AlbumIcon, BackIcon, CheckIcon, DeleteIcon, EditIcon, PhotoIcon, PlusIcon } from '../../../shared/ui/icons'
-import { getPhotoThumbnailUrl } from '../../photos/api'
 import type { Photo } from '../../photos/public'
 import type { AlbumDetail } from '../api'
+import { AlbumPhotoThumbnail } from './AlbumPhotoThumbnail'
 import { AlbumPhotoGrid } from './AlbumPhotoGrid'
 
 interface AlbumDetailViewProps {
@@ -44,6 +44,12 @@ export function AlbumDetailView({
   onLoadMore,
 }: AlbumDetailViewProps) {
   const { t } = useTranslation()
+  const coverPhoto = album.cover_photo_id
+    ? (album.photos.find((photo) => photo.id === album.cover_photo_id) ?? {
+        id: album.cover_photo_id,
+        original_filename: '',
+      })
+    : null
   const [organizing, setOrganizing] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const selectedPhotos = useMemo(
@@ -83,14 +89,18 @@ export function AlbumDetailView({
       </button>
 
       <header className="album-detail-header">
-        <div className="album-detail-header__cover">
-          {album.cover_photo_id ? <img src={getPhotoThumbnailUrl(album.cover_photo_id)} alt="" /> : <AlbumIcon />}
-        </div>
+        {coverPhoto ? (
+          <AlbumPhotoThumbnail photo={coverPhoto} className="album-detail-header__cover" />
+        ) : (
+          <div className="album-detail-header__cover">
+            <AlbumIcon />
+          </div>
+        )}
         <div className="album-detail-header__copy">
           <p className="eyebrow">{t('albums.detailEyebrow')}</p>
           <h1>{album.title}</h1>
           <p>{album.description ?? t('albums.noDescription')}</p>
-          {album.group_name && <span>{album.group_name}</span>}
+          {album.group_names.length > 0 && <span>{album.group_names.join(', ')}</span>}
           <span>
             {t('albums.photosCount', { count: album.photo_count })} ·{' '}
             {t('albums.updated', { date: formatDateTime(album.updated_at) })}

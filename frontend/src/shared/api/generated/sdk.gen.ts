@@ -9,6 +9,9 @@ import type {
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostData,
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostErrors,
   AddAlbumPhotosApiV1AlbumsAlbumIdPhotosPostResponses,
+  AddGroupMemberApiV1GroupsGroupIdMembersPostData,
+  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
+  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutData,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutErrors,
   AddPhotoFavoriteApiV1PhotosPhotoIdFavoritePutResponses,
@@ -66,9 +69,6 @@ import type {
   CreateUploadBatchApiV1UploadBatchesPostData,
   CreateUploadBatchApiV1UploadBatchesPostErrors,
   CreateUploadBatchApiV1UploadBatchesPostResponses,
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostData,
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors,
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteData,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteErrors,
   DeleteAlbumApiV1AlbumsAlbumIdDeleteResponses,
@@ -126,6 +126,9 @@ import type {
   GetPhotoContentApiV1PhotosPhotoIdContentGetData,
   GetPhotoContentApiV1PhotosPhotoIdContentGetErrors,
   GetPhotoContentApiV1PhotosPhotoIdContentGetResponses,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetData,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetData,
   GetPhotoSearchOptionsApiV1PhotosSearchOptionsGetResponses,
   GetPhotoThumbnailApiV1PhotosPhotoIdThumbnailGetData,
@@ -153,9 +156,6 @@ import type {
   GetUploadOffsetApiV1UploadBatchesItemsItemIdContentHeadData,
   GetUploadOffsetApiV1UploadBatchesItemsItemIdContentHeadErrors,
   GetUploadOffsetApiV1UploadBatchesItemsItemIdContentHeadResponses,
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostData,
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors,
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses,
   ListAlbumsApiV1AlbumsGetData,
   ListAlbumsApiV1AlbumsGetResponses,
   ListAuditEventsApiV1AdminAuditEventsGetData,
@@ -183,8 +183,6 @@ import type {
   ListMaintenanceHistoryApiV1AdminMaintenanceHistoryGetData,
   ListMaintenanceHistoryApiV1AdminMaintenanceHistoryGetErrors,
   ListMaintenanceHistoryApiV1AdminMaintenanceHistoryGetResponses,
-  ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetData,
-  ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses,
   ListPhotoActivityApiV1PhotosActivityGetData,
   ListPhotoActivityApiV1PhotosActivityGetErrors,
   ListPhotoActivityApiV1PhotosActivityGetResponses,
@@ -1015,48 +1013,6 @@ export const createGroupApiV1GroupsPost = <ThrowOnError extends boolean = false>
   })
 
 /**
- * List My Group Membership Invitations
- */
-export const listMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGet = <
-  ThrowOnError extends boolean = false,
->(
-  options?: Options<ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetData, ThrowOnError>,
-): RequestResult<ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<
-    ListMyGroupMembershipInvitationsApiV1GroupsMembershipInvitationsGetResponses,
-    unknown,
-    ThrowOnError
-  >({ url: '/api/v1/groups/membership-invitations', ...options })
-
-/**
- * Decide Group Membership Invitation
- */
-export const decideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPost = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<
-    DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostData,
-    ThrowOnError
-  >,
-): RequestResult<
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses,
-  DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).post<
-    DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostResponses,
-    DecideGroupMembershipInvitationApiV1GroupsMembershipInvitationsInvitationIdDecisionPostErrors,
-    ThrowOnError
-  >({
-    url: '/api/v1/groups/membership-invitations/{invitation_id}/decision',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-
-/**
  * Get Group
  */
 export const getGroupApiV1GroupsGroupIdGet = <ThrowOnError extends boolean = false>(
@@ -1136,6 +1092,29 @@ export const listGroupMemberCandidatesApiV1GroupsGroupIdMemberCandidatesGet = <T
   >({ url: '/api/v1/groups/{group_id}/member-candidates', ...options })
 
 /**
+ * Add Group Member
+ */
+export const addGroupMemberApiV1GroupsGroupIdMembersPost = <ThrowOnError extends boolean = false>(
+  options: Options<AddGroupMemberApiV1GroupsGroupIdMembersPostData, ThrowOnError>,
+): RequestResult<
+  AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
+  AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    AddGroupMemberApiV1GroupsGroupIdMembersPostResponses,
+    AddGroupMemberApiV1GroupsGroupIdMembersPostErrors,
+    ThrowOnError
+  >({
+    url: '/api/v1/groups/{group_id}/members',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+/**
  * Remove Group Member
  */
 export const removeGroupMemberApiV1GroupsGroupIdMembersUserIdDelete = <ThrowOnError extends boolean = false>(
@@ -1191,29 +1170,6 @@ export const getGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalIm
     GetGroupMemberRemovalImpactApiV1GroupsGroupIdMembersUserIdRemovalImpactGetErrors,
     ThrowOnError
   >({ url: '/api/v1/groups/{group_id}/members/{user_id}/removal-impact', ...options })
-
-/**
- * Invite Group Member
- */
-export const inviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPost = <ThrowOnError extends boolean = false>(
-  options: Options<InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostData, ThrowOnError>,
-): RequestResult<
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses,
-  InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).post<
-    InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostResponses,
-    InviteGroupMemberApiV1GroupsGroupIdMembershipInvitationsPostErrors,
-    ThrowOnError
-  >({
-    url: '/api/v1/groups/{group_id}/membership-invitations',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
 
 /**
  * Update Group Settings
@@ -1657,6 +1613,22 @@ export const permanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDelete = <ThrowOnE
     PermanentlyDeletePhotoApiV1PhotosPhotoIdPermanentDeleteErrors,
     ThrowOnError
   >({ url: '/api/v1/photos/{photo_id}/permanent', ...options })
+
+/**
+ * Get Photo Preview
+ */
+export const getPhotoPreviewApiV1PhotosPhotoIdPreviewGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetData, ThrowOnError>,
+): RequestResult<
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
+  GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetResponses,
+    GetPhotoPreviewApiV1PhotosPhotoIdPreviewGetErrors,
+    ThrowOnError
+  >({ url: '/api/v1/photos/{photo_id}/preview', ...options })
 
 /**
  * Restore Photo

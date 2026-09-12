@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import and_, case, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
 
-from app.features.albums.public import Album, album_is_visible_to_user, photo_is_in_album
+from app.features.albums.public import Album, AlbumGroupShare, album_is_visible_to_user, photo_is_in_album
 from app.features.groups.public import FamilyGroup, FamilyGroupMember
 from app.features.photos.access import photo_is_in_library, photo_is_shared
 from app.features.photos.models import Photo, PhotoFavorite, PhotoMetadata, PhotoShare, PhotoVisibility
@@ -271,10 +271,22 @@ class PhotoQueryService:
                 ]
             )
         elif filters.exclude_album_id:
+            missing_album_group_share = exists(
+                select(AlbumGroupShare.group_id).where(
+                    AlbumGroupShare.album_id == filters.exclude_album_id,
+                    ~exists(
+                        select(PhotoShare.id).where(
+                            PhotoShare.photo_id == Photo.id,
+                            PhotoShare.group_id == AlbumGroupShare.group_id,
+                        )
+                    ),
+                )
+            )
             conditions.extend(
                 [
                     album_is_visible_to_user(filters.exclude_album_id, viewer_user_id),
                     not_(photo_is_in_album(Photo.id, filters.exclude_album_id)),
+                    or_(Photo.uploaded_by_user_id == viewer_user_id, not_(missing_album_group_share)),
                 ]
             )
         return conditions

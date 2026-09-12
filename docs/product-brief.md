@@ -28,12 +28,16 @@ explicit group in the URL.
 Batch photo and video upload supports multiple share groups, per-file progress, retry, cancellation, server-side resumable
 state kept for 24 hours, and partial success. JPEG, PNG, HEIF/HEIC, MP4, QuickTime MOV, and M4V are supported. A WebP
 thumbnail with a longest edge of at most 480 px is generated synchronously from the image or the first video frame when an
-upload is finalized. Lists and albums serve thumbnails; the enlarged modal serves images or playable video originals. Resume from React is
-limited to retrying requests while the same page remains open; resume after a page reload is not implemented.
+upload is finalized. Still-image uploads also receive a WebP detail preview with a longest edge of at most 1600 px on the
+photo-storage HDD. Lists and albums serve thumbnails; the enlarged modal serves detail previews for images and playable video
+originals. On touch devices, image details support pinch zoom and one-finger panning up to the available preview pixels; equal-scale
+horizontal swipes navigate between photos. Resume from React is limited to retrying requests while the same page remains open;
+resume after a page reload is not implemented.
 
-Original image previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
-photo does not download it again. Individual blobs larger than 64 MiB are held only for the active preview and are not added to that
-cache. The cache is released when the authenticated session ends; API responses remain non-cacheable.
+Image detail previews are kept in a bounded in-memory cache for the current authenticated app session, so returning to a viewed
+photo does not download the detail preview again. Individual blobs larger than 64 MiB are held only for the active preview and are
+not added to that cache. The cache is released when the authenticated session ends; API responses remain non-cacheable. Original
+images are retrieved by the explicit download and ZIP export operations.
 
 Automated frontend and backend tests, CI, and TypeScript API generation from OpenAPI are in place. Shopping is divided into
 an in-store mode, list management, and purchase history/statistics. Assignees are requests rather than permissions: every
@@ -41,7 +45,7 @@ group member can complete a purchase, and the actual purchaser is recorded separ
 trip totals are entered later in yen, and history uses cursor pagination without a 20-item limit.
 
 The home screen aggregates recent photos, unread photo updates, active chore tasks across all groups, and unpurchased
-shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, size or
+shopping items. A read-only photo-storage integrity command reports missing originals, JSON sidecars, thumbnails, detail previews, size or
 content mismatches, and orphaned files using the database as the reference. A separate guarded maintenance command can
 remove old orphaned photo files after an explicit apply flag; it refuses an empty database unless an intentional reset is
 explicitly confirmed. Original SHA-256 recalculation is optional.
@@ -64,7 +68,7 @@ administrator. The footer displays the application version from `frontend/packag
 
 The frontend is mobile-first. On iPhone-sized screens, Home, Photos, Chores, Shopping, and Other appear in bottom
 navigation. New, Library, Albums, and Trash are tabs inside Photos; Task list, Daily, and Monthly are tabs inside Chores;
-In store, List, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
+List, In store, and History & stats are tabs inside Shopping; Groups, invitation administration, Account, and the
 administrator-only System screen are under Other. Screens wider than
 900 px switch to a left sidebar and expand the photo area and other features. On mobile, pulling down from the top of an
 authenticated page far enough and releasing refreshes the currently active data queries.
@@ -78,7 +82,8 @@ On mobile, the photo list shows thumbnails with month headings, favorite state, 
 or 4 columns; 3 is the default and the choice is stored in the browser. Filename, capture time, and file format are shown
 in photo details. On tablet-sized screens and desktop, tapping or clicking the left or right edge of the enlarged photo view
 moves to the adjacent photo; horizontal swipes provide the same navigation on phones. Both operate on photos already loaded
-in the library.
+in the library. Album-list cards use a full-width cover above their metadata. An album-list cover, its detail header, and
+the grid card marked as its cover use the same centered `4:3` thumbnail crop.
 Photo details fit the complete image or video inside a bounded media stage without cropping. If the device cannot display or
 play an original, the unavailable-preview message retains the same bounded stage instead of collapsing vertically. Search
 conditions and the upload panel start collapsed on mobile; the active search count appears on the search toggle, and the
@@ -157,8 +162,8 @@ configured as `PHOTO_STORAGE_ROOT`; it must not also be treated as a backup of i
 
 ### Internal HDD
 
-The internal HDD is the primary photo storage device. It stores photo and video originals, recovery JSON metadata, in-progress
-upload files, and database backups staged for the external snapshot. Originals are stored in directories based on upload date
+The internal HDD is the primary photo storage device. It stores photo and video originals, recovery JSON metadata, regenerable
+still-image detail previews, in-progress upload files, and database backups staged for the external snapshot. Originals are stored in directories based on upload date
 and use server-generated UUIDs as filenames. Capture time
 is used for organization, list ordering, search, and date timelines, but not for choosing the HDD directory because EXIF may
 be absent or not yet parsed.
@@ -166,8 +171,8 @@ be absent or not yet parsed.
 Each original has a JSON sidecar with the same UUID. It records the schema version, ID, upload user ID and username,
 filename, storage path, MIME type, file size, SHA-256 hash, media dimensions, capture and upload times, derivatives, shared
 memo and its last editor and timestamp, share targets, and lifecycle state. The current integrity command uses PostgreSQL as
-the reference, and sidecar-to-database re-registration or automatic thumbnail repair is not implemented; restore the database
-from a backup after database loss.
+the reference, and sidecar-to-database re-registration or automatic thumbnail/preview repair is not implemented; restore the
+database from a backup after database loss and regenerate missing previews from originals.
 
 ```text
 photo-storage/                       # Internal HDD
@@ -176,6 +181,7 @@ photo-storage/                       # Internal HDD
 │       ├── <UUID>.jpg
 │       └── <UUID>.json
 ├── incoming/
+├── previews/YYYY/MM/<UUID>.webp
 └── database-backups/
 
 backend/var/photo-derivatives/       # Internal SSD; configurable with PHOTO_DERIVATIVE_ROOT
@@ -190,7 +196,7 @@ separate marker so an incorrectly mounted disk cannot be used as a backup target
 
 ### Internal SSD
 
-The internal SSD stores the application, PostgreSQL data, thumbnails, and regenerable caches. Do not normally duplicate
+The internal SSD stores the application, PostgreSQL data, thumbnails, and other regenerable caches. Do not normally duplicate
 photo or video originals there. Set a future usage limit so thumbnails and caches cannot consume the SSD.
 
 ### Cloud storage
@@ -242,8 +248,9 @@ Password recovery is limited to an operator with server and database access. Tem
 arguments, environment variables, shell history, or command output and must be entered invisibly in the terminal.
 
 Each photo records its uploader as its owner. New uploads default to `private`; the owner may share a photo with zero or
-more of their family groups. Only the owner and members of target groups can view it. Adding a photo to an album grants no
-new access; the photo must already be shared with the album's group. Unauthorized photo IDs are treated as not found.
+more of their family groups. Only the owner and members of target groups can view it. Adding an owner's photo to an album
+automatically shares it with any album target groups that do not already have access; adding another user's photo requires
+that it is already shared with every album target group. Unauthorized photo IDs are treated as not found.
 
 After login, use a server-side session represented by a sufficiently long random token in an HttpOnly cookie. Store only the
 SHA-256 token hash in PostgreSQL. Sessions can be revoked by logout, expiration, password change, or user deactivation.
@@ -269,22 +276,27 @@ Users can belong to multiple family groups to separate scopes such as a househol
 Any logged-in user can create a group and is registered as its administrator. Users see only their groups; group existence is
 not disclosed to non-members. Group names are globally unique, and duplicate creation is rejected.
 
-Group administrators can rename a group and invite an existing active user who is not a member. Membership is created when
-the invitee accepts. Administrators can change `admin` and `member` roles and remove membership after reviewing impact counts.
+Group administrators can rename a group and add an existing active user who is not a member. Membership is created
+immediately by the administrator's action; there is no separate group-invitation acceptance step. Administrators can change `admin`
+and `member` roles and remove membership after reviewing impact counts.
 Members cannot perform administrative actions. Every group must retain at least one active administrator; the last active
 administrator cannot be demoted or removed. Only accounts created by invitation acceptance or management command can be added.
 
 Group physical deletion is available only as an operator management command, not through the web API or UI. Before deletion,
-show counts for members, invitations, albums, chore history, shopping items, photo shares, activity events, and upload
-batch targets. Require an exact group-name confirmation. Delete related data only with an explicit option. Preserve photo
-records, originals, and thumbnails, and synchronize affected JSON sidecars with the remaining share state.
+show counts for members, invitations, albums that will lose their final target group, album-photo associations removed with
+the group's photo shares, chore history, shopping items, photo shares, activity events, and upload batch targets. Require an
+exact group-name confirmation. Delete related data only with an explicit option. Preserve albums that still have another
+target group and delete albums that would have no target groups. Preserve photo records, originals, thumbnails, and detail
+previews; remove
+affected photos from albums and synchronize affected JSON sidecars with the remaining share state.
 
-Owners can share a photo with multiple groups. Each album belongs to one group and is visible and editable by that group's
-members. A cover is selected explicitly, with the first added photo as the fallback. Removing a group share also removes the
-photo and cover assignment from albums of that group. A group administrator can re-enter the current password to remove
-another user's share for that group; the photo remains and the action is recorded in the audit log. System administrators see
-user, group-health, maintenance, and all audit information; group administrators see related counts and that group's audit log.
-Favorites are independent of sharing and albums and belong only to each user.
+Owners can share a photo with multiple groups. Albums can target multiple groups and are visible and editable by members of
+any target group; the album contains one shared photo collection rather than a copy per group. A cover is selected
+explicitly, with the first added photo as the fallback. Removing any photo group share removes the photo from every album and
+clears affected covers. A group administrator can re-enter the current password to remove another user's share for that group;
+the photo remains and the action is recorded in the audit log. System administrators see user, group-health, maintenance, and
+all audit information; group administrators see related counts and that group's audit log. Favorites are independent of
+sharing and albums and belong only to each user.
 
 Batch uploads verify group membership both when the batch is created and when each file is finalized. If membership is
 removed after batch creation, unfinished items are stopped so the old permission cannot share new photos.
@@ -318,7 +330,7 @@ each month, assignees, notifications, points, and completion undo are future fea
 
 ## Shopping list application
 
-Shopping is shared per family group and is split into three pages: a deliberately simple in-store mode, list management,
+Shopping is shared per family group and is split into three pages: list management, a deliberately simple in-store mode,
 and purchase history/statistics. The in-store page shows only unpurchased names and optional assignee labels. Tapping a row
 completes it without a confirmation dialog, records the current user as purchaser, removes it from the active view, and offers
 an immediate undo. The start control resumes the latest in-progress trip for the group, or creates one when none exists.
@@ -361,10 +373,11 @@ photos; cover selection and removal appear only in an “organize photos” mode
 requires one selection and removal requires at least one.
 
 - A photo can belong to multiple albums.
-- An album belongs to one family group and is visible and editable by all group members.
-- Album membership grants no photo access.
-- Only photos already shared with the album's group can be added.
-- Albums have a name, optional description, group, creator, and creation and update timestamps.
+- An album targets one or more family groups and is visible and editable by members of any target group.
+- The album has one photo collection shared across all target groups; it is not duplicated per group.
+- Adding an owner's photo automatically adds missing photo shares for all album target groups.
+- A photo owned by another user can be added only when it is already shared with every album target group.
+- Albums have a name, optional description, target groups, creator, and creation and update timestamps.
 - Photos are ordered by oldest capture time, falling back to upload time when capture time is unknown.
 - A cover can be selected; the first added photo is the fallback.
 - Deleting an album or removing a photo from it never deletes the photo, original, or JSON sidecar.
@@ -433,7 +446,6 @@ configured on the browser or server operating system.
 ## Future candidates
 
 - Repair and recovery commands for integrity findings
-- Background regeneration of derivatives for existing photos
 - Devices other than iPhone and browsers other than Safari
 - Additional EXIF fields
 - Tags

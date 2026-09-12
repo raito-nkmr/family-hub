@@ -296,6 +296,28 @@ def download_photo_original(
     )
 
 
+@router.get("/{photo_id}/preview", response_class=FileResponse)
+def get_photo_preview(
+    photo_id: UUID,
+    authenticated_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    service: Annotated[PhotoAccessService, Depends(get_photo_access_service)],
+) -> FileResponse:
+    try:
+        content = service.get_photo_preview(photo_id, authenticated_user.id)
+    except PhotoNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found") from error
+    except PhotoContentUnavailableError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Photo preview unavailable",
+        ) from error
+    return FileResponse(
+        content.path,
+        media_type=content.content_type,
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
 @router.get("/{photo_id}/thumbnail", response_class=FileResponse)
 def get_photo_thumbnail(
     photo_id: UUID,

@@ -130,7 +130,7 @@ class PhotoStorage(ResumableUploadOperations, PhotoFileOperations):
                 return self._status(StorageStatusCode.READ_ONLY)
             if not _is_writable(root):
                 return self._status(StorageStatusCode.NOT_WRITABLE)
-            for directory_name in ("originals", "incoming", "database-backups"):
+            for directory_name in ("originals", "previews", "incoming", "database-backups"):
                 directory = root / directory_name
                 if directory.is_symlink():
                     return self._status(StorageStatusCode.SYMLINK_NOT_ALLOWED)
@@ -187,8 +187,11 @@ class PhotoStorage(ResumableUploadOperations, PhotoFileOperations):
         return candidate, candidate.with_suffix(".json")
 
     def get_derivative_path(self, storage_key: str) -> Path:
+        key = self._validate_derivative_key(storage_key)
+        if key.parts[0] == "previews":
+            self._require_readable_storage()
         candidate = self.get_derivative_file_path(storage_key)
-        root = Path(os.path.abspath(self._derivative_root))
+        root = self._get_derivative_root(key)
         try:
             if not root.is_dir():
                 raise DerivativeNotFoundError("Photo derivative root is unavailable")
@@ -207,9 +210,10 @@ class PhotoStorage(ResumableUploadOperations, PhotoFileOperations):
     def get_derivative_file_path(self, storage_key: str) -> Path:
         """Return a safe derivative candidate without requiring the file to exist."""
         key = self._validate_derivative_key(storage_key)
-        root = Path(os.path.abspath(self._derivative_root))
+        root = self._get_derivative_root(key)
         if root.is_symlink():
-            raise InvalidStorageKeyError("Photo derivative root must not be a symlink")
+            root_name = "Photo storage root" if key.parts[0] == "previews" else "Photo derivative root"
+            raise InvalidStorageKeyError(f"{root_name} must not be a symlink")
         candidate = root.joinpath(*key.parts)
         self._validate_path_components(candidate, root, "derivative")
         return candidate
@@ -326,6 +330,17 @@ class PhotoStorage(ResumableUploadOperations, PhotoFileOperations):
         except ValueError as error:
             raise InvalidStorageKeyError("Derivative directory resolves outside the derivative root") from error
         return directory
+
+    def _get_or_create_preview_directory(self, relative_path: PurePosixPath) -> Path:
+        self._require_writable_storage(0)
+        return self._get_or_create_directory(relative_path)
+
+    def _get_derivative_root(self, key: PurePosixPath) -> Path:
+        if key.parts[0] == "previews":
+            if self._root is None:
+                raise StorageUnavailableError(StorageStatusCode.NOT_CONFIGURED)
+            return Path(os.path.abspath(self._root))
+        return Path(os.path.abspath(self._derivative_root))
 
     def _validate_original_key(self, storage_key: str) -> PurePosixPath:
         return validate_original_key(storage_key)

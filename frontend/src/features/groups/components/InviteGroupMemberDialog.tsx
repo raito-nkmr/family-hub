@@ -10,7 +10,7 @@ interface InviteGroupMemberDialogProps {
   loadingCandidates: boolean
   candidates: GroupMemberCandidate[]
   error: string | null
-  onSubmit: (inviteeUserId: string, role: GroupRole) => Promise<void>
+  onSubmit: (userId: string, role: GroupRole) => Promise<void>
   onClose: () => void
 }
 
@@ -26,19 +26,19 @@ export function InviteGroupMemberDialog({
   const headingId = useId()
   const userSelectId = useId()
   const roleId = useId()
-  const [selectedInviteeUserId, setSelectedInviteeUserId] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState('')
   const [role, setRole] = useState<GroupRole>('member')
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (submitting || !selectedInviteeUserId) return
-    await onSubmit(selectedInviteeUserId, role)
+    if (submitting || !selectedUserId) return
+    await onSubmit(selectedUserId, role)
   }
 
   return (
     <Dialog titleId={headingId} className="group-form-dialog" busy={submitting} onClose={onClose}>
       <div className="dialog__heading">
-        <h2 id={headingId}>{t('groups.inviteMember')}</h2>
+        <h2 id={headingId}>{t('groups.addMember')}</h2>
         <p>{t('groups.candidateHelp')}</p>
       </div>
       <form className="group-form" onSubmit={(event) => void handleSubmit(event)}>
@@ -46,11 +46,11 @@ export function InviteGroupMemberDialog({
         <select
           className="form-control form-control--subtle"
           id={userSelectId}
-          value={selectedInviteeUserId}
+          value={selectedUserId}
           required
           autoFocus
           disabled={loadingCandidates || candidates.length === 0}
-          onChange={(event) => setSelectedInviteeUserId(event.target.value)}
+          onChange={(event) => setSelectedUserId(event.target.value)}
         >
           <option value="">{loadingCandidates ? t('common.loading') : t('groups.selectUser')}</option>
           {candidates.map((candidate) => (
@@ -78,9 +78,9 @@ export function InviteGroupMemberDialog({
           </p>
         )}
         <DialogActions disabled={submitting} onCancel={onClose}>
-          <button className="primary-button icon-button" type="submit" disabled={submitting || !selectedInviteeUserId}>
+          <button className="primary-button icon-button" type="submit" disabled={submitting || !selectedUserId}>
             <GroupAddIcon />
-            {submitting ? t('groups.inviting') : t('groups.invite')}
+            {submitting ? t('groups.adding') : t('groups.add')}
           </button>
         </DialogActions>
       </form>

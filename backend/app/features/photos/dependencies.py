@@ -8,14 +8,10 @@ from app.features.photos.access_service import PhotoAccessService
 from app.features.photos.activity import PhotoActivityService
 from app.features.photos.export_service import PhotoExportService
 from app.features.photos.metadata_service import PhotoMetadataService
+from app.features.photos.public import PhotoStorage, get_photo_storage
 from app.features.photos.queries import PhotoQueryService
-from app.features.photos.storage.facade import PhotoStorage
 from app.features.photos.trash_service import PhotoTrashService
 from app.features.photos.uploads import UploadBatchService
-
-
-async def get_photo_storage(request: Request) -> PhotoStorage:
-    return PhotoStorage(request.app.state.settings)
 
 
 def get_photo_access_service(
