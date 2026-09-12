@@ -7,7 +7,7 @@ class Base(DeclarativeBase):
 
 
 def get_model_metadata() -> MetaData:
-    from app.features.albums.models import Album, AlbumPhoto
+    from app.features.albums.models import Album, AlbumGroupShare, AlbumPhoto
     from app.features.audit.models import AdministrativeAuditEvent
     from app.features.auth.models import LoginRateLimit, User, UserInvitation, UserSession
     from app.features.chores.models import ChoreCategory, ChoreCompletion, ChoreTask
@@ -36,6 +36,7 @@ def get_model_metadata() -> MetaData:
 
     for model in (
         Album,
+        AlbumGroupShare,
         AlbumPhoto,
         AdministrativeAuditEvent,
         ChoreCategory,

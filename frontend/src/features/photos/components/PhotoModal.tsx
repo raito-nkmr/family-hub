@@ -31,6 +31,81 @@ interface PhotoModalProps {
 }
 
 const SWIPE_THRESHOLD_PX = 50
+const TAP_MOVE_TOLERANCE_PX = 10
+
+interface PhotoEdgeNavigationProps {
+  disabled: boolean
+  previousPhoto?: () => void
+  nextPhoto?: () => void
+  label: string
+  previousLabel: string
+  nextLabel: string
+}
+
+function PhotoEdgeNavigation({
+  disabled,
+  previousPhoto,
+  nextPhoto,
+  label,
+  previousLabel,
+  nextLabel,
+}: PhotoEdgeNavigationProps) {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const handleTouchStart = (event: TouchEvent<HTMLButtonElement>) => {
+    if (event.touches.length !== 1) {
+      touchStartRef.current = null
+      return
+    }
+    const touch = event.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+  const handleTouchEnd = (event: TouchEvent<HTMLButtonElement>, navigate?: () => void) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start || disabled || !navigate || event.changedTouches.length !== 1) return
+    const touch = event.changedTouches[0]
+    const movedDistance = Math.hypot(touch.clientX - start.x, touch.clientY - start.y)
+    if (movedDistance > TAP_MOVE_TOLERANCE_PX) return
+
+    // Some tablet browsers do not synthesize a click for a transparent, full-height button.
+    // Handle the tap directly and prevent the compatibility click from firing twice.
+    event.preventDefault()
+    navigate()
+  }
+
+  return (
+    <nav className="modal__edge-navigation" aria-label={label}>
+      <button
+        className="modal__edge-navigation-button modal__edge-navigation-button--previous"
+        type="button"
+        disabled={disabled || !previousPhoto}
+        aria-label={previousLabel}
+        onClick={previousPhoto}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={(event) => handleTouchEnd(event, previousPhoto)}
+        onTouchCancel={() => {
+          touchStartRef.current = null
+        }}
+      >
+        <BackIcon />
+      </button>
+      <button
+        className="modal__edge-navigation-button modal__edge-navigation-button--next"
+        type="button"
+        disabled={disabled || !nextPhoto}
+        aria-label={nextLabel}
+        onClick={nextPhoto}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={(event) => handleTouchEnd(event, nextPhoto)}
+        onTouchCancel={() => {
+          touchStartRef.current = null
+        }}
+      >
+        <BackIcon />
+      </button>
+    </nav>
+  )
+}
 
 export function PhotoModal(props: PhotoModalProps) {
   return isPhotoDetails(props.photo) ? (
@@ -132,26 +207,14 @@ function PhotoModalDetails({
       surface="media"
       onClose={onClose}
       overlayContent={
-        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
-            type="button"
-            disabled={metadataBusy || !onPreviousPhoto}
-            aria-label={t('photoDetails.previousPhoto')}
-            onClick={onPreviousPhoto}
-          >
-            <BackIcon />
-          </button>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--next"
-            type="button"
-            disabled={metadataBusy || !onNextPhoto}
-            aria-label={t('photoDetails.nextPhoto')}
-            onClick={onNextPhoto}
-          >
-            <BackIcon />
-          </button>
-        </nav>
+        <PhotoEdgeNavigation
+          disabled={metadataBusy}
+          previousPhoto={onPreviousPhoto}
+          nextPhoto={onNextPhoto}
+          label={t('photoDetails.navigationLabel')}
+          previousLabel={t('photoDetails.previousPhoto')}
+          nextLabel={t('photoDetails.nextPhoto')}
+        />
       }
     >
       {photoDetailError ? (
@@ -443,26 +506,14 @@ function PhotoModalFallback({
       surface="media"
       onClose={onClose}
       overlayContent={
-        <nav className="modal__edge-navigation" aria-label={t('photoDetails.navigationLabel')}>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--previous"
-            type="button"
-            disabled={metadataBusy || !onPreviousPhoto}
-            aria-label={t('photoDetails.previousPhoto')}
-            onClick={onPreviousPhoto}
-          >
-            <BackIcon />
-          </button>
-          <button
-            className="modal__edge-navigation-button modal__edge-navigation-button--next"
-            type="button"
-            disabled={metadataBusy || !onNextPhoto}
-            aria-label={t('photoDetails.nextPhoto')}
-            onClick={onNextPhoto}
-          >
-            <BackIcon />
-          </button>
-        </nav>
+        <PhotoEdgeNavigation
+          disabled={metadataBusy}
+          previousPhoto={onPreviousPhoto}
+          nextPhoto={onNextPhoto}
+          label={t('photoDetails.navigationLabel')}
+          previousLabel={t('photoDetails.previousPhoto')}
+          nextLabel={t('photoDetails.nextPhoto')}
+        />
       }
     >
       <div className="modal__image-wrap" style={{ aspectRatio: mediaAspectRatio }}>

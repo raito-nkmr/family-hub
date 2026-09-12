@@ -1,10 +1,13 @@
 import os
 import re
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import DBAPIError
 
 from alembic import command
 from app.core import config as config_module
@@ -15,9 +18,11 @@ def test_migration_history_has_single_head() -> None:
     config = Config(backend_root / "alembic.ini")
     scripts = ScriptDirectory.from_config(config)
 
-    assert scripts.get_heads() == ["20260829_04_shopping"]
+    assert scripts.get_heads() == ["20260830_02_drop_album_group"]
     assert scripts.get_bases() == ["20260829_01_core"]
     assert [revision.revision for revision in scripts.walk_revisions()] == [
+        "20260830_02_drop_album_group",
+        "20260830_01_album_groups",
         "20260829_04_shopping",
         "20260829_03_household",
         "20260829_02_media",
@@ -80,6 +85,12 @@ def test_full_migration_history_compiles_for_postgresql_offline(tmp_path, monkey
     assert "ck_shopping_trips_discard_state" in sql
     assert "CREATE TABLE login_rate_limits" in sql
     assert "pk_login_rate_limits" in sql
+    assert "CREATE TABLE album_group_shares" in sql
+    assert "pk_album_group_shares" in sql
+    assert "ALTER TABLE albums ALTER COLUMN group_id DROP NOT NULL" in sql
+    assert "LOCK TABLE albums, album_group_shares IN SHARE ROW EXCLUSIVE MODE" in sql
+    assert "Cannot remove albums.group_id before every album group share has been migrated" in sql
+    assert "ALTER TABLE albums DROP COLUMN group_id" in sql
     assert re.search(r"\b(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?!alembic_version\b)", sql, re.IGNORECASE) is None
 
 
@@ -98,6 +109,7 @@ def test_full_migration_history_downgrade_compiles_for_postgresql_offline(tmp_pa
     assert "DROP TABLE photos" in sql
     assert "DROP TABLE chore_categories" in sql
     assert "DROP COLUMN timezone" in sql
+    assert "DROP TABLE album_group_shares" in sql
 
 
 MIGRATION_TEST_DATABASE_URL = os.getenv("MIGRATION_TEST_DATABASE_URL")
@@ -116,3 +128,63 @@ def test_upgrade_head_then_downgrade_base_on_postgresql(monkeypatch) -> None:
 
     command.upgrade(config, "head")
     command.downgrade(config, "base")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    MIGRATION_TEST_DATABASE_URL is None,
+    reason="MIGRATION_TEST_DATABASE_URL is not configured",
+)
+def test_album_group_drop_refuses_unmigrated_existing_album(monkeypatch) -> None:
+    assert MIGRATION_TEST_DATABASE_URL is not None
+    backend_root = Path(__file__).resolve().parents[2]
+    monkeypatch.setenv("DATABASE_URL", MIGRATION_TEST_DATABASE_URL)
+    config = Config(backend_root / "alembic.ini")
+    engine = create_engine(MIGRATION_TEST_DATABASE_URL)
+    user_id = uuid4()
+    group_id = uuid4()
+    album_id = uuid4()
+
+    command.upgrade(config, "20260829_04_shopping")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("INSERT INTO users (id, username, password_hash) VALUES (:id, 'owner', 'hash')"),
+                {"id": user_id},
+            )
+            connection.execute(
+                text("INSERT INTO family_groups (id, name, created_by_user_id) VALUES (:id, 'Family', :user_id)"),
+                {"id": group_id, "user_id": user_id},
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO albums (id, title, created_by_user_id, created_by_username, group_id)
+                    VALUES (:id, 'Legacy album', :user_id, 'owner', :group_id)
+                    """
+                ),
+                {"id": album_id, "user_id": user_id, "group_id": group_id},
+            )
+
+        with pytest.raises(DBAPIError, match="every album group share has been migrated"):
+            command.upgrade(config, "head")
+
+        with engine.connect() as connection:
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260830_01_album_groups"
+
+        with engine.begin() as connection:
+            connection.execute(
+                text("INSERT INTO album_group_shares (album_id, group_id) VALUES (:album_id, :group_id)"),
+                {"album_id": album_id, "group_id": group_id},
+            )
+
+        command.upgrade(config, "head")
+
+        assert "group_id" not in {column["name"] for column in inspect(engine).get_columns("albums")}
+    finally:
+        with engine.begin() as connection:
+            connection.execute(text("DELETE FROM albums WHERE id = :id"), {"id": album_id})
+            connection.execute(text("DELETE FROM family_groups WHERE id = :id"), {"id": group_id})
+            connection.execute(text("DELETE FROM users WHERE id = :id"), {"id": user_id})
+        engine.dispose()
+        command.downgrade(config, "base")

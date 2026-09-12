@@ -12,7 +12,6 @@ def make_album() -> Album:
         description="2026年の家族旅行",
         created_by_user_id=uuid4(),
         created_by_username="owner",
-        group_id=uuid4(),
         cover_photo_id=None,
         created_at=created_at,
         updated_at=created_at,

@@ -65,7 +65,9 @@ production reset must stop services and explicitly remove this named volume afte
 ├── frontend/
 │   └── dist/
 └── deploy/
-    └── compose.production.yaml
+    ├── Caddyfile
+    ├── compose.production.yaml
+    └── systemd/
 ```
 
 Do not include `.env`, test data, Python cache, `frontend/node_modules`, or development Compose volumes. Before creating a
@@ -79,7 +81,12 @@ The repository provides two release helpers:
 - `scripts/create-production-release.sh` runs the repository checks, builds the frontend, and creates an archive without
   `.env`, `.venv`, or `frontend/node_modules`.
 - `deploy/production-release.sh` installs an archive and performs the guarded production cutover described in the release
-  update section below.
+  update section below. Its `--prepare-only` and `--activate-prepared` modes separate installation from cutover when a schema
+  migration must run from the new release.
+
+`scripts/create-production-release.sh` removes `VITE_UPLOAD_REQUEST_TIMEOUT_MS` while running the checks so timeout tests
+continue to use their development setting. When the variable is provided, it is applied only to the final production
+frontend build.
 
 The production host must provide `uv` at `/usr/local/bin/uv` or `/usr/bin/uv`. The installer runs it as root while preparing the
 new release and leaves the resulting runtime readable and executable by the `family-hub` service user. A user-local `uv` path
@@ -163,7 +170,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now family-hub-database.service
 ```
 
-Apply migrations with a temporary unit that reads the production environment:
+For a fresh database with no legacy albums, apply migrations with a temporary unit that reads the production environment:
 
 ```bash
 sudo systemd-run --wait --pipe --collect \
@@ -174,33 +181,114 @@ sudo systemd-run --wait --pipe --collect \
   /opt/family-hub/current/backend/.venv/bin/alembic upgrade head
 ```
 
-When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
-read-only integrity check before starting the Backend. An intentional empty-environment reset uses the guarded orphan-file
-cleanup command in the reset procedure below instead.
+## Existing database migration before cutover
+
+For an existing database, never infer the current schema from the active application release. Prepare the new release first,
+then query Alembic through that prepared runtime while Backend remains available:
 
 ```bash
+release_id="replace-with-prepared-release-id"
+release_backend="/opt/family-hub/releases/${release_id}/backend"
+sudo test -x "$release_backend/.venv/bin/alembic"
+
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$release_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$release_backend/.venv/bin/alembic" current
+```
+
+Choose the next step from the reported revision:
+
+- `20260830_02_drop_album_group (head)`: the album migration is already complete. Do not rerun either album revision or
+  `migrate_album_group_shares`; leave Backend running and proceed to prepared-release activation.
+- `20260829_04_shopping`: use the one-time album migration below.
+- Any other revision, multiple revisions, or no revision: stop and investigate. Do not guess an upgrade path.
+
+For a database currently stamped at `20260829_04_shopping`, do not apply `upgrade head` in one step: the legacy
+`albums.group_id` column is needed by the data migration. Create and verify a fresh backup before downtime. Then stop Backend
+so no album can be written between the copy and column removal, and run every step from the prepared release's absolute path:
+
+```bash
+sudo systemctl start family-hub-db-backup.service
+test "$(sudo systemctl show --property=Result --value family-hub-db-backup.service)" = success
+
+sudo systemctl stop family-hub-backend.service
+if sudo systemctl is-active --quiet family-hub-backend.service; then
+  printf '%s\n' 'Backend did not stop; aborting migration.' >&2
+  exit 1
+fi
+
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$release_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$release_backend/.venv/bin/alembic" upgrade 20260830_01_album_groups
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$release_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$release_backend/.venv/bin/python" \
+  -m app.commands.migrate_album_group_shares --apply
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$release_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$release_backend/.venv/bin/python" \
+  -m app.commands.migrate_album_group_shares
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$release_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$release_backend/.venv/bin/alembic" upgrade head
+```
+
+The second revision locks the album tables and refuses to remove `albums.group_id` if any album target is missing. If any
+migration command fails, keep Backend stopped, correct the migration state, and retry from the same prepared release. After
+the second revision succeeds, do not start the previous release against the new schema. Fresh databases with no legacy
+albums can use `alembic upgrade head` directly. A database already at `20260830_02_drop_album_group` needs no migration.
+Never run the data command after the second revision has removed `albums.group_id`.
+
+When applying a schema change while retaining existing photos, regenerate all photo sidecars from PostgreSQL and run the
+read-only integrity check before starting the Backend. Use the prepared release path during a database-changing release; use
+`current` only for a fresh construction that has no previous release to preserve. An intentional empty-environment reset
+uses the guarded orphan-file cleanup command in the reset procedure below instead.
+
+```bash
+migration_backend="${release_backend:-/opt/family-hub/current/backend}"
+sudo systemd-run --wait --pipe --collect \
+  --uid=family-hub \
+  --gid=family-hub \
+  --property="WorkingDirectory=$migration_backend" \
+  --property=EnvironmentFile=/etc/family-hub/backend.env \
+  "$migration_backend/.venv/bin/python" \
   -m app.commands.sync_photo_sidecars
 sudo systemd-run --wait --pipe --collect \
   --uid=family-hub \
   --gid=family-hub \
-  --property=WorkingDirectory=/opt/family-hub/current/backend \
+  --property="WorkingDirectory=$migration_backend" \
   --property=EnvironmentFile=/etc/family-hub/backend.env \
-  /opt/family-hub/current/backend/.venv/bin/python \
+  "$migration_backend/.venv/bin/python" \
   -m app.commands.check_photo_integrity
 ```
 
-The current resettable schema chain has four readable domain revisions, ending at `20260829_04_shopping`. The upgrade contains
-schema DDL only; it does not create users, groups, categories, tasks, completion history, or other application data. Run
-`create_user` and any other bootstrap commands separately. Development reset and production-like reset are independent
+After all migration-specific data commands and integrity checks succeed, return to
+[the prepared cutover procedure](#prepared-cutover-for-database-changes) and activate that exact release. This starts Backend
+on the migrated schema.
+
+The current resettable schema chain has four readable domain revisions followed by the album sharing revisions. The upgrade
+contains schema DDL only; it does not create users, groups, categories, tasks, completion history, or other application data.
+Run `create_user` and any other bootstrap commands separately. Development reset and production-like reset are independent
 procedures: never run the development `docker compose down --volumes` command against the production-like service or volume.
 These revisions replace the disposable pre-production history; a database stamped with a retired revision ID must be rebuilt
 using the reset procedure below, not upgraded in place. Never apply that reset to a real-data environment.
+
+## Application bootstrap and legacy data commands
 
 Create the initial administrator with a PTY so password input is hidden:
 
@@ -507,25 +595,50 @@ Replace `30000` with the measured production value before building the release.
 Transfer the resulting archive to the production host through the approved operator channel and verify the printed SHA-256
 before starting the installer. The archive path passed to the installer must be readable on that host.
 
-Install the cutover helper once on the production host. Keep `uv` in a system path, or pass an absolute `UV_BIN` path to the
-transient unit when that is not possible:
+Install the cutover helper once on the production host. Resolve `uv` to an executable absolute path and pass it explicitly
+to the transient unit. This works with both a system-wide installation and a user-local installation:
 
 ```bash
 sudo install -o root -g root -m 0755 \
   deploy/production-release.sh \
   /usr/local/sbin/family-hub-production-release
 
-sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
-  /usr/local/sbin/family-hub-production-release \
-  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
+uv_command="$(command -v uv)" || {
+  printf '%s\n' 'uv was not found; install it or add it to PATH.' >&2
+  exit 1
+}
+uv_bin="$(readlink -f -- "$uv_command")"
+[[ -x "$uv_bin" ]] || {
+  printf 'uv is not executable: %s\n' "$uv_bin" >&2
+  exit 1
+}
 ```
 
-If `uv` is not installed in one of the default system paths, add a systemd environment assignment without putting secrets in
-the command:
+Verify that `command -v uv` succeeds and that the resulting path is executable before starting a release unit. The installer
+uses `uv` only as root to create the release virtual environment; the resulting release remains readable and executable by
+the `family-hub` service user.
+
+### Choose the cutover path
+
+Classify the release before invoking the helper. Database and host-configuration changes are independent: one release may
+need both a prepared database cutover and a separate Caddy or systemd update.
+
+| Release contents | Required path |
+| --- | --- |
+| Application or frontend only, with no database or host-configuration change | Default install-and-activate mode |
+| Alembic revision, separate data command, or uncertain production database revision | Prepare, inspect the actual database revision, migrate only when required, then activate the prepared release |
+| `deploy/Caddyfile` or `deploy/systemd/` change | Use the applicable application path above, then separately validate and install the host configuration |
+
+The release helper manages the release directory, `current` symlink, Backend restart, and local application health checks.
+It never applies Alembic migrations, runs data commands, installs systemd units, or installs and reloads Caddy configuration.
+
+### Application-only cutover
+
+For a release with no database or host-configuration change, start the detached default install-and-activate unit:
 
 ```bash
 sudo systemd-run --unit="family-hub-release-${release_id}" --collect \
-  --setenv=UV_BIN=/absolute/path/to/uv \
+  --setenv="UV_BIN=${uv_bin}" \
   /usr/local/sbin/family-hub-production-release \
   "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
 ```
@@ -536,7 +649,7 @@ The transient unit continues after an SSH or terminal disconnect. Follow its out
 sudo journalctl -u "family-hub-release-${release_id}" --no-pager
 ```
 
-The installer performs these guarded steps:
+In its default install-and-activate mode, the installer performs these guarded steps:
 
 1. Acquire a host-wide release lock and verify the current release and backend health.
 2. Reject unsafe archive paths, `.env`, `.venv`, and `node_modules` entries.
@@ -547,20 +660,132 @@ The installer performs these guarded steps:
    new `index.html` content.
 7. Restore the previous release and restart Backend automatically if any post-switch check fails.
 
-The script leaves a failed release directory for inspection and never deletes an existing release automatically. It does not
-apply Alembic migrations or reload Caddy configuration. Review and run schema migrations separately when the release changes
-the backend schema; frontend-only releases such as the photo layout fix do not require a migration.
+`--prepare-only` stops after step 4 and leaves `current` and services unchanged. After the separately reviewed migration,
+`--activate-prepared <release-id>` performs the atomic switch and health checks without recreating the environment. This
+activation mode intentionally does not roll back to the old release after a failure because the old Backend may be
+incompatible with the migrated schema; it leaves the prepared release selected for manual recovery.
 
-For a release with a database schema change, review backward compatibility before applying Alembic. The application rollback
-protects the release symlink and service, but it must not downgrade an already-upgraded database.
-
-The normal release sequence is therefore:
+The script leaves a failed release directory for inspection and never deletes an existing release automatically. The normal
+application-only sequence is:
 
 1. Build and verify the archive.
-2. Review any Alembic changes and apply them through the separate migration procedure when required.
-3. Start the detached release helper.
-4. Check the helper journal and loopback health.
-5. Run the public smoke, login, and core-screen acceptance checks.
+2. Start the detached release helper in its default install-and-activate mode.
+3. Check the helper journal and loopback health.
+4. Run the public smoke, login, and core-screen acceptance checks.
+
+### Prepared cutover for database changes
+
+For a release that contains an Alembic revision or data command, prepare it before deciding whether production needs that
+change:
+
+```bash
+sudo systemd-run --unit="family-hub-release-prepare-${release_id}" --wait --pipe --collect \
+  --setenv="UV_BIN=${uv_bin}" \
+  /usr/local/sbin/family-hub-production-release \
+  --prepare-only \
+  "/tmp/family-hub-release-${release_id}.tar.gz" "$release_id"
+```
+
+The command must end with `Release prepared` and must say that the production symlink and services were not changed. Reuse
+that exact release ID for activation; do not rerun preparation with the same ID. Query the production Alembic revision using
+the prepared runtime, following [the existing-database procedure](#existing-database-migration-before-cutover). Do not infer
+it from the old application version or from deployment notes.
+
+- If production is already at the target head, skip the migration and every associated data command. Leave Backend running.
+- If production is at an explicitly documented predecessor, create and verify a fresh backup, then stop Backend only when
+  the documented migration requires exclusive access.
+- For an unexpected, missing, or multi-head revision, stop the cutover and investigate instead of guessing an upgrade path.
+
+Run Alembic, separate data commands, and integrity checks from
+`/opt/family-hub/releases/${release_id}/backend`. After all required work succeeds, activate exactly that prepared release:
+
+```bash
+sudo systemd-run --unit="family-hub-release-activate-${release_id}" --wait --pipe --collect \
+  /usr/local/sbin/family-hub-production-release \
+  --activate-prepared "$release_id"
+```
+
+`--activate-prepared` intentionally does not restore the previous Backend if activation fails, because an incompatible
+schema migration may already have completed. Keep the prepared release selected, inspect the service journal, and recover
+forward. Application rollback protects only a release whose database remains compatible; it must never downgrade an
+already-upgraded database.
+
+During a normal Backend restart the helper can print transient `curl: (7)` connection failures while port 8000 is closed.
+They are retry output, not the final result. Treat the activation as successful only when it ends with `Release active` and
+`Backend, Caddy, and static content health checks passed`; otherwise inspect the unit and Backend journals.
+
+### Apply a changed Caddy configuration
+
+The versioned Caddyfile is inside the prepared or active release, but `/etc/caddy/Caddyfile` is host state and does not
+follow the `current` symlink. After reviewing an expected Caddy change, stage it in `/etc/caddy`, validate the staged file,
+then replace it atomically and reload Caddy:
+
+```bash
+release_dir="/opt/family-hub/releases/${release_id}"
+release_caddy="$release_dir/deploy/Caddyfile"
+sudo test -f "$release_caddy"
+sudo diff --unified /etc/caddy/Caddyfile "$release_caddy"
+```
+
+`diff` exits with status 1 when it displays ordinary differences. Review those differences before continuing; a status
+greater than 1 is an error. If the files are identical, skip the installation and reload. Otherwise run:
+
+```bash
+sudo install -o root -g root -m 0644 \
+  "$release_caddy" /etc/caddy/Caddyfile.next
+sudo caddy validate --config /etc/caddy/Caddyfile.next
+sudo mv /etc/caddy/Caddyfile.next /etc/caddy/Caddyfile
+sudo systemctl reload caddy.service
+```
+
+Do not replace the live file if validation fails. A changed systemd unit follows the same separation: compare it with the
+prepared release, install only the reviewed file, run `systemd-analyze verify`, then `systemctl daemon-reload` and restart
+only the affected service. Do not bulk-install every unit during an ordinary release.
+
+### Verify the completed cutover
+
+Set `release_id` to the activated release and verify the symlink, services, private readiness boundary, authentication
+boundary, and exact frontend content from loopback:
+
+```bash
+expected_release="/opt/family-hub/releases/${release_id}"
+test "$(readlink -f /opt/family-hub/current)" = "$expected_release"
+
+sudo systemctl is-active \
+  family-hub-database.service \
+  family-hub-backend.service \
+  caddy.service \
+  cloudflared.service
+
+curl --fail --silent http://127.0.0.1:8000/api/v1/health
+curl --fail --silent http://127.0.0.1:8000/api/v1/readiness
+curl --fail --silent http://127.0.0.1:8080/api/v1/health
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+  http://127.0.0.1:8080/api/v1/readiness)" = 404
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+  http://127.0.0.1:8080/api/v1/albums)" = 401
+
+expected_index_hash="$(sha256sum "$expected_release/frontend/dist/index.html" | cut -d' ' -f1)"
+served_index_hash="$(curl --fail --silent --header 'Accept-Encoding: identity' \
+  http://127.0.0.1:8080/ | sha256sum | cut -d' ' -f1)"
+test "$served_index_hash" = "$expected_index_hash"
+```
+
+The direct readiness response must report both database and photo storage as available. Caddy must continue to hide the
+readiness route with `404`, and the unauthenticated albums request must return `401`. If a pre-migration backup was required,
+also verify `Result=success` and `ExecMainStatus=0`:
+
+```bash
+sudo systemctl show family-hub-db-backup.service \
+  --property=Result --property=ExecMainStatus
+sudo journalctl \
+  -u family-hub-backend.service \
+  -u caddy.service \
+  --since '-10 minutes' --no-pager
+```
+
+Finish with the public smoke and authenticated checks in
+[pre-construction validation](#pre-construction-validation) from a trusted operator machine.
 
 ## Ongoing production conditions
 

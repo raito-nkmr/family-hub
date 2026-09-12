@@ -386,7 +386,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
     session.scalar.return_value = photo
     session.scalars.return_value.all.return_value = [group_id]
     remove_from_albums = MagicMock()
-    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_group_albums", remove_from_albums)
+    monkeypatch.setattr("app.features.photos.metadata_service.remove_photo_from_all_albums", remove_from_albums)
     service, _ = make_metadata_service(session)
 
     service.update_photo(
@@ -399,7 +399,7 @@ def test_update_photo_removes_photo_from_albums_after_sharing_is_revoked(
         expected_version=1,
     )
 
-    remove_from_albums.assert_called_once_with(session, photo.id, {group_id})
+    remove_from_albums.assert_called_once_with(session, photo.id)
 
 
 def test_bulk_add_sharing_updates_sidecars_and_groups_activity() -> None:
