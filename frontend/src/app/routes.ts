@@ -20,7 +20,7 @@ export type AppView = keyof typeof appPaths
 
 export const photoViews: AppView[] = ['photo-activity', 'photos', 'albums', 'photo-trash']
 export const choreViews: AppView[] = ['chores', 'chores-daily', 'chores-monthly']
-export const shoppingViews: AppView[] = ['shopping', 'shopping-list', 'shopping-history']
+export const shoppingViews: AppView[] = ['shopping-list', 'shopping', 'shopping-history']
 export const managementViews: AppView[] = ['groups', 'invitations', 'account', 'system']
 
 export function getAppView(pathname: string): AppView | null {

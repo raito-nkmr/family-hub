@@ -124,7 +124,7 @@ export function AppNavigation({ showInvitations, photoUnseenCount }: NavigationP
         <HouseholdSuppliesIcon />
         {t('navigation.chores')}
       </NavLink>
-      <NavLink className={sectionClass(shoppingViews, 'app-navigation__mobile-only')} to={shoppingTo('shopping')}>
+      <NavLink className={sectionClass(shoppingViews, 'app-navigation__mobile-only')} to={shoppingTo('shopping-list')}>
         <ShoppingCartIcon />
         {t('navigation.shopping')}
       </NavLink>
