@@ -48,6 +48,17 @@ const photoSummary: PhotoListItem = {
   effective_captured_at: photo.effective_captured_at,
 }
 
+const group = {
+  id: 'group-1',
+  name: 'Family',
+  timezone: 'Asia/Tokyo',
+  created_by_user_id: 'owner-1',
+  created_at: '2026-07-01T00:00:00Z',
+  updated_at: '2026-07-01T00:00:00Z',
+  current_user_role: 'member' as const,
+  member_count: 2,
+}
+
 describe('PhotoModal', () => {
   it.each([
     { label: 'portrait', width: 3024, height: 4032, aspectRatio: '3024 / 4032' },
@@ -367,6 +378,31 @@ describe('PhotoModal', () => {
 
     expect(screen.getByLabelText('撮影日時を補正')).toHaveAttribute('type', 'datetime-local')
     expect(screen.getByLabelText('共有メモ')).toHaveValue('旅行のメモ')
+  })
+
+  it('notifies the owner when an additional sharing group is selected', () => {
+    const onSharingChange = vi.fn()
+    render(
+      <PhotoModal
+        photo={{ ...photo, sharing: { group_ids: ['group-1'] } }}
+        currentUserId="owner-1"
+        updatingMetadata={false}
+        error={null}
+        groups={[
+          { ...group, id: 'group-1', name: 'Family' },
+          { ...group, id: 'group-2', name: 'Extended family' },
+        ]}
+        onClose={vi.fn()}
+        onSharingChange={onSharingChange}
+        onToggleFavorite={vi.fn()}
+        onMemoSave={vi.fn()}
+        onTrash={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByLabelText('Extended family'))
+
+    expect(onSharingChange).toHaveBeenCalledWith(['group-1', 'group-2'])
   })
 
   it('syncs the capture date input after resetting an override', () => {

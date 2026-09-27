@@ -4,6 +4,7 @@ import i18n from '../../i18n'
 import { isApiErrorWithStatus, isUnauthorizedError } from '../../shared/api/errors'
 import { queryKeys } from '../../shared/api/queryKeys'
 import {
+  addBulkPhotoSharing,
   removePhotoGroupShareAsAdmin,
   setPhotoFavorite,
   trashPhoto,
@@ -60,6 +61,32 @@ export function usePhotoMetadata({
     if (!selectedPhoto) return
     const currentIds = selectedPhoto.sharing.group_ids ?? []
     if (currentIds.length === groupIds.length && currentIds.every((id) => groupIds.includes(id))) return
+
+    const addedGroupIds = groupIds.filter((id) => !currentIds.includes(id))
+    const removedGroupIds = currentIds.filter((id) => !groupIds.includes(id))
+    if (addedGroupIds.length > 0 && removedGroupIds.length === 0) {
+      setUpdatingMetadata(true)
+      setMetadataError(null)
+      queryClient.setQueryData<Photo>(queryKeys.photo(selectedPhoto.id), {
+        ...selectedPhoto,
+        visibility: 'shared',
+        sharing: { group_ids: groupIds },
+        metadata_version: selectedPhoto.metadata_version + 1,
+      })
+      try {
+        await addBulkPhotoSharing([selectedPhoto.id], addedGroupIds)
+        await queryClient.invalidateQueries({ queryKey: queryKeys.photo(selectedPhoto.id) })
+        await invalidateLibrary()
+      } catch (error) {
+        queryClient.setQueryData(queryKeys.photo(selectedPhoto.id), selectedPhoto)
+        if (isUnauthorizedError(error)) onUnauthorized()
+        else setMetadataError(i18n.t('photos.updateFailed'))
+      } finally {
+        setUpdatingMetadata(false)
+      }
+      return
+    }
+
     await savePhotoMetadata({
       sharing: { visibility: groupIds.length > 0 ? 'shared' : 'private', group_ids: groupIds },
     })

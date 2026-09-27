@@ -535,6 +535,34 @@ describe('usePhotoDashboard', () => {
     expect(result.current.selectedPhoto?.metadata_version).toBe(2)
   })
 
+  it('adds a sharing group to an existing photo', async () => {
+    let resolveSharing: ((result: Awaited<ReturnType<typeof addBulkPhotoSharing>>) => void) | undefined
+    vi.mocked(addBulkPhotoSharing).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSharing = resolve
+        }),
+    )
+    const onUnauthorized = vi.fn()
+    const { result } = renderHook(() => usePhotoDashboard({ onUnauthorized }), {
+      wrapper: createAppWrapper(),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(() => result.current.selectPhoto(photo))
+    let sharingPromise: Promise<void>
+    act(() => {
+      sharingPromise = result.current.changeSharing(['group-1'])
+    })
+
+    await waitFor(() => expect(result.current.selectedPhoto?.sharing.group_ids).toEqual(['group-1']))
+    resolveSharing?.({ activity_operation_id: 'operation-1', updated_count: 1, unchanged_count: 0 })
+    await act(() => sharingPromise!)
+
+    expect(addBulkPhotoSharing).toHaveBeenCalledWith(['photo-1'], ['group-1'])
+    expect(updatePhoto).not.toHaveBeenCalled()
+  })
+
   it('notifies the app when loading finds an expired session', async () => {
     vi.mocked(getPhotos).mockRejectedValue(new ApiError(401, 'expired'))
     const onUnauthorized = vi.fn()
